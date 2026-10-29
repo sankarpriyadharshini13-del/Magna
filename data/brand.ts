@@ -38,13 +38,13 @@ export const sourcingPrinciples = [
 export const team = [
   {
     name: "Mageshwaran",
-    role: "Co-founder · Director & Export Sales",
+    role: "Director & Export Sales",
     focus: "Oversees sourcing and quality.",
     founder: true,
   },
   {
     name: "Sathish",
-    role: "Co-founder · Branch Manager",
+    role: "Branch Manager",
     focus: "Runs the kitchen where every batch is stone-ground.",
     founder: true,
   },
