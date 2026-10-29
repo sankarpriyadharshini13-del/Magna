@@ -114,6 +114,26 @@ ${itemsTable(o)}
   return { subject: `New order #${label} · ${inr(total(o))}`, html, text };
 }
 
+/** Sent to the admins after a purchase leaves products at or below the low-stock level. */
+export function lowStockEmail(products: { name: string; packSize: string; stock: number }[], orderNumber: number, s: Settings) {
+  const label = orderLabel(orderNumber, s.invoice.numberFormat);
+  const line = (p: { name: string; packSize: string; stock: number }) =>
+    `${p.name}${p.packSize ? ` ${p.packSize}` : ""}: ${p.stock <= 0 ? "out of stock" : `${p.stock} left`}`;
+  const rows = products
+    .map((p) => `<tr><td style="padding:8px 0;border-bottom:1px solid #efe9da">${esc(p.name)} ${esc(p.packSize)}</td><td style="padding:8px 0;border-bottom:1px solid #efe9da;text-align:right;font-weight:bold;color:${p.stock <= 0 ? "#b8332b" : "#9a5a12"}">${p.stock <= 0 ? "Out of stock" : `${p.stock} left`}</td></tr>`)
+    .join("");
+  const html = layout(
+    s,
+    "Low stock",
+    `<p style="margin:0 0 16px;line-height:1.6">Order <b>#${esc(label)}</b> just reduced your stock. These products are running low:</p>
+<table style="width:100%;border-collapse:collapse;font-size:14px">${rows}</table>
+<p style="margin:16px 0 0;font-size:13px;color:#6f7469">Open Admin → Products &amp; Stock and use “Update stock” when the new batch is packed.</p>`,
+  );
+  const text = `Order #${label} just reduced your stock. Running low:\n\n${products.map((p) => `- ${line(p)}`).join("\n")}\n\nUpdate it in Admin → Products & Stock.`;
+  const out = products.some((p) => p.stock <= 0);
+  return { subject: `${out ? "Out of stock" : "Low stock"}: ${products.map((p) => p.name).join(", ")}`, html, text };
+}
+
 export function deliveredEmail(o: EmailOrder, s: Settings) {
   const label = orderLabel(o.number, s.invoice.numberFormat);
   const html = layout(

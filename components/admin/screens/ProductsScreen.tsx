@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { fmtDateTime, groupBarcode, initials } from "@/lib/admin/format";
+import { fmtDateTime, fmtTime, groupBarcode, initials } from "@/lib/admin/format";
 import { compressImage } from "@/lib/admin/image";
 import { LOW_STOCK, nextBarcode, productStatus } from "@/lib/admin/logic";
 import { PRODUCT_COLORS } from "@/lib/admin/defaults";
@@ -37,7 +37,7 @@ const toDraft = (p: AdminProduct | null): Draft => ({
 });
 
 export default function ProductsScreen() {
-  const { data, mutate, uploadImage, toast } = useAdminData();
+  const { data, mutate, uploadImage, toast, lastSync } = useAdminData();
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [selectedId, setSelectedId] = useState<string>(() => data.products[0]?.id ?? "new");
@@ -244,10 +244,16 @@ export default function ProductsScreen() {
           </section>
 
           <section className="adm-card">
-            <div className="adm-card-h"><h2>Low-stock alerts</h2><span>alert email at ≤ {LOW_STOCK} units</span></div>
-            {alerts.length ? alerts.map((p) => (
+            <div className="adm-card-h">
+              <h2>Low-stock alerts</h2>
+              <span className="p-live" title="Stock refreshes automatically every 20 seconds and after every sale">
+                <i aria-hidden="true" />Live{lastSync ? ` · updated ${fmtTime(lastSync)}` : ""}
+              </span>
+            </div>
+            <p className="adm-muted" style={{ margin: "-4px 0 8px" }}>Stock drops automatically with every purchase. You&apos;re emailed when a product reaches {LOW_STOCK} units or fewer.</p>
+            {alerts.length ? [...alerts].sort((a, b) => a.stock - b.stock).map((p) => (
               <div className="p-alert" key={p.id}>
-                <span><b style={{ color: "var(--ink)" }}>{p.name} {p.packSize}</b> — {p.stock} left</span>
+                <span><b style={{ color: "var(--ink)" }}>{p.name} {p.packSize}</b> — {p.stock <= 0 ? <span className="out">out of stock</span> : `${p.stock} left`}</span>
                 <button className="adm-btn pri sm" onClick={() => setModal({ stockFor: p.id })}>Update stock</button>
               </div>
             )) : <div className="adm-empty" style={{ padding: "10px 0" }}>Everything is well stocked.</div>}

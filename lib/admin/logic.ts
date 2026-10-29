@@ -1,3 +1,4 @@
+import { formatInr } from "@/lib/format";
 import { addWorkingDays, startOfDay } from "./format";
 import type { AdminData, AdminProduct, Customer, Order, OrderStatus, PaymentStatus } from "./types";
 
@@ -5,7 +6,7 @@ export const LOW_STOCK = 10;
 export const FEE_RATE = 0.02;
 
 export const orderSubtotal = (o: Order) => o.items.reduce((s, i) => s + i.price * i.qty, 0);
-export const orderTotal = (o: Order) => orderSubtotal(o) + o.shipping;
+export const orderTotal = (o: Order) => Math.max(0, orderSubtotal(o) + o.shipping - (o.discount ?? 0));
 export const orderUnits = (o: Order) => o.items.reduce((s, i) => s + i.qty, 0);
 
 export type Tone = "green" | "yellow" | "blue" | "orange" | "red" | "gray";
@@ -45,11 +46,25 @@ const PAY_LABEL: Record<PaymentStatus, { label: string; tone: Tone }> = {
   partial_refund: { label: "Partial refund", tone: "orange" },
 };
 
+/** Short payment text for the Orders table: "Paid · UPI", "Cash on delivery", "Advance ₹2,000", … */
+export function paymentLabel(o: Order): string {
+  const by = o.method === "NetBanking" ? "Bank" : o.method;
+  switch (o.paymentMode) {
+    case "paid": return `Paid · ${by}`;
+    case "cod": return "Cash on delivery";
+    case "pending": return "Payment pending";
+    case "advance": return `Advance ${formatInr(o.amountPaid)}`;
+    default: return o.method;
+  }
+}
+
 export function paymentView(o: Order, now: Date): PaymentView {
   const amount = orderTotal(o);
-  const fee = Math.round(amount * FEE_RATE);
+  // Orders added by an admin are paid outside the gateway (cash / UPI to the shop): no fee, no payout wait.
+  const manual = o.source === "admin";
+  const fee = manual ? 0 : Math.round(amount * FEE_RATE);
   const pending = o.payment.status === "pending";
-  const payout = pending ? null : addWorkingDays(new Date(o.placedAt), 2);
+  const payout = pending ? null : manual ? new Date(o.placedAt) : addWorkingDays(new Date(o.placedAt), 2);
   const settled = !!payout && payout < startOfDay(now);
   let { label, tone } = PAY_LABEL[o.payment.status];
   if (o.payment.status === "captured" && settled) {

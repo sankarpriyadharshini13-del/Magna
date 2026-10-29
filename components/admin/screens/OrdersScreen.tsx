@@ -2,12 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { downloadCsv, fmtDateTime, isTestPayment, maskEmail, maskPhone } from "@/lib/admin/format";
-import { customerSub, orderTone, orderTotal, orderUnits } from "@/lib/admin/logic";
+import { downloadCsv, fmtDate, fmtDateTime, isTestPayment, maskEmail, maskPhone } from "@/lib/admin/format";
+import { customerSub, orderTone, orderTotal, orderUnits, paymentLabel } from "@/lib/admin/logic";
 import { printInvoices } from "@/lib/admin/print";
 import { useAdminData } from "@/lib/admin/store";
 import type { Order } from "@/lib/admin/types";
 import { formatInr } from "@/lib/format";
+import OrderFormModal from "../OrderFormModal";
 import { Badge, Topbar, useQueryParam } from "../ui";
 
 const PAGE = 9;
@@ -61,6 +62,8 @@ export default function OrdersScreen() {
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<number[]>([]);
   const [activeNo, setActiveNo] = useState<number | null>(null);
+  /** "+ Add" (new) or "Edit" (order number) popup. */
+  const [form, setForm] = useState<null | "new" | number>(null);
   const initialised = useRef(false);
 
   const customers = useMemo(() => new Map(data.customers.map((c) => [c.id, c])), [data.customers]);
@@ -99,6 +102,7 @@ export default function OrdersScreen() {
         o.location.city.toLowerCase().includes(q) ||
         o.location.pincode.includes(q) ||
         o.shipName.toLowerCase().includes(q) ||
+        o.businessName.toLowerCase().includes(q) ||
         o.email.toLowerCase().includes(q)
       );
     });
@@ -125,13 +129,13 @@ export default function OrdersScreen() {
 
   const exportCsv = () =>
     downloadCsv("orders.csv", [
-      ["Order", "Placed", "Customer", "Email", "Phone", "City", "State", "PIN", "Address", "Units", "Amount (INR)", "Payment", "Status"],
+      ["Order", "Type", "Placed", "Business", "Customer", "Email", "Phone", "City", "State", "PIN", "Address", "Units", "Amount (INR)", "Payment", "Status"],
       ...filtered.map((o) => {
         const c = customers.get(o.customerId);
         return [
-          label(o.number), fmtDateTime(o.placedAt), o.shipName || c?.name || "", o.email || c?.email || "", o.shipPhone || c?.phone || "",
+          label(o.number), o.kind === "bulk" ? "Bulk" : "Normal", fmtDateTime(o.placedAt), o.businessName, o.shipName || c?.name || "", o.email || c?.email || "", o.shipPhone || c?.phone || "",
           o.location.city || c?.city || "", o.location.state || c?.state || "", o.location.pincode, o.address,
-          orderUnits(o), orderTotal(o), o.method, o.status,
+          orderUnits(o), orderTotal(o), paymentLabel(o), o.status,
         ];
       }),
     ]);
@@ -159,6 +163,7 @@ export default function OrdersScreen() {
           onChange={(e) => { setQuery(e.target.value); setPage(1); }}
         />
         <button type="button" className="adm-btn lg" onClick={exportCsv}>Export CSV</button>
+        <button type="button" className="adm-btn pri lg" onClick={() => setForm("new")}>+ Add</button>
       </Topbar>
 
       <div className="adm-chips" role="tablist" aria-label="Filter by status">
@@ -184,7 +189,7 @@ export default function OrdersScreen() {
                       onChange={(e) => setSelected(e.target.checked ? Array.from(new Set([...selected, ...rows.map((o) => o.number)])) : selected.filter((n) => !rows.some((o) => o.number === n)))}
                     />
                   </th>
-                  <th>Order</th><th>Placed</th><th>Customer</th><th>Customer location</th><th>Items</th><th>Amount</th><th>Payment</th><th>Status</th>
+                  <th>Order</th><th>Placed</th><th>Customer</th><th>Customer location</th><th>Items</th><th>Amount</th><th>Payment</th><th>Status</th><th aria-label="Edit" />
                 </tr>
               </thead>
               <tbody>
@@ -195,9 +200,12 @@ export default function OrdersScreen() {
                       <td onClick={(e) => e.stopPropagation()}>
                         <input type="checkbox" className="adm-cb" aria-label={`Select ${label(o.number)}`} checked={selected.includes(o.number)} onChange={() => toggleSel(o.number)} />
                       </td>
-                      <td className="b">#{label(o.number)}</td>
+                      <td className="b">#{label(o.number)}{o.kind === "bulk" && <span className="o-kind">BULK</span>}</td>
                       <td style={{ color: "#4a4f46" }}>{fmtDateTime(o.placedAt)}</td>
-                      <td style={{ lineHeight: 1.25 }}><b style={{ fontWeight: 600, color: "var(--ink)" }}>{c?.name}</b><span className="sub">{c && customerSub(c)}</span></td>
+                      <td style={{ lineHeight: 1.25 }}>
+                        <b style={{ fontWeight: 600, color: "var(--ink)" }}>{o.businessName || o.shipName || c?.name}</b>
+                        <span className="sub">{o.businessName ? o.shipName : c && customerSub(c)}</span>
+                      </td>
                       <td style={{ lineHeight: 1.25 }}>
                         {(() => {
                           const loc = locationOf(o);
@@ -206,13 +214,16 @@ export default function OrdersScreen() {
                       </td>
                       <td>{orderUnits(o)}</td>
                       <td className="b">{formatInr(orderTotal(o))}</td>
-                      <td>{o.method}</td>
+                      <td>{paymentLabel(o)}</td>
                       <td><Badge tone={orderTone(o.status)}>{o.status}</Badge></td>
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <button type="button" className="adm-btn sm" aria-label={`Edit order ${label(o.number)}`} onClick={() => { pickRow(o.number); setForm(o.number); }}>Edit</button>
+                      </td>
                     </tr>
                   );
                 })}
                 {!rows.length && (
-                  <tr><td colSpan={9}><div className="adm-empty">No orders match your search.</div></td></tr>
+                  <tr><td colSpan={10}><div className="adm-empty">{data.orders.length ? "No orders match your search." : "No orders yet. Click “+ Add” to add one."}</div></td></tr>
                 )}
               </tbody>
             </table>
@@ -249,10 +260,13 @@ export default function OrdersScreen() {
                 <Badge tone={orderTone(active.status)}>{active.status}</Badge>
               </div>
               <p className="adm-muted" style={{ margin: "4px 0 14px" }}>
-                Placed {fmtDateTime(active.placedAt)} ·{" "}
-                {isTestPayment(active.payment.id)
-                  ? `Test payment via ${active.method} (no money collected)`
-                  : `${active.payment.status === "pending" ? "Payment pending" : "Paid"} via ${active.method} (Razorpay)`}
+                {active.source === "admin" ? "Added by admin" : "Placed"} {fmtDateTime(active.placedAt)} ·{" "}
+                {active.source === "admin"
+                  ? paymentLabel(active)
+                  : isTestPayment(active.payment.id)
+                    ? `Test payment via ${active.method} (no money collected)`
+                    : `${active.payment.status === "pending" ? "Payment pending" : "Paid"} via ${active.method} (Razorpay)`}
+                {active.kind === "bulk" && <span className="o-kind">BULK</span>}
               </p>
 
               {active.status === "New" && (
@@ -275,8 +289,12 @@ export default function OrdersScreen() {
               )}
 
               <div className="o-sec">
-                <div className="adm-fl">Customer</div>
-                <div className="o-name">{active.shipName || activeCustomer.name}</div>
+                <div className="adm-fl">{active.businessName ? "Business" : "Customer"}</div>
+                {active.businessName && <div className="o-name">{active.businessName}</div>}
+                {active.businessName && active.gstNumber && <div className="adm-muted">GST {active.gstNumber}</div>}
+                <div className={active.businessName ? "" : "o-name"} style={active.businessName ? { color: "var(--ink)", marginTop: 4 } : undefined}>
+                  {active.shipName || activeCustomer.name}
+                </div>
                 <div className="adm-muted">
                   {maskPhone(active.shipPhone || activeCustomer.phone)} · {maskEmail(active.email || activeCustomer.email)}
                 </div>
@@ -295,16 +313,56 @@ export default function OrdersScreen() {
                   </div>
                 ))}
                 {active.shipping > 0 && (
-                  <div className="o-items adm-muted"><span>Shipping</span><span>{formatInr(active.shipping)}</span></div>
+                  <div className="o-items adm-muted"><span>{active.kind === "bulk" ? "Freight" : "Shipping"}</span><span>{formatInr(active.shipping)}</span></div>
+                )}
+                {active.discount > 0 && (
+                  <div className="o-items adm-muted"><span>Discount</span><span>−{formatInr(active.discount)}</span></div>
                 )}
                 <div className="o-total"><span>Total</span><span>{formatInr(orderTotal(active))}</span></div>
+                {active.paymentMode === "advance" && (
+                  <>
+                    <div className="o-items adm-muted"><span>Advance received</span><span>{formatInr(active.amountPaid)}</span></div>
+                    <div className="o-items" style={{ color: "var(--clay)", fontWeight: 600 }}><span>Balance due</span><span>{formatInr(Math.max(0, orderTotal(active) - active.amountPaid))}</span></div>
+                  </>
+                )}
+                {(active.paymentMode === "pending" || active.paymentMode === "cod") && (
+                  <div className="o-items" style={{ color: "var(--clay)", fontWeight: 600 }}><span>Balance due</span><span>{formatInr(orderTotal(active))}</span></div>
+                )}
               </div>
+              {active.kind === "bulk" && (active.boxes != null || active.totalWeight || active.tracking.transporter || active.tracking.number) && (
+                <div className="o-sec">
+                  <div className="adm-fl">Shipment (entered manually)</div>
+                  {(active.boxes != null || active.totalWeight) && (
+                    <div className="adm-muted">{[active.boxes != null && `${active.boxes} box${active.boxes === 1 ? "" : "es"}`, active.totalWeight].filter(Boolean).join(" · ")}</div>
+                  )}
+                  {(active.tracking.transporter || active.tracking.number) && (
+                    <div style={{ color: "var(--ink)", marginTop: 2 }}>
+                      {active.tracking.transporter}{active.tracking.number && ` · ${active.tracking.number}`}
+                    </div>
+                  )}
+                  {(active.tracking.status || active.tracking.dispatchDate) && (
+                    <div className="adm-muted">
+                      {[active.tracking.status, active.tracking.dispatchDate && `dispatched ${fmtDate(active.tracking.dispatchDate)}`].filter(Boolean).join(" · ")}
+                    </div>
+                  )}
+                  {active.tracking.url && (
+                    <a href={active.tracking.url} target="_blank" rel="noopener noreferrer" style={{ color: "var(--clay)", fontWeight: 600, fontSize: 12.5 }}>Open tracking link</a>
+                  )}
+                </div>
+              )}
+              {active.note && (
+                <div className="o-sec">
+                  <div className="adm-fl">Note for packing</div>
+                  <div style={{ lineHeight: 1.5 }}>{active.note}</div>
+                </div>
+              )}
               <div className="o-sec">
                 <div className="adm-fl" style={{ marginBottom: 8 }}>Order timeline</div>
                 <Timeline order={active} future={future(active)} />
               </div>
 
               <div className="o-actions">
+                <button className="adm-btn" onClick={() => setForm(active.number)}>Edit order</button>
                 <button className="adm-btn" onClick={() => printInvoices(entries([active]), data.settings)}>Invoice PDF</button>
                 <button className="adm-btn" onClick={() => router.push(`/admin/payments?order=${active.number}`)}>Refund</button>
               </div>
@@ -314,6 +372,23 @@ export default function OrdersScreen() {
           )}
         </aside>
       </div>
+
+      {form !== null && (
+        <OrderFormModal
+          order={form === "new" ? null : data.orders.find((o) => o.number === form) ?? null}
+          customer={form === "new" ? undefined : customers.get(data.orders.find((o) => o.number === form)?.customerId ?? "")}
+          onClose={() => setForm(null)}
+          onSaved={(n) => {
+            if (form === "new") {
+              setFilter("All");
+              setQuery("");
+              setPage(1);
+            }
+            setActiveNo(n);
+            setSelected([n]);
+          }}
+        />
+      )}
     </>
   );
 }

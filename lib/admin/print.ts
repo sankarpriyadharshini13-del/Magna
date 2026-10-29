@@ -1,6 +1,6 @@
 import { barcodeSvgString } from "./code128";
 import { fmtDateYear, groupBarcode, maskPaymentId, orderLabel } from "./format";
-import { orderSubtotal, orderTotal } from "./logic";
+import { orderSubtotal, orderTotal, paymentLabel } from "./logic";
 import type { AdminProduct, Customer, Order, Settings } from "./types";
 
 /**
@@ -70,8 +70,18 @@ html,body{margin:0;padding:0;background:#fff}${pageCss}</style></head><body>${bo
 
 export function invoiceHtml(o: Order, c: Customer, s: Settings) {
   const label = orderLabel(o.number, s.invoice.numberFormat);
+  const manual = o.source === "admin";
   const pay =
-    o.payment.status === "pending" ? "Payment pending" : o.payment.refunded >= orderTotal(o) ? `Refunded (${o.method})` : `Paid (${o.method})`;
+    manual && o.payment.refunded < orderTotal(o)
+      ? paymentLabel(o)
+      : o.payment.status === "pending" ? "Payment pending" : o.payment.refunded >= orderTotal(o) ? `Refunded (${o.method})` : `Paid (${o.method})`;
+  const billTo = o.businessName
+    ? `${esc(o.businessName)}${o.gstNumber ? ` (GSTIN ${esc(o.gstNumber)})` : ""} · Attn: ${esc(o.shipName || c.name)}`
+    : esc(o.shipName || c.name);
+  const balance =
+    o.paymentMode === "advance"
+      ? ` · Advance ${inr(o.amountPaid)} · Balance due ${inr(Math.max(0, orderTotal(o) - o.amountPaid))}`
+      : o.paymentMode === "pending" || o.paymentMode === "cod" ? ` · Balance due ${inr(orderTotal(o))}` : "";
   const rows = o.items
     .map(
       (i) =>
@@ -83,10 +93,10 @@ export function invoiceHtml(o: Order, c: Customer, s: Settings) {
   return `<div class="doc"><div class="inv"><div class="inv-in">
 <div class="inv-head"><div><div class="inv-brand">${logo}${esc(s.store.name)}</div><div class="inv-muted">${esc(s.store.address)}</div>${gst}</div>
 <div class="inv-right"><b>INVOICE #${esc(label)}</b><div class="inv-muted">${esc(fmtDateYear(o.placedAt))} · ${esc(pay)}</div></div></div>
-<p><b>Bill to / Ship to:</b> ${esc(c.name)}, ${esc(o.address)}</p>
+<p><b>Bill to / Ship to:</b> ${billTo}${o.address ? `, ${esc(o.address)}` : ""}</p>
 <table><thead><tr><th>ITEM</th><th>QTY</th><th>PRICE</th><th>AMOUNT</th></tr></thead><tbody>${rows}</tbody></table>
-<div class="inv-tot"><div class="inv-muted">Subtotal ${inr(orderSubtotal(o))} · Shipping ${inr(o.shipping)}</div><b>Total ${inr(orderTotal(o))}</b></div>
-<div class="inv-foot">Payment: ${esc(o.method)} · ${esc(maskPaymentId(o.payment.id))} · ${esc(s.invoice.footer)}</div>
+<div class="inv-tot"><div class="inv-muted">Subtotal ${inr(orderSubtotal(o))} · ${o.kind === "bulk" ? "Freight" : "Shipping"} ${inr(o.shipping)}${o.discount ? ` · Discount −${inr(o.discount)}` : ""}${balance}</div><b>Total ${inr(orderTotal(o))}</b></div>
+<div class="inv-foot">Payment: ${esc(manual ? paymentLabel(o) : `${o.method} · ${maskPaymentId(o.payment.id)}`)} · ${esc(s.invoice.footer)}</div>
 </div></div></div>`;
 }
 

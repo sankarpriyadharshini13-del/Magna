@@ -1,6 +1,9 @@
 export type OrderStatus = "New" | "Packed" | "Delivered" | "Cancelled";
 
-export type PayMethod = "UPI" | "Card" | "NetBanking" | "Wallet" | "Other";
+export type PayMethod = "UPI" | "Card" | "NetBanking" | "Wallet" | "Cash" | "Other";
+
+/** online = paid on the website; the rest are set by an admin on orders they add or edit. */
+export type PaymentMode = "online" | "paid" | "cod" | "pending" | "advance";
 
 export type PaymentStatus = "pending" | "captured" | "refunded" | "partial_refund";
 
@@ -63,6 +66,35 @@ export interface Order {
   shipPhone: string;
   location: { city: string; state: string; pincode: string };
   deliveredAt: string | null;
+  /** Bulk = shops, events, large quantities (added by an admin). */
+  kind: "normal" | "bulk";
+  /** online = placed on the website; admin = added in Admin → Orders. */
+  source: "online" | "admin";
+  businessName: string;
+  gstNumber: string;
+  /** Note for packing. */
+  note: string;
+  paymentMode: PaymentMode;
+  /** Money received so far on admin orders (the advance for part-paid bulk orders). */
+  amountPaid: number;
+  /** Taken off the total (total = items + shipping − discount). */
+  discount: number;
+  /** Bulk orders: parcels and the transporter details the admin entered. */
+  boxes: number | null;
+  totalWeight: string;
+  tracking: OrderTracking;
+}
+
+export const TRACKING_STATUSES = ["Not dispatched", "Dispatched", "In transit", "Out for delivery", "Delivered", "Delayed"] as const;
+export type TrackingStatus = (typeof TRACKING_STATUSES)[number];
+
+export interface OrderTracking {
+  transporter: string;
+  number: string;
+  /** YYYY-MM-DD, empty when not dispatched yet. */
+  dispatchDate: string;
+  status: TrackingStatus | "";
+  url: string;
 }
 
 export interface Refund {

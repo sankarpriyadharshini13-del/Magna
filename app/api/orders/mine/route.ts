@@ -16,9 +16,12 @@ export const GET = handle(async (req) => {
   const { client } = await requireUser(req);
   const base =
     "number, placed_at, status, shipping, address, ship_name, ship_phone, method, payment_id, payment_refunded, delivered_at, order_items(product_id, name, pack_size, qty, price), order_events(label, note, at)";
+  // Payment mode, discount and the transporter details arrive with later migrations.
+  const extra = ", payment_mode, amount_paid, discount, transporter, tracking_number, dispatch_date, tracking_status, tracking_url";
   const query = (cols: string) => client.from("orders").select(cols).order("number", { ascending: false }).limit(100);
-  let { data, error } = await query(`${base}, reviews(rating, message, created_at)`);
-  // Before the reviews migration is applied, still show orders (just without reviews).
+  let { data, error } = await query(`${base}${extra}, reviews(rating, message, created_at)`);
+  // Before those migrations are applied, still show orders (just without the newer details).
+  if (error && ["42703", "PGRST204"].includes(error.code ?? "")) ({ data, error } = await query(`${base}, reviews(rating, message, created_at)`));
   if (error && ["PGRST200", "PGRST205", "42P01"].includes(error.code ?? "")) ({ data, error } = await query(base));
   if (error) throw dbError(error);
 
@@ -35,6 +38,8 @@ export const GET = handle(async (req) => {
     }));
     const subtotal = items.reduce((s: number, i: any) => s + i.price * i.qty, 0);
     const rv = Array.isArray(o.reviews) ? o.reviews[0] : o.reviews;
+    const discount = o.discount ?? 0;
+    const total = Math.max(0, subtotal + (o.shipping ?? 0) - discount);
     return {
       number: Number(o.number),
       label: orderLabel(Number(o.number), format),
@@ -43,7 +48,13 @@ export const GET = handle(async (req) => {
       items,
       subtotal,
       shipping: o.shipping ?? 0,
-      total: subtotal + (o.shipping ?? 0),
+      discount,
+      total,
+      paymentMode: o.payment_mode ?? "online",
+      amountPaid: o.amount_paid ?? 0,
+      tracking: o.transporter || o.tracking_number
+        ? { transporter: o.transporter ?? "", number: o.tracking_number ?? "", dispatchDate: o.dispatch_date ?? "", status: o.tracking_status ?? "", url: o.tracking_url ?? "" }
+        : null,
       refunded: o.payment_refunded ?? 0,
       address: o.address ?? "",
       shipName: o.ship_name ?? "",

@@ -1,5 +1,6 @@
 import "server-only";
 import { defaultSettings, PRODUCT_COLORS } from "@/lib/admin/defaults";
+import { TRACKING_STATUSES } from "@/lib/admin/types";
 import type {
   AdminProduct,
   Customer,
@@ -13,7 +14,7 @@ import type {
   Settings,
   StockLogEntry,
 } from "@/lib/admin/types";
-import { HttpError } from "./http";
+import { HttpError, dbError } from "./http";
 import { publicUrl } from "./supabase";
 
 /* ------------------------------------------------------------- DB → app shapes */
@@ -66,6 +67,23 @@ export function mapOrder(r: Row): Order {
     shipPhone: r.ship_phone ?? "",
     location: { city: r.ship_city ?? "", state: r.ship_state ?? "", pincode: r.ship_pincode ?? "" },
     deliveredAt: r.delivered_at ?? null,
+    kind: r.kind === "bulk" ? "bulk" : "normal",
+    source: r.source === "admin" ? "admin" : "online",
+    businessName: r.business_name ?? "",
+    gstNumber: r.gst_number ?? "",
+    note: r.note ?? "",
+    paymentMode: r.payment_mode ?? "online",
+    amountPaid: r.amount_paid ?? 0,
+    discount: r.discount ?? 0,
+    boxes: r.boxes ?? null,
+    totalWeight: r.total_weight ?? "",
+    tracking: {
+      transporter: r.transporter ?? "",
+      number: r.tracking_number ?? "",
+      dispatchDate: r.dispatch_date ?? "",
+      status: r.tracking_status ?? "",
+      url: r.tracking_url ?? "",
+    },
   };
 }
 
@@ -265,3 +283,126 @@ export function parseSettings(body: Row): Settings {
 }
 
 export { bad, int, str };
+
+/* ------------------------------------------------------------ admin orders */
+
+export type OrderPaymentMode = "paid" | "cod" | "pending" | "advance";
+
+export interface OrderInput {
+  kind: "normal" | "bulk";
+  name: string;
+  phone: string;
+  email: string;
+  business_name: string;
+  gst_number: string;
+  address: string;
+  city: string;
+  state: string;
+  pincode: string;
+  note: string;
+  shipping: number;
+  discount: number;
+  boxes: number | null;
+  total_weight: string;
+  transporter: string;
+  tracking_number: string;
+  dispatch_date: string;
+  tracking_status: string;
+  tracking_url: string;
+  payment_mode: OrderPaymentMode;
+  method: string;
+  amount_paid: number;
+  items: { product_id: string | null; name: string; pack_size: string; qty: number; price: number }[];
+}
+
+const MODES: OrderPaymentMode[] = ["paid", "cod", "pending", "advance"];
+const METHODS = ["UPI", "Cash", "Card", "NetBanking", "Other"];
+
+/** Body of "+ Add" / "Edit" order (Admin → Orders), checked before it reaches admin_save_order(). */
+export function parseOrder(body: Row, editing: boolean): OrderInput {
+  const kind = body.kind === "bulk" ? "bulk" : body.kind === "normal" ? "normal" : null;
+  if (!kind) throw bad("Choose Normal or Bulk order.");
+  const email = str(body.email, "Email", 160).toLowerCase();
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw bad("Enter a valid email address.");
+  const phone = str(body.phone, "Phone", 20, { required: true });
+  if (phone.replace(/\D/g, "").length < 10) throw bad("Enter a valid phone number (at least 10 digits).");
+  const pincode = str(body.pincode, "Pincode", 6);
+  if (pincode && !/^\d{6}$/.test(pincode)) throw bad("Pincode must be 6 digits.");
+  const gst = str(body.gst_number, "GST number", 15).toUpperCase();
+  if (gst && !/^[0-9A-Z]{15}$/.test(gst)) throw bad("GST number must be 15 letters and digits.");
+
+  if (!Array.isArray(body.items) || body.items.length === 0) throw bad("Add at least one product.");
+  if (body.items.length > 50) throw bad("An order can have at most 50 products.");
+  const items = body.items.map((raw: unknown, i: number) => {
+    const it = (raw ?? {}) as Row;
+    const productId = it.product_id === null || it.product_id === undefined || it.product_id === "" ? null : it.product_id;
+    if (productId !== null && (typeof productId !== "string" || productId.length > 80)) throw bad(`Product ${i + 1} isn't valid.`);
+    if (productId === null && !editing) throw bad(`Choose a product for line ${i + 1}.`);
+    return {
+      product_id: productId as string | null,
+      name: str(it.name, `Product ${i + 1} name`, 120, { required: productId === null }),
+      pack_size: str(it.pack_size, `Product ${i + 1} pack`, 40),
+      qty: int(it.qty, `Quantity of product ${i + 1}`, 1, 100_000),
+      price: int(it.price, `Price of product ${i + 1}`, 0, 10_000_000),
+    };
+  });
+  const shipping = int(body.shipping ?? 0, kind === "bulk" ? "Freight" : "Shipping", 0, 1_000_000);
+  const discount = int(body.discount ?? 0, "Discount", 0, 10_000_000);
+  const total = shipping - discount + items.reduce((s: number, i: { qty: number; price: number }) => s + i.qty * i.price, 0);
+  if (total < 0) throw bad("The discount can't be more than the order total.");
+
+  // Parcels and manual tracking (bulk orders only).
+  const boxes = body.boxes === null || body.boxes === undefined || body.boxes === "" ? null : int(body.boxes, "Boxes / parcels", 0, 10_000);
+  const dispatchDate = str(body.dispatch_date, "Dispatch date", 10);
+  if (dispatchDate && (!/^\d{4}-\d{2}-\d{2}$/.test(dispatchDate) || Number.isNaN(Date.parse(dispatchDate)))) throw bad("Choose a valid dispatch date.");
+  const trackingStatus = str(body.tracking_status, "Tracking status", 30);
+  if (trackingStatus && !(TRACKING_STATUSES as readonly string[]).includes(trackingStatus)) throw bad("Choose a tracking status from the list.");
+  const trackingUrl = str(body.tracking_url, "Tracking link", 300);
+  if (trackingUrl && !/^https?:\/\/[^\s]+\.[^\s]+/i.test(trackingUrl)) throw bad("The tracking link must start with https://");
+
+  const mode = body.payment_mode as OrderPaymentMode;
+  if (!MODES.includes(mode)) throw bad("Choose how the order is paid.");
+  const method = mode === "cod" ? "Cash" : METHODS.includes(body.method) ? body.method : "Other";
+  const amountPaid = mode === "advance" ? int(body.amount_paid, "Advance received", 1, 10_000_000) : 0;
+  if (mode === "advance" && amountPaid >= total) throw bad("The advance must be less than the order total. Choose Fully paid instead.");
+
+  return {
+    kind,
+    name: str(body.name, kind === "bulk" ? "Contact person" : "Customer name", 120, { required: true }),
+    phone,
+    email,
+    business_name: kind === "bulk" ? str(body.business_name, "Business name", 120, { required: true }) : "",
+    gst_number: kind === "bulk" ? gst : "",
+    address: str(body.address, "Address", 300),
+    city: str(body.city, "City", 80),
+    state: str(body.state, "State", 80),
+    pincode,
+    note: str(body.note, "Note", 500),
+    shipping,
+    discount,
+    boxes: kind === "bulk" ? boxes : null,
+    total_weight: kind === "bulk" ? str(body.total_weight, "Total weight", 20) : "",
+    transporter: kind === "bulk" ? str(body.transporter, "Transporter", 80) : "",
+    tracking_number: kind === "bulk" ? str(body.tracking_number, "Tracking / LR number", 60) : "",
+    dispatch_date: kind === "bulk" ? dispatchDate : "",
+    tracking_status: kind === "bulk" ? trackingStatus : "",
+    tracking_url: kind === "bulk" ? trackingUrl : "",
+    payment_mode: mode,
+    method,
+    amount_paid: amountPaid,
+    items,
+  };
+}
+
+/** Turns admin_save_order() errors into messages for the admin. */
+export function orderSaveError(e: { code?: string; message?: string } | null): HttpError {
+  const m = e?.message ?? "";
+  if (m.startsWith("insufficient_stock:")) return new HttpError(409, `Not enough stock for ${m.slice(19)}. Lower the quantity or add stock in Products & Stock.`);
+  if (m.startsWith("unknown_product:")) return new HttpError(409, "One of the products no longer exists. Remove it and try again.");
+  if (m.includes("order_not_found")) return new HttpError(404, "That order no longer exists.");
+  if (m.includes("invalid_advance")) return new HttpError(400, "The advance must be more than ₹0 and less than the order total.");
+  if (m.includes("invalid_discount")) return new HttpError(400, "The discount can't be more than the order total.");
+  if (m.includes("not_admin")) return new HttpError(403, "You don't have permission to do that.");
+  if (/(_required|invalid_)/.test(m)) return new HttpError(400, "Some of the order details are missing or not valid.");
+  return dbError(e);
+}

@@ -255,6 +255,35 @@ new-order email on/off. Without email keys, orders still work and the emails are
   Load more). Long messages are collapsed with "Read more". For exact totals and paging past 50 reviews, run
   `supabase/migrations/20261031000000_review_listing.sql`; until then the site uses the newest 50.
 
+### Adding and editing orders (Admin → Orders)
+
+- **+ Add** (next to Export CSV) opens the Add order popup:
+  - **Normal order:** one customer at shop prices. Payment: already paid (UPI / cash / card / bank), cash on
+    delivery, or payment pending.
+  - **Bulk order:** business name, contact person, optional GST number, and a bulk rate per product. Payment:
+    fully paid, advance received (shows the balance due) or not paid yet.
+- New orders appear as **New** (bulk ones with a **BULK** tag), reduce stock, and reuse the customer with the same
+  email (or same name + phone), otherwise they add a new customer.
+- **Edit** on every row (and in the order panel) changes any order: customer details, address, products,
+  quantities, prices, payment and the packing note. Stock moves by the difference. Website payments are never
+  changed (refunds stay in Payments & Refunds). Each save is noted on the order's timeline.
+- Normal orders also take a **shipping** charge and a **discount** (edited in the order summary). Bulk orders
+  take **freight**, **boxes / parcels**, **total weight** and a **manual tracking** box: transporter, tracking /
+  LR number, dispatch date, status and an optional tracking link. The customer sees the tracking on My orders.
+- Setup: run `supabase/migrations/20261101000000_manual_orders.sql`, then
+  `supabase/migrations/20261102000000_order_delivery.sql`.
+
+### Live stock
+
+- Every purchase lowers each product's stock by the quantity bought, in the same database transaction that creates
+  the order (and logs it under Products & Stock → Recent stock changes).
+- The admin panel re-reads stock every 20 seconds and on tab focus. **Products & Stock** shows "Live · updated
+  <time>"; the sidebar link shows a badge with the number of products at 10 units or fewer (red when one is sold out).
+- While the panel is open, a notice pops up when a sale lowers stock, and a warning when a product drops to 10 or
+  fewer, or sells out.
+- With Settings → "Low-stock alerts" on, the store email and the owner get a **Low stock** email when a purchase
+  leaves a product at 10 units or fewer (needs `RESEND_API_KEY` and `EMAIL_FROM`).
+
 ### Prices and cart quantity
 
 - **Admin → Products & Stock** has two price fields: **Original price** (optional, e.g. MRP) and

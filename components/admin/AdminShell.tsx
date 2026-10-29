@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { DOC_CSS } from "@/lib/admin/print";
-import { attentionCount } from "@/lib/admin/logic";
+import { LOW_STOCK, attentionCount } from "@/lib/admin/logic";
 import { useAdmin } from "@/lib/admin/store";
 import { useAuth } from "@/context/AuthContext";
 import AdminLogin from "./AdminLogin";
@@ -104,6 +104,9 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   }
 
   const badge = attentionCount(data.orders);
+  // Products on the shop that are running low or have sold out (shown on the Products & Stock link).
+  const stockAlerts = data.products.filter((p) => p.visible && p.stock <= LOW_STOCK);
+  const soldOut = stockAlerts.filter((p) => p.stock <= 0).length;
   const storeName = data.settings.store.name || "Magna Eco Bites";
 
   return (
@@ -130,6 +133,15 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
                   <Link key={it.href} href={it.href} className={`adm-nav-item${active ? " active" : ""}`} aria-current={active ? "page" : undefined}>
                     {it.label}
                     {it.href === "/admin/orders" && badge > 0 && <span className="adm-badge-n">{badge}</span>}
+                    {it.href === "/admin/products" && stockAlerts.length > 0 && (
+                      <span
+                        className={`adm-badge-n ${soldOut ? "" : "warn"}`}
+                        title={`${stockAlerts.length} product${stockAlerts.length === 1 ? "" : "s"} low or out of stock`}
+                        aria-label={`${stockAlerts.length} stock alert${stockAlerts.length === 1 ? "" : "s"}`}
+                      >
+                        {stockAlerts.length}
+                      </span>
+                    )}
                   </Link>
                 );
               })}

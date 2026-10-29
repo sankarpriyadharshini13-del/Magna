@@ -19,7 +19,12 @@ interface MyOrder {
   items: { productId: string | null; name: string; packSize: string; qty: number; price: number }[];
   subtotal: number;
   shipping: number;
+  discount?: number;
   total: number;
+  paymentMode?: "online" | "paid" | "cod" | "pending" | "advance";
+  amountPaid?: number;
+  /** Transporter details entered by the shop (bulk orders). */
+  tracking?: { transporter: string; number: string; dispatchDate: string; status: string; url: string } | null;
   refunded: number;
   address: string;
   shipName: string;
@@ -29,6 +34,16 @@ interface MyOrder {
   deliveredAt: string | null;
   timeline: { label: string; note: string | null; at: string }[];
   review: SavedReview | null;
+}
+
+function paymentText(o: MyOrder) {
+  switch (o.paymentMode) {
+    case "paid": return `Paid via ${o.method === "NetBanking" ? "bank transfer" : o.method}`;
+    case "cod": return "Cash on delivery";
+    case "pending": return `Payment pending · ${formatInr(o.total)} due`;
+    case "advance": return `Advance ${formatInr(o.amountPaid ?? 0)} paid · ${formatInr(Math.max(0, o.total - (o.amountPaid ?? 0)))} due`;
+    default: return o.testPayment ? `${o.method} · test payment (no money charged)` : `Paid via ${o.method}`;
+  }
 }
 
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
@@ -154,15 +169,33 @@ function OrderCard({ o, defaultOpen, remind, onReviewed }: { o: MyOrder; default
                 {o.address || "—"}
               </p>
               {o.deliveredAt && <p className="mt-2 text-xs font-semibold text-leaf">Delivered on {fmtDate(o.deliveredAt)}</p>}
+              {o.tracking && (
+                <div className="mt-3 rounded-xl bg-white/80 p-3 text-xs leading-relaxed text-ink/75 ring-1 ring-forest/[0.06]">
+                  <p className="font-bold uppercase tracking-[0.12em] text-forest">Shipment</p>
+                  <p className="mt-1">
+                    {o.tracking.transporter && <b className="text-forest">{o.tracking.transporter}</b>}
+                    {o.tracking.number && <> · Tracking / LR no. {o.tracking.number}</>}
+                  </p>
+                  {(o.tracking.status || o.tracking.dispatchDate) && (
+                    <p>{[o.tracking.status, o.tracking.dispatchDate && `dispatched ${fmtDate(o.tracking.dispatchDate)}`].filter(Boolean).join(" · ")}</p>
+                  )}
+                  {o.tracking.url && (
+                    <a href={o.tracking.url} target="_blank" rel="noopener noreferrer" className="mt-1 inline-block font-semibold text-clay underline-offset-2 hover:underline">
+                      Track shipment
+                    </a>
+                  )}
+                </div>
+              )}
             </div>
             <div>
               <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-clay">Payment</p>
               <div className="mt-1.5 space-y-1 text-ink/80">
                 <p className="flex justify-between"><span>Items</span><span>{formatInr(o.subtotal)}</span></p>
                 <p className="flex justify-between"><span>Delivery</span><span>{o.shipping ? formatInr(o.shipping) : "Free"}</span></p>
+                {!!o.discount && <p className="flex justify-between text-leaf"><span>Discount</span><span>−{formatInr(o.discount)}</span></p>}
                 <p className="flex justify-between font-semibold text-forest"><span>Total</span><span>{formatInr(o.total)}</span></p>
                 {o.refunded > 0 && <p className="flex justify-between text-clay"><span>Refunded</span><span>{formatInr(o.refunded)}</span></p>}
-                <p className="pt-1 text-xs text-ink/55">{o.testPayment ? `${o.method} · test payment (no money charged)` : `Paid via ${o.method}`}</p>
+                <p className="pt-1 text-xs text-ink/55">{paymentText(o)}</p>
               </div>
             </div>
             {o.timeline.length > 0 && (

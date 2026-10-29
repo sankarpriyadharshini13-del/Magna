@@ -4,9 +4,10 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useAuth } from "@/context/AuthContext";
 import { getSupabase } from "@/lib/supabase";
 import { orderLabel } from "./format";
-import type { AdminData } from "./types";
+import { LOW_STOCK } from "./logic";
+import type { AdminData, AdminProduct } from "./types";
 
-export type ToastTone = "ok" | "error";
+export type ToastTone = "ok" | "warn" | "error";
 interface ToastItem {
   id: number;
   message: string;
@@ -29,6 +30,8 @@ interface AdminContextValue {
   now: Date;
   label: (orderNumber: number) => string;
   toast: (message: string, tone?: ToastTone) => void;
+  /** When the data was last read from the database (drives the "Live · updated" label). */
+  lastSync: Date | null;
   toasts: ToastItem[];
   dismissToast: (id: number) => void;
   /** Re-read everything from the database. */
@@ -74,6 +77,35 @@ async function call<T>(path: string, init: { method?: string; body?: unknown; fo
   }
 }
 
+/**
+ * Tells the admin when stock changed since the last refresh: products that just ran low or out (always),
+ * and purchases that lowered stock (on background refreshes, so their own edits don't echo back).
+ */
+function announceStock(
+  before: Map<string, number> | null,
+  products: AdminProduct[],
+  background: boolean,
+  toast: (message: string, tone?: ToastTone) => void,
+) {
+  if (!before) return;
+  const sold: string[] = [];
+  const out: string[] = [];
+  const low: string[] = [];
+  for (const p of products) {
+    const prev = before.get(p.id);
+    if (prev === undefined || p.stock >= prev) continue;
+    sold.push(`${p.name} ${prev} → ${p.stock}`);
+    if (!p.visible) continue;
+    if (p.stock <= 0) out.push(p.name);
+    else if (p.stock <= LOW_STOCK && prev > LOW_STOCK) low.push(`${p.name} (${p.stock} left)`);
+  }
+  if (out.length) toast(`Out of stock: ${out.join(", ")}. Restock it in Products & Stock.`, "error");
+  if (low.length) toast(`Low stock: ${low.join(", ")}.`, "warn");
+  if (background && sold.length && !out.length && !low.length) {
+    toast(sold.length <= 2 ? `Stock updated after a sale: ${sold.join(", ")}.` : `Stock updated for ${sold.length} products after new sales.`);
+  }
+}
+
 export function AdminProvider({ children }: { children: React.ReactNode }) {
   const { user, ready } = useAuth();
   const [status, setStatus] = useState<AdminStatus>("loading");
@@ -88,12 +120,15 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     (message: string, tone: ToastTone = "ok") => {
       const id = ++toastId.current;
       setToasts((t) => [...t.slice(-2), { id, message, tone }]);
-      setTimeout(() => dismissToast(id), tone === "error" ? 6000 : 3500);
+      setTimeout(() => dismissToast(id), tone === "ok" ? 3500 : 7000);
     },
     [dismissToast],
   );
 
   const lastOrder = useRef<number | null>(null);
+  /** Stock per product at the last refresh, to spot purchases and products running low. */
+  const lastStock = useRef<Map<string, number> | null>(null);
+  const [lastSync, setLastSync] = useState<Date | null>(null);
   const toastRef = useRef(toast);
   toastRef.current = toast;
 
@@ -108,6 +143,9 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
         toastRef.current?.(fresh === 1 ? `New order #${orderLabel(newest, fmt)} received.` : `${fresh} new orders received.`);
       }
       lastOrder.current = newest;
+      announceStock(lastStock.current, res.data.products, background, toastRef.current);
+      lastStock.current = new Map(res.data.products.map((p) => [p.id, p.stock]));
+      setLastSync(new Date());
       setData(res.data);
       setStatus("ready");
     } else if (background && res.status !== 401 && res.status !== 403) {
@@ -142,11 +180,11 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(tick);
   }, []);
 
-  // Keep orders, stock and customers live: refresh every 30 s while the tab is visible, and on focus.
+  // Keep orders, stock and customers live: refresh every 20 s while the tab is visible, and on focus.
   useEffect(() => {
     if (status !== "ready") return;
     const refreshIfVisible = () => document.visibilityState === "visible" && load(true);
-    const timer = setInterval(refreshIfVisible, 30_000);
+    const timer = setInterval(refreshIfVisible, 20_000);
     window.addEventListener("focus", refreshIfVisible);
     return () => {
       clearInterval(timer);
@@ -209,6 +247,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       now,
       label,
       toast,
+      lastSync,
       toasts,
       dismissToast,
       refresh: () => load(),
@@ -220,7 +259,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
         load();
       },
     }),
-    [status, errorMessage, data, now, label, toast, toasts, dismissToast, load, api, mutate, uploadImage],
+    [status, errorMessage, data, now, label, toast, lastSync, toasts, dismissToast, load, api, mutate, uploadImage],
   );
 
   return <AdminContext.Provider value={value}>{children}</AdminContext.Provider>;
