@@ -271,7 +271,8 @@ new-order email on/off. Without email keys, orders still work and the emails are
   take **freight**, **boxes / parcels**, **total weight** and a **manual tracking** box: transporter, tracking /
   LR number, dispatch date, status and an optional tracking link. The customer sees the tracking on My orders.
 - Setup: run `supabase/migrations/20261101000000_manual_orders.sql`, then
-  `supabase/migrations/20261102000000_order_delivery.sql`.
+  `supabase/migrations/20261102000000_order_delivery.sql`, then `supabase/migrations/20261103000000_order_customer_sync.sql`
+  (editing an order then also updates that customer on the Customers page).
 
 ### Live stock
 

@@ -18,28 +18,6 @@ const FILTERS: Filter[] = ["All", "New", "Packed", "Delivered"];
 
 const matchesFilter = (o: Order, f: Filter) => (f === "All" ? true : o.status === f);
 
-function Timeline({ order, future }: { order: Order; future?: { label: string; note: string }[] }) {
-  const lastIdx = order.timeline.length - 1;
-  return (
-    <ol className="adm-tl">
-      {order.timeline.map((e, i) => (
-        <li key={i} className={i === lastIdx && (order.status === "New" || order.status === "Packed") ? "cur" : ""}>
-          <i />
-          <b>{e.label}</b>
-          <span>{fmtDateTime(e.at)}{e.note ? ` · ${e.note}` : ""}</span>
-        </li>
-      ))}
-      {future?.map((f) => (
-        <li key={f.label} className="todo">
-          <i />
-          <b>{f.label}</b>
-          <span>{f.note}</span>
-        </li>
-      ))}
-    </ol>
-  );
-}
-
 export default function OrdersScreen() {
   const router = useRouter();
   const { data, mutate, label } = useAdminData();
@@ -72,8 +50,9 @@ export default function OrdersScreen() {
     if (initialised.current || qParam === undefined || orderParam === undefined) return;
     initialised.current = true;
     if (qParam) setQuery(qParam);
+    // Details open only when the admin clicks an order, or follows a link to one (?order=1009).
     const fromUrl = orderParam ? Number(orderParam.replace(/\D/g, "")) : NaN;
-    const target = data.orders.find((o) => o.number === fromUrl) ?? data.orders.find((o) => o.status === "New") ?? data.orders[0];
+    const target = data.orders.find((o) => o.number === fromUrl);
     if (target) {
       setActiveNo(target.number);
       setSelected([target.number]);
@@ -115,10 +94,8 @@ export default function OrdersScreen() {
   const active = data.orders.find((o) => o.number === activeNo) ?? null;
   const activeCustomer = active ? customers.get(active.customerId) : undefined;
 
-  const toggleSel = (n: number) => {
-    setSelected((s) => (s.includes(n) ? s.filter((x) => x !== n) : [...s, n]));
-    setActiveNo(n);
-  };
+  // Ticking a checkbox only selects the order for bulk actions; clicking the row opens its details.
+  const toggleSel = (n: number) => setSelected((s) => (s.includes(n) ? s.filter((x) => x !== n) : [...s, n]));
   const pickRow = (n: number) => {
     setActiveNo(n);
     setSelected([n]);
@@ -140,12 +117,6 @@ export default function OrdersScreen() {
       }),
     ]);
 
-  const future = (o: Order) =>
-    o.status === "New"
-      ? [{ label: "Packed", note: "Pending" }, { label: "Delivered", note: "Pending" }]
-      : o.status === "Packed"
-        ? [{ label: "Delivered", note: "Pending — customer is emailed when marked" }]
-        : undefined;
   const locationOf = (o: Order) => {
     if (o.location.city) return { main: o.location.city, sub: [o.location.state, o.location.pincode].filter(Boolean).join(" · ") };
     const c = customers.get(o.customerId);
@@ -174,7 +145,7 @@ export default function OrdersScreen() {
         ))}
       </div>
 
-      <div className="o-wrap">
+      <div className={`o-wrap ${active ? "open" : "closed"}`}>
         <section className="adm-card o-panel" style={{ minHeight: 686 }}>
           <div className="adm-scroll">
             <table className="adm-table">
@@ -189,7 +160,7 @@ export default function OrdersScreen() {
                       onChange={(e) => setSelected(e.target.checked ? Array.from(new Set([...selected, ...rows.map((o) => o.number)])) : selected.filter((n) => !rows.some((o) => o.number === n)))}
                     />
                   </th>
-                  <th>Order</th><th>Placed</th><th>Customer</th><th>Customer location</th><th>Items</th><th>Amount</th><th>Payment</th><th>Status</th><th aria-label="Edit" />
+                  <th>Order</th><th>Customer</th><th className="o-loc">Customer location</th><th>Amount</th><th className="o-pay">Payment</th><th>Status</th><th aria-label="Edit" />
                 </tr>
               </thead>
               <tbody>
@@ -200,21 +171,25 @@ export default function OrdersScreen() {
                       <td onClick={(e) => e.stopPropagation()}>
                         <input type="checkbox" className="adm-cb" aria-label={`Select ${label(o.number)}`} checked={selected.includes(o.number)} onChange={() => toggleSel(o.number)} />
                       </td>
-                      <td className="b">#{label(o.number)}{o.kind === "bulk" && <span className="o-kind">BULK</span>}</td>
-                      <td style={{ color: "#4a4f46" }}>{fmtDateTime(o.placedAt)}</td>
+                      <td style={{ lineHeight: 1.25 }}>
+                        <b style={{ color: "var(--ink)" }}>#{label(o.number)}</b>{o.kind === "bulk" && <span className="o-kind">BULK</span>}
+                        <span className="sub">{fmtDateTime(o.placedAt)}</span>
+                      </td>
                       <td style={{ lineHeight: 1.25 }}>
                         <b style={{ fontWeight: 600, color: "var(--ink)" }}>{o.businessName || o.shipName || c?.name}</b>
                         <span className="sub">{o.businessName ? o.shipName : c && customerSub(c)}</span>
                       </td>
-                      <td style={{ lineHeight: 1.25 }}>
+                      <td className="o-loc" style={{ lineHeight: 1.25 }}>
                         {(() => {
                           const loc = locationOf(o);
                           return loc ? <><span style={{ color: "var(--ink)" }}>{loc.main}</span>{loc.sub && <span className="sub">{loc.sub}</span>}</> : <span className="adm-muted">—</span>;
                         })()}
                       </td>
-                      <td>{orderUnits(o)}</td>
-                      <td className="b">{formatInr(orderTotal(o))}</td>
-                      <td>{paymentLabel(o)}</td>
+                      <td style={{ lineHeight: 1.25 }}>
+                        <b style={{ color: "var(--ink)" }}>{formatInr(orderTotal(o))}</b>
+                        <span className="sub">{orderUnits(o)} item{orderUnits(o) === 1 ? "" : "s"}</span>
+                      </td>
+                      <td className="o-pay">{paymentLabel(o)}</td>
                       <td><Badge tone={orderTone(o.status)}>{o.status}</Badge></td>
                       <td onClick={(e) => e.stopPropagation()}>
                         <button type="button" className="adm-btn sm" aria-label={`Edit order ${label(o.number)}`} onClick={() => { pickRow(o.number); setForm(o.number); }}>Edit</button>
@@ -223,7 +198,7 @@ export default function OrdersScreen() {
                   );
                 })}
                 {!rows.length && (
-                  <tr><td colSpan={10}><div className="adm-empty">{data.orders.length ? "No orders match your search." : "No orders yet. Click “+ Add” to add one."}</div></td></tr>
+                  <tr><td colSpan={7}><div className="adm-empty">{data.orders.length ? "No orders match your search." : "No orders yet. Click “+ Add” to add one."}</div></td></tr>
                 )}
               </tbody>
             </table>
@@ -252,12 +227,15 @@ export default function OrdersScreen() {
           </div>
         </section>
 
+        {active && activeCustomer && (
         <aside className="adm-card o-panel" aria-label="Order details">
-          {active && activeCustomer ? (
             <>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
                 <h2 style={{ fontFamily: "var(--font-serif)", fontSize: 19, color: "var(--ink)" }}>Order #{label(active.number)}</h2>
-                <Badge tone={orderTone(active.status)}>{active.status}</Badge>
+                <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <Badge tone={orderTone(active.status)}>{active.status}</Badge>
+                  <button type="button" className="adm-x" aria-label="Close order details" onClick={() => { setActiveNo(null); setSelected([]); }}>×</button>
+                </span>
               </div>
               <p className="adm-muted" style={{ margin: "4px 0 14px" }}>
                 {active.source === "admin" ? "Added by admin" : "Placed"} {fmtDateTime(active.placedAt)} ·{" "}
@@ -356,10 +334,6 @@ export default function OrdersScreen() {
                   <div style={{ lineHeight: 1.5 }}>{active.note}</div>
                 </div>
               )}
-              <div className="o-sec">
-                <div className="adm-fl" style={{ marginBottom: 8 }}>Order timeline</div>
-                <Timeline order={active} future={future(active)} />
-              </div>
 
               <div className="o-actions">
                 <button className="adm-btn" onClick={() => setForm(active.number)}>Edit order</button>
@@ -367,10 +341,8 @@ export default function OrdersScreen() {
                 <button className="adm-btn" onClick={() => router.push(`/admin/payments?order=${active.number}`)}>Refund</button>
               </div>
             </>
-          ) : (
-            <div className="adm-empty">Select an order to see its details.</div>
-          )}
         </aside>
+        )}
       </div>
 
       {form !== null && (
