@@ -263,6 +263,10 @@
 /* ---------------- products ---------------- */
 .p-kpis { grid-template-columns: repeat(4, 1fr); }
 .p-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 398px; gap: 14px; align-items: start; }
+/* The Edit product panel appears only after Edit / "+ Add new product"; until then the list uses the full width.
+   While it's open the SKU column steps aside so the Edit buttons stay in view. */
+.p-wrap.closed { grid-template-columns: minmax(0, 1fr); }
+.p-wrap.open .p-sku { display: none; }
 .p-col { display: grid; gap: 14px; }
 .p-tile { width: 36px; height: 36px; border-radius: 8px; display: grid; place-items: center; color: #fff; font-family: var(--font-serif); font-weight: 700; font-size: 15px; flex: none; background-size: cover; background-position: center; }
 .p-cell { display: flex; align-items: center; gap: 11px; }

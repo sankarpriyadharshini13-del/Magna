@@ -40,7 +40,8 @@ export default function ProductsScreen() {
   const { data, mutate, uploadImage, toast, lastSync } = useAdminData();
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [selectedId, setSelectedId] = useState<string>(() => data.products[0]?.id ?? "new");
+  /** null = no panel; "new" = Add new product; otherwise the product being edited. */
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const isNew = selectedId === "new";
   const product = data.products.find((p) => p.id === selectedId) ?? null;
 
@@ -52,6 +53,13 @@ export default function ProductsScreen() {
   const panelRef = useRef<HTMLElement>(null);
 
   /** Opens an empty form, brings it into view and puts the cursor in the name field. */
+  /** Opens the Edit product panel for a product and brings it into view. */
+  const openEdit = (id: string) => {
+    setSelectedId(id);
+    requestAnimationFrame(() => panelRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }));
+  };
+  const closePanel = () => setSelectedId(null);
+
   const startNew = () => {
     setSelectedId("new");
     setDraft(toDraft(null));
@@ -193,26 +201,26 @@ export default function ProductsScreen() {
         <div className="adm-kpi"><div className="l">Out of stock</div><div className="v">{out.length}</div><div className={`d ${out.length ? "bad" : ""}`}>{out.length ? "Restock now" : "All good"}</div></div>
       </div>
 
-      <div className="p-wrap">
+      <div className={`p-wrap ${selectedId ? "open" : "closed"}`}>
         <div className="p-col">
           <section className="adm-card">
             <div className="adm-scroll">
               <table className="adm-table">
                 <thead>
-                  <tr><th>Product</th><th>SKU</th><th>Price</th><th>Stock</th><th>Status</th><th>Visible</th><th /></tr>
+                  <tr><th>Product</th><th className="p-sku">SKU</th><th>Price</th><th>Stock</th><th>Status</th><th>Visible</th><th /></tr>
                 </thead>
                 <tbody>
                   {data.products.map((p) => {
                     const st = productStatus(p);
                     return (
-                      <tr key={p.id} className={`click${selectedId === p.id ? " sel" : ""}`} style={{ height: 56 }} onClick={() => setSelectedId(p.id)}>
+                      <tr key={p.id} className={`click${selectedId === p.id ? " sel" : ""}`} style={{ height: 56 }} onClick={() => openEdit(p.id)}>
                         <td>
                           <div className="p-cell">
                             <div className="p-tile" style={tileStyle(p)}>{p.images[0] ? "" : p.name === "Coming Soon" ? "?" : initials(p.name)}</div>
                             <div><b>{p.name}</b><span>{subtitle(p)}</span></div>
                           </div>
                         </td>
-                        <td style={{ color: "var(--muted)" }}>{p.sku || "—"}</td>
+                        <td className="p-sku" style={{ color: "var(--muted)" }}>{p.sku || "—"}</td>
                         <td className="b">
                           {p.price != null ? formatInr(p.price) : "—"}
                           {p.price != null && p.originalPrice != null && p.originalPrice > p.price && (
@@ -228,7 +236,7 @@ export default function ProductsScreen() {
                           <Toggle checked={p.visible} label={`Show ${p.name} on website`} onChange={(v) => toggleVisible(p, v)} />
                         </td>
                         <td onClick={(e) => e.stopPropagation()}>
-                          <button className="adm-btn sm" onClick={() => setSelectedId(p.id)}>Edit</button>
+                          <button className="adm-btn sm" onClick={() => openEdit(p.id)}>Edit</button>
                         </td>
                       </tr>
                     );
@@ -271,8 +279,15 @@ export default function ProductsScreen() {
           </section>
         </div>
 
+        {selectedId && (
         <section ref={panelRef} className="adm-card" aria-label={isNew ? "New product" : "Edit product"} style={{ minHeight: 700, display: "flex", flexDirection: "column" }}>
-          <div className="adm-card-h"><h2>{isNew ? "New product" : "Edit product"}</h2><Badge tone={status.tone}>{status.label}</Badge></div>
+          <div className="adm-card-h">
+            <h2>{isNew ? "New product" : "Edit product"}</h2>
+            <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <Badge tone={status.tone}>{status.label}</Badge>
+              <button type="button" className="adm-x" aria-label="Close product panel" onClick={closePanel}>×</button>
+            </span>
+          </div>
 
           <div className="p-up">
             <div
@@ -366,12 +381,13 @@ export default function ProductsScreen() {
             <button className="adm-btn pri lg" onClick={save} disabled={busy || uploading}>{busy ? "Saving…" : isNew ? "Add product" : "Save changes"}</button>
             <button className="adm-btn lg" onClick={() => setModal("preview")} disabled={!draft.name.trim()}>Preview</button>
             {isNew ? (
-              <button className="adm-btn lg sp" disabled={busy} onClick={() => setSelectedId(data.products[0]?.id ?? "new")} style={data.products.length ? undefined : { display: "none" }}>Cancel</button>
+              <button className="adm-btn lg sp" disabled={busy} onClick={closePanel}>Cancel</button>
             ) : (
               <button className="adm-btn dng lg sp" onClick={() => setModal("remove")}>Remove</button>
             )}
           </div>
         </section>
+        )}
       </div>
 
       {modal === "remove" && product && (
@@ -382,7 +398,7 @@ export default function ProductsScreen() {
           onConfirm={async () => {
             const rest = data.products.filter((p) => p.id !== product.id);
             const res = await mutate(`/api/admin/products/${product.id}`, "DELETE", undefined, `${product.name} removed.`);
-            if (res.ok) setSelectedId(rest[0]?.id ?? "new");
+            if (res.ok) closePanel();
           }}
           onClose={() => setModal(null)}
         />
