@@ -9,7 +9,7 @@ async function loadProducts(): Promise<Product[]> {
   try {
     const products = await getPublicProducts();
     // Filter products that have images
-    return products.filter(p => p.image || p.images?.length > 0);
+    return products.filter(p => Boolean(p.image) || (p.images && p.images.length > 0));
   } catch (error) {
     console.error("Failed to load products:", error);
     return [];

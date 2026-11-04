@@ -25,7 +25,7 @@ export default function ProductCarousel({ products }: { products: Product[] }) {
   }, [products.length]);
 
   const currentProduct = products[currentIndex];
-  const imageSrc = currentProduct?.image || currentProduct?.images?.[0] || "/images/placeholder-product.jpg";
+  const imageSrc = currentProduct?.image || (currentProduct?.images && currentProduct.images[0]) || "/images/placeholder-product.jpg";
   const imageAlt = currentProduct?.imageAlt || "Magna Eco Bites product";
 
   return (
