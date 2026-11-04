@@ -301,6 +301,32 @@ Opening **/admin** (or any admin page) while signed out shows the admin sign-in 
 only after the server confirms the account is in `admin_members`; other accounts see "No admin access"
 with an option to switch accounts. Use **Sign out** at the bottom of the admin sidebar.
 
+### Changing admin email and password
+
+**To change your password:**
+1. Go to **Admin → Settings**
+2. Scroll to the **"Team & access"** section
+3. Click the **"Change password"** button
+4. Enter your current password, new password (minimum 8 characters), and confirm
+5. Click "Update password"
+
+**To change your email:**
+Run the same script used during setup with the new email address. Copy the `service_role` key from Supabase (Project Settings → API) and run (PowerShell):
+
+```powershell
+$env:SUPABASE_SERVICE_ROLE_KEY="<service_role key>"
+$env:ADMIN_EMAIL="<new email>"; $env:ADMIN_PASSWORD="<current password>"; $env:ADMIN_NAME="Magesh"; $env:ALLOW_OWNER_EMAIL_CHANGE="1"
+node --env-file=.env scripts/create-admin.mjs
+```
+
+This will update the owner's email while keeping the existing password. You'll need to verify the new email in Supabase.
+
+**To reset a forgotten password:**
+1. Go to **/admin** while signed out
+2. Enter your email and click **"Forgot password?"**
+3. If an admin account exists for that email, a password reset link will be sent
+4. Follow the link in the email to set a new password
+
 ### Notes
 
 - Product photos are compressed in the browser, validated on the server (JPG/PNG/WebP, ≤ 1.5 MB) and

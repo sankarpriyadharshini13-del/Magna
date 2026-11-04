@@ -1,6 +1,20 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowIcon, LeafIcon } from "@/components/ui/Icons";
+import { getPublicProducts } from "@/lib/server/publicProducts";
+import type { Product } from "@/types";
+import ProductCarousel from "./ProductCarousel";
+
+async function loadProducts(): Promise<Product[]> {
+  try {
+    const products = await getPublicProducts();
+    // Filter products that have images
+    return products.filter(p => p.image || p.images?.length > 0);
+  } catch (error) {
+    console.error("Failed to load products:", error);
+    return [];
+  }
+}
 
 const tan = "#c9a679";
 
@@ -46,7 +60,9 @@ function BlurLeaf({ className = "" }: { className?: string }) {
   );
 }
 
-export default function Hero() {
+export default async function Hero() {
+  const products = await loadProducts();
+
   return (
     <section aria-labelledby="hero-title" className="relative overflow-hidden lg:flex lg:min-h-[calc(100vh-4.75rem)] lg:items-center">
       <BananaLeaf className="pointer-events-none absolute -left-4 top-[34%] hidden h-52 w-28 lg:block xl:h-60 xl:w-32" />
@@ -88,28 +104,32 @@ export default function Hero() {
           </div>
         </div>
 
-        <figure className="relative mx-auto aspect-[575/720] w-full max-w-[575px] overflow-hidden rounded-[2rem] bg-forest-card shadow-lift lg:mx-0 lg:rounded-[2.75rem]">
-          <Image src="/images/hero-moringa-card.jpg" alt="Kraft pack of Magna Eco Bites Moringa Idli Podi beside a wooden bowl of the podi, moringa leaves and curry leaves" fill priority sizes="(min-width:1024px) 575px, 92vw" className="object-cover" />
-          <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-[28%] bg-gradient-to-t from-forest-deep/70 to-transparent" />
-          <div className="absolute left-[5%] top-[4.5%] flex items-start gap-4 rounded-xl bg-cream px-3 py-2.5 shadow-soft sm:gap-6 sm:rounded-2xl sm:px-4 sm:py-3">
-            <div>
-              <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-ink/40 sm:text-[10px]">Purity</p>
-              <p className="font-display text-base text-forest sm:text-[1.15rem]">100% Organic</p>
+        {products.length > 0 ? (
+          <ProductCarousel products={products} />
+        ) : (
+          <figure className="relative mx-auto aspect-[575/720] w-full max-w-[575px] overflow-hidden rounded-[2rem] bg-forest-card shadow-lift lg:mx-0 lg:rounded-[2.75rem]">
+            <Image src="/images/hero-moringa-card.jpg" alt="Kraft pack of Magna Eco Bites Moringa Idli Podi beside a wooden bowl of the podi, moringa leaves and curry leaves" fill priority sizes="(min-width:1024px) 575px, 92vw" className="object-cover" />
+            <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-[28%] bg-gradient-to-t from-forest-deep/70 to-transparent" />
+            <div className="absolute left-[5%] top-[4.5%] flex items-start gap-4 rounded-xl bg-cream px-3 py-2.5 shadow-soft sm:gap-6 sm:rounded-2xl sm:px-4 sm:py-3">
+              <div>
+                <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-ink/40 sm:text-[10px]">Purity</p>
+                <p className="font-display text-base text-forest sm:text-[1.15rem]">100% Organic</p>
+              </div>
+              <LeafIcon width={14} height={14} className="text-leaf sm:w-4 sm:h-4" />
             </div>
-            <LeafIcon width={14} height={14} className="text-leaf sm:w-4 sm:h-4" />
-          </div>
-          <div className="absolute bottom-[14.5%] right-[3.5%] flex items-start gap-6 rounded-xl bg-cream px-3 py-2.5 shadow-soft sm:gap-8 sm:rounded-2xl sm:px-4 sm:py-3">
-            <div>
-              <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-ink/40 sm:text-[10px]">Process</p>
-              <p className="font-display text-base text-forest sm:text-[1.15rem]">No additives</p>
+            <div className="absolute bottom-[14.5%] right-[3.5%] flex items-start gap-6 rounded-xl bg-cream px-3 py-2.5 shadow-soft sm:gap-8 sm:rounded-2xl sm:px-4 sm:py-3">
+              <div>
+                <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-ink/40 sm:text-[10px]">Process</p>
+                <p className="font-display text-base text-forest sm:text-[1.15rem]">No additives</p>
+              </div>
+              <LeafIcon width={14} height={14} className="text-leaf sm:w-4 sm:h-4" />
             </div>
-            <LeafIcon width={14} height={14} className="text-leaf sm:w-4 sm:h-4" />
-          </div>
-          <figcaption className="absolute bottom-[4.5%] left-[6.5%] right-4 text-cream">
-            <p className="font-display text-[1.4rem] leading-tight sm:text-[1.65rem] lg:text-[1.9rem]">Stone-ground <span aria-hidden="true">•</span> Small batch</p>
-            <p className="mt-1 text-[0.85rem] text-cream/70 sm:mt-1.5 sm:text-[0.95rem]">Moringa Idli Podi — our newest blend</p>
-          </figcaption>
-        </figure>
+            <figcaption className="absolute bottom-[4.5%] left-[6.5%] right-4 text-cream">
+              <p className="font-display text-[1.4rem] leading-tight sm:text-[1.65rem] lg:text-[1.9rem]">Stone-ground <span aria-hidden="true">•</span> Small batch</p>
+              <p className="mt-1 text-[0.85rem] text-cream/70 sm:mt-1.5 sm:text-[0.95rem]">Moringa Idli Podi — our newest blend</p>
+            </figcaption>
+          </figure>
+        )}
       </div>
     </section>
   );
