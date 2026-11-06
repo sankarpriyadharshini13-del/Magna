@@ -9,6 +9,7 @@ import { useAdminData } from "@/lib/admin/store";
 import type { AdminProduct } from "@/lib/admin/types";
 import { formatInr } from "@/lib/format";
 import { Badge, BarcodeSvg, ConfirmModal, Modal, PromptModal, Toggle, Topbar } from "../ui";
+import ProductPreviewCard from "./ProductPreviewCard";
 
 const MAX_PHOTOS = 5;
 
@@ -308,7 +309,7 @@ export default function ProductsScreen() {
             >
               <div>
                 <b>Upload photos</b>
-                Drag &amp; drop, up to {MAX_PHOTOS} images<br />auto-compressed for fast loading
+                Drag &amp; drop images
               </div>
               <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={(e) => { if (e.target.files) addPhotos(e.target.files); e.target.value = ""; }} />
             </div>
@@ -404,22 +405,18 @@ export default function ProductsScreen() {
         />
       )}
       {modal === "preview" && (
-        <Modal title="Preview" onClose={() => setModal(null)} footer={<button className="adm-btn" onClick={() => setModal(null)}>Close</button>}>
-          <div style={{ border: "1px solid var(--line)", borderRadius: 14, overflow: "hidden" }}>
-            <div className="p-big" style={{ width: "100%", height: 190, borderRadius: 0, ...(draft.images[0] ? { backgroundImage: `url(${draft.images[0]})` } : { background: `linear-gradient(135deg, ${tint}22, ${tint}55)`, color: tint }) }}>
-              {draft.images[0] ? "" : initials(draft.name)}
-            </div>
-            <div style={{ padding: 16 }}>
-              {draft.tag && <Badge tone="yellow">{draft.tag}</Badge>}
-              <h3 style={{ fontFamily: "var(--font-serif)", fontSize: 20, color: "var(--ink)", margin: "8px 0 2px" }}>{draft.name}</h3>
-              <p className="adm-muted">{draft.packSize}</p>
-              <p style={{ margin: "10px 0", lineHeight: 1.55 }}>{draft.description || "No description yet."}</p>
-              {pricePreview && <s className="adm-muted" style={{ marginRight: 8, fontSize: 14 }}>{formatInr(pricePreview.original)}</s>}
-              <b style={{ fontSize: 18, color: "var(--ink)" }}>{draft.price.trim() && Number.isFinite(Number(draft.price)) ? formatInr(Number(draft.price)) : "₹—"}</b>
-              {pricePreview && <span style={{ marginLeft: 8 }}><Badge tone="green">{pricePreview.off}% off</Badge></span>}
-              {!draft.visible && <p className="adm-muted" style={{ marginTop: 8 }}>Hidden — customers won&apos;t see this until you switch on “Visible on website”.</p>}
-            </div>
-          </div>
+        <Modal title="Preview" onClose={() => setModal(null)} footer={<button className="adm-btn" onClick={() => setModal(null)}>Close</button>} noScroll>
+          <ProductPreviewCard
+            name={draft.name}
+            tag={draft.tag}
+            packSize={draft.packSize}
+            description={draft.description}
+            price={draft.price}
+            originalPrice={draft.originalPrice}
+            images={draft.images}
+            visible={draft.visible}
+            color={tint}
+          />
         </Modal>
       )}
       {stockTarget && (

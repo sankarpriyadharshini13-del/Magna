@@ -87,6 +87,7 @@ export function Modal({
   footer,
   wide,
   xl,
+  noScroll,
 }: {
   title: string;
   onClose: () => void;
@@ -95,6 +96,8 @@ export function Modal({
   wide?: boolean;
   /** Large two-column forms (Add / Edit order). */
   xl?: boolean;
+  /** Disable max-height to prevent scrolling (for content that fits in viewport). */
+  noScroll?: boolean;
 }) {
   const ref = useModalBehavior(true, onClose, () =>
     document.querySelector<HTMLElement>(".adm-modal input, .adm-modal textarea, .adm-modal select"),
@@ -102,7 +105,7 @@ export function Modal({
   const id = useId();
   return (
     <div className="adm-modal-back" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div ref={ref} className={`adm-modal${wide ? " wide" : ""}${xl ? " xl" : ""}`} role="dialog" aria-modal="true" aria-labelledby={id}>
+      <div ref={ref} className={`adm-modal${wide ? " wide" : ""}${xl ? " xl" : ""}${noScroll ? " no-scroll" : ""}`} role="dialog" aria-modal="true" aria-labelledby={id}>
         <div className="adm-modal-h">
           <h2 id={id}>{title}</h2>
           <button type="button" className="adm-x" onClick={onClose} aria-label="Close">×</button>

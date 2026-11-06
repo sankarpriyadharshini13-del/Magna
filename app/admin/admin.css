@@ -194,6 +194,7 @@
 .adm-modal-back { position: fixed; inset: 0; background: rgba(18,41,28,.45); z-index: 100; display: grid; place-items: center; padding: 16px; backdrop-filter: blur(2px); }
 .adm-modal { background: #fff; border-radius: 16px; width: 100%; max-width: 440px; max-height: calc(100vh - 32px); overflow: auto; box-shadow: 0 30px 70px -20px rgba(0,0,0,.45); }
 .adm-modal.wide { max-width: 560px; }
+.adm-modal.no-scroll { max-height: none; overflow: visible; }
 .adm-modal-h { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px 0; }
 .adm-modal-h h2 { font-family: var(--font-serif); font-size: 19px; color: var(--ink); }
 .adm-x { border: 0; background: transparent; width: 30px; height: 30px; border-radius: 50%; font-size: 20px; line-height: 1; color: var(--muted); }
