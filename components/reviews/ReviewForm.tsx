@@ -57,16 +57,18 @@ export function Stars({ value, size = 18 }: { value: number; size?: number }) {
 }
 
 /**
- * 5-star rating + short message for one order.
+ * 5-star rating + short message for one product from an order.
  *  - mode "prompt" (right after checkout): Submit · Leave later · Skip
  *  - mode "inline" (My orders): Submit · Cancel
  */
 export default function ReviewForm({
   orderNumber,
+  productId,
   mode,
   onDone,
 }: {
   orderNumber: number;
+  productId: string;
   mode: "prompt" | "inline";
   onDone: (outcome: "submitted" | "later" | "skipped" | "cancelled", review?: SavedReview) => void;
 }) {
@@ -86,7 +88,7 @@ export default function ReviewForm({
       const res = await fetch("/api/reviews", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ orderNumber, rating, message: message.trim() }),
+        body: JSON.stringify({ orderNumber, productId, rating, message: message.trim() }),
       });
       const body = await res.json().catch(() => ({}));
       setBusy(false);

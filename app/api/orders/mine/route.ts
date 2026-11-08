@@ -6,6 +6,12 @@ import { serviceClient, serviceConfigured } from "@/lib/server/supabase";
 
 export const dynamic = "force-dynamic";
 
+interface SavedReview {
+  rating: number;
+  message: string;
+  createdAt: string;
+}
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 /**
@@ -19,14 +25,29 @@ export const GET = handle(async (req) => {
   // Payment mode, discount and the transporter details arrive with later migrations.
   const extra = ", payment_mode, amount_paid, discount, transporter, tracking_number, dispatch_date, tracking_status, tracking_url";
   const query = (cols: string) => client.from("orders").select(cols).order("number", { ascending: false }).limit(100);
-  let { data, error } = await query(`${base}${extra}, reviews(rating, message, created_at)`);
+  let { data, error } = await query(`${base}${extra}`);
   // Before those migrations are applied, still show orders (just without the newer details).
-  if (error && ["42703", "PGRST204"].includes(error.code ?? "")) ({ data, error } = await query(`${base}, reviews(rating, message, created_at)`));
+  if (error && ["42703", "PGRST204"].includes(error.code ?? "")) ({ data, error } = await query(base));
   if (error && ["PGRST200", "PGRST205", "42P01"].includes(error.code ?? "")) ({ data, error } = await query(base));
   if (error) throw dbError(error);
 
   // Order numbers follow the store's invoice format (Settings is admin-only, so read it on the server).
   const format = serviceConfigured ? (await loadSettings(serviceClient())).invoice.numberFormat : "MEB-0000";
+
+  // Fetch product-level reviews for all orders
+  const orderNumbers = (data ?? []).map((o: any) => o.number);
+  const { data: reviewsData, error: reviewsError } = orderNumbers.length > 0
+    ? await client.from("reviews").select("order_number, product_id, rating, message, created_at").in("order_number", orderNumbers)
+    : { data: [], error: null };
+
+  // Build a map of (order_number, product_id) -> review
+  const reviewMap = new Map<string, SavedReview>();
+  if (!reviewsError && reviewsData) {
+    for (const r of reviewsData) {
+      const key = `${r.order_number}:${r.product_id}`;
+      reviewMap.set(key, { rating: r.rating, message: r.message ?? "", createdAt: r.created_at });
+    }
+  }
 
   const orders = (data ?? []).map((o: any) => {
     const items = (o.order_items ?? []).map((i: any) => ({
@@ -35,9 +56,9 @@ export const GET = handle(async (req) => {
       packSize: i.pack_size ?? "",
       qty: i.qty,
       price: i.price,
+      review: i.product_id ? reviewMap.get(`${o.number}:${i.product_id}`) ?? null : null,
     }));
     const subtotal = items.reduce((s: number, i: any) => s + i.price * i.qty, 0);
-    const rv = Array.isArray(o.reviews) ? o.reviews[0] : o.reviews;
     const discount = o.discount ?? 0;
     const total = Math.max(0, subtotal + (o.shipping ?? 0) - discount);
     return {
@@ -62,7 +83,6 @@ export const GET = handle(async (req) => {
       method: o.method,
       testPayment: String(o.payment_id ?? "").startsWith("dummy_"),
       deliveredAt: o.delivered_at ?? null,
-      review: rv ? { rating: rv.rating, message: rv.message ?? "", createdAt: rv.created_at } : null,
       timeline: [...(o.order_events ?? [])]
         .sort((a: any, b: any) => a.at.localeCompare(b.at))
         .map((e: any) => ({ label: e.label, note: e.note ?? null, at: e.at })),

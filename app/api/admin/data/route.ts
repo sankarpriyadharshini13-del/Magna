@@ -27,7 +27,7 @@ export const GET = handle(async (req) => {
     c.from("app_settings").select("data").eq("id", 1).maybeSingle(),
     c.from("admin_members").select("*").order("created_at", { ascending: true }),
     c.from("admin_invites").select("*").order("created_at", { ascending: false }).limit(100),
-    c.from("reviews").select("*, orders(order_items(name, qty))").order("created_at", { ascending: false }).limit(1000),
+    c.from("reviews").select("*, products(name)").order("created_at", { ascending: false }).limit(1000),
   ]);
   // Reviews arrive with their own migration; until it's applied the panel simply shows none.
   const reviewsMissing = ["PGRST205", "42P01", "PGRST200"].includes(reviews.error?.code ?? "");
@@ -51,7 +51,7 @@ export const GET = handle(async (req) => {
       message: r.message ?? "",
       createdAt: r.created_at,
       published: Boolean(r.published),
-      products: ((r.orders?.order_items ?? []) as { name: string; qty: number }[]).map((i) => `${i.name} ×${i.qty}`).join(", "),
+      products: r.products?.name || "Unknown product",
     })),
     me: { userId: a.userId, email: a.email, name: a.name, role: a.role },
     members: (members.data ?? []).map(mapMember),

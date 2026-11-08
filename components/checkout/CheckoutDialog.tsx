@@ -11,7 +11,7 @@ import { useUI } from "@/context/UIContext";
 import { formatInr } from "@/lib/format";
 import { getSupabase } from "@/lib/supabase";
 import { startCheckout } from "@/services/checkout";
-import ReviewForm from "@/components/reviews/ReviewForm";
+
 
 const STATES = [
   "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat", "Haryana", "Himachal Pradesh",
@@ -94,7 +94,6 @@ export default function CheckoutDialog() {
   const [dummyOrder, setDummyOrder] = useState<{ orderId: string; amount: number } | null>(null);
   const [dummyMethod, setDummyMethod] = useState<DummyMethod>("UPI");
   const [placed, setPlaced] = useState<{ number: number; label: string; email: string } | null>(null);
-  const [reviewOutcome, setReviewOutcome] = useState<"submitted" | "later" | "skipped" | null>(null);
   const firstField = useRef<HTMLInputElement>(null);
 
   // Prefill from the account and the last delivery address used on this device.
@@ -213,7 +212,6 @@ export default function CheckoutDialog() {
         clear();
         refresh();
         setPlaced({ number: v.json.orderNumber, label: v.json.label, email: user.email });
-        setReviewOutcome(null);
         setStage("done");
       },
     });
@@ -244,7 +242,6 @@ export default function CheckoutDialog() {
     refresh();
     setDummyOrder(null);
     setPlaced({ number: v.json.orderNumber, label: v.json.label, email: user.email });
-        setReviewOutcome(null);
     setStage("done");
   };
 
@@ -294,24 +291,6 @@ export default function CheckoutDialog() {
             <p className="mt-1 text-ink/70">Order <b>#{placed.label}</b> is confirmed.</p>
             <p className="mt-1 text-sm text-ink/60">A confirmation email is on its way to {placed.email}.</p>
           </div>
-
-          {reviewOutcome === null ? (
-            <section aria-labelledby="review-title" className="mt-7 rounded-2xl bg-sand/50 p-5">
-              <h3 id="review-title" className="font-display text-xl text-forest">How was your shopping experience?</h3>
-              <p className="mt-1 text-sm text-ink/60">Rate your order — it takes a few seconds and helps other customers.</p>
-              <div className="mt-4">
-                <ReviewForm orderNumber={placed.number} mode="prompt" onDone={(o) => setReviewOutcome(o === "cancelled" ? "skipped" : o)} />
-              </div>
-            </section>
-          ) : (
-            <p role="status" className="mt-7 rounded-2xl bg-sand/50 p-4 text-center text-sm text-ink/70">
-              {reviewOutcome === "submitted"
-                ? "Thanks for your review! 🌿"
-                : reviewOutcome === "later"
-                  ? "No problem — you can review this order any time from My orders."
-                  : "Okay! You can still review it later from My orders."}
-            </p>
-          )}
 
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             <Link href="/orders" className="btn-primary" onClick={() => { setStage("form"); setPlaced(null); close(); }}>View my orders</Link>

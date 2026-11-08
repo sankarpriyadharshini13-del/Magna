@@ -16,7 +16,7 @@ interface MyOrder {
   label: string;
   placedAt: string;
   status: "New" | "Packed" | "Delivered" | "Cancelled";
-  items: { productId: string | null; name: string; packSize: string; qty: number; price: number }[];
+  items: { productId: string | null; name: string; packSize: string; qty: number; price: number; review: SavedReview | null }[];
   subtotal: number;
   shipping: number;
   discount?: number;
@@ -33,7 +33,6 @@ interface MyOrder {
   testPayment: boolean;
   deliveredAt: string | null;
   timeline: { label: string; note: string | null; at: string }[];
-  review: SavedReview | null;
 }
 
 function paymentText(o: MyOrder) {
@@ -86,11 +85,13 @@ function Progress({ status }: { status: MyOrder["status"] }) {
   );
 }
 
-function OrderCard({ o, defaultOpen, remind, onReviewed }: { o: MyOrder; defaultOpen: boolean; remind: boolean; onReviewed: (r: SavedReview) => void }) {
+function OrderCard({ o, defaultOpen, remind, onReviewed }: { o: MyOrder; defaultOpen: boolean; remind: boolean; onReviewed: (productId: string, review: SavedReview) => void }) {
   const { getById } = useProducts();
   const [open, setOpen] = useState(defaultOpen);
-  const [reviewing, setReviewing] = useState(false);
+  const [reviewingItem, setReviewingItem] = useState<{ productId: string; idx: number } | null>(null);
   const st = STATUS[o.status];
+  const canReview = o.status === "Delivered";
+
   return (
     <article className="overflow-hidden rounded-[1.75rem] bg-white shadow-soft ring-1 ring-forest/[0.06]">
       <header className="flex flex-wrap items-start justify-between gap-3 border-b border-forest/[0.07] p-5 sm:p-6">
@@ -110,8 +111,9 @@ function OrderCard({ o, defaultOpen, remind, onReviewed }: { o: MyOrder; default
         <ul className="divide-y divide-forest/[0.07]">
           {o.items.map((i, idx) => {
             const p = i.productId ? getById(i.productId) : undefined;
+            const isReviewing = reviewingItem?.idx === idx;
             return (
-              <li key={idx} className="flex items-center gap-4 py-3 first:pt-0 last:pb-0">
+              <li key={idx} className="flex items-start gap-4 py-3 first:pt-0 last:pb-0">
                 <span className="relative grid h-16 w-14 shrink-0 place-items-center overflow-hidden rounded-xl bg-sand">
                   {p?.image ? <Image src={p.image} alt="" fill sizes="56px" className="object-cover" /> : <LeafIcon width={18} height={18} className="text-leaf/60" />}
                 </span>
@@ -122,6 +124,35 @@ function OrderCard({ o, defaultOpen, remind, onReviewed }: { o: MyOrder; default
                     <p className="font-display text-base leading-tight text-forest sm:text-lg">{i.name}</p>
                   )}
                   <p className="text-xs text-ink/55">{i.packSize ? `${i.packSize} · ` : ""}{i.qty} × {formatInr(i.price)}</p>
+
+                  {i.productId && o.status !== "Cancelled" && (
+                    i.review ? (
+                      <div className="mt-2 rounded-xl bg-leaf/[0.07] p-2.5">
+                        <p className="flex flex-wrap items-center gap-2 text-xs font-semibold text-forest">Your review <Stars value={i.review.rating} size={14} /></p>
+                        {i.review.message && <p className="mt-1 text-xs leading-relaxed text-ink/75">"{i.review.message}"</p>}
+                      </div>
+                    ) : isReviewing ? (
+                      <div className="mt-2 rounded-xl bg-sand/50 p-3">
+                        <ReviewForm
+                          orderNumber={o.number}
+                          productId={i.productId}
+                          mode="inline"
+                          onDone={(outcome, review) => {
+                            setReviewingItem(null);
+                            if (outcome === "submitted" && review) onReviewed(i.productId, review);
+                          }}
+                        />
+                      </div>
+                    ) : canReview && i.productId ? (
+                      <button
+                        type="button"
+                        className="mt-2 text-xs font-semibold text-ink/55 underline-offset-4 hover:text-clay hover:underline"
+                        onClick={() => setReviewingItem({ productId: i.productId, idx })}
+                      >
+                        Rate this product
+                      </button>
+                    ) : null
+                  )}
                 </div>
                 <span className="shrink-0 font-semibold text-forest">{formatInr(i.price * i.qty)}</span>
               </li>
@@ -129,30 +160,10 @@ function OrderCard({ o, defaultOpen, remind, onReviewed }: { o: MyOrder; default
           })}
         </ul>
 
-        {o.status !== "Cancelled" && (
-          o.review ? (
-            <div className="rounded-2xl bg-leaf/[0.07] p-4">
-              <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-forest">Your review <Stars value={o.review.rating} size={16} /></p>
-              {o.review.message && <p className="mt-1.5 text-sm leading-relaxed text-ink/75">“{o.review.message}”</p>}
-            </div>
-          ) : reviewing ? (
-            <div className="rounded-2xl bg-sand/50 p-4">
-              <p className="mb-3 font-display text-lg text-forest">Rate this order</p>
-              <ReviewForm
-                orderNumber={o.number}
-                mode="inline"
-                onDone={(outcome, review) => {
-                  setReviewing(false);
-                  if (outcome === "submitted" && review) onReviewed(review);
-                }}
-              />
-            </div>
-          ) : (
-            <div className={`flex flex-wrap items-center justify-between gap-3 rounded-2xl p-4 ${remind ? "bg-honey/20 ring-1 ring-honey/50" : "bg-sand/40"}`}>
-              <p className="text-sm text-ink/70">{remind ? "You saved this order to review later." : "Enjoyed your order? Let us know."}</p>
-              <button type="button" className="btn-primary !min-h-10 !px-5 !text-sm" onClick={() => setReviewing(true)}>Rate this order</button>
-            </div>
-          )
+        {remind && canReview && (
+          <p role="status" className="rounded-2xl bg-honey/20 p-4 text-sm text-forest-deep ring-1 ring-honey/50">
+            ⭐ Your order has been delivered. Rate each product above to share your feedback.
+          </p>
         )}
 
         <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} className="focus-ring inline-flex items-center gap-1.5 rounded text-sm font-semibold text-forest underline-offset-4 hover:text-clay hover:underline">
@@ -280,12 +291,12 @@ export default function MyOrders() {
         <Link href="/shop" className="btn-primary mt-6">Shop our products</Link>
       </div>
     );
-  const waiting = orders.filter((o) => !o.review && o.status !== "Cancelled" && later.includes(o.number));
+  const waiting = orders.filter((o) => o.status === "Delivered" && o.items.some((i) => i.productId && !i.review) && later.includes(o.number));
   return (
     <div className="space-y-5">
       {waiting.length > 0 && (
         <p role="status" className="rounded-2xl bg-honey/20 p-4 text-sm text-forest-deep ring-1 ring-honey/50">
-          ⭐ You have {waiting.length} order{waiting.length === 1 ? "" : "s"} waiting for your review — use “Rate this order” below.
+          ⭐ You have {waiting.length} delivered order{waiting.length === 1 ? "" : "s"} with products waiting for your review — use "Rate this product" below.
         </p>
       )}
       {orders.map((o, i) => (
@@ -294,7 +305,7 @@ export default function MyOrders() {
           o={o}
           defaultOpen={i === 0}
           remind={later.includes(o.number)}
-          onReviewed={(review) => setOrders((list) => (list ?? []).map((x) => (x.number === o.number ? { ...x, review } : x)))}
+          onReviewed={(productId, review) => setOrders((list) => (list ?? []).map((x) => (x.number === o.number ? { ...x, items: x.items.map((item) => item.productId === productId ? { ...item, review } : item) } : x)))}
         />
       ))}
     </div>
