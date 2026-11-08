@@ -139,7 +139,7 @@ function OrderCard({ o, defaultOpen, remind, onReviewed }: { o: MyOrder; default
                           mode="inline"
                           onDone={(outcome, review) => {
                             setReviewingItem(null);
-                            if (outcome === "submitted" && review) onReviewed(i.productId, review);
+                            if (outcome === "submitted" && review && i.productId) onReviewed(i.productId, review);
                           }}
                         />
                       </div>
@@ -147,7 +147,7 @@ function OrderCard({ o, defaultOpen, remind, onReviewed }: { o: MyOrder; default
                       <button
                         type="button"
                         className="mt-2 text-xs font-semibold text-ink/55 underline-offset-4 hover:text-clay hover:underline"
-                        onClick={() => setReviewingItem({ productId: i.productId, idx })}
+                        onClick={() => setReviewingItem({ productId: i.productId!, idx })}
                       >
                         Rate this product
                       </button>
