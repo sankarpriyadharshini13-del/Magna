@@ -43,6 +43,10 @@ export default function OrdersScreen() {
   /** "+ Add" (new) or "Edit" (order number) popup. */
   const [form, setForm] = useState<null | "new" | number>(null);
   const initialised = useRef(false);
+  /** Track delivery charge changes per order. */
+  const [deliveryCharges, setDeliveryCharges] = useState<Record<number, number>>({});
+  /** Track which orders have unsaved delivery charge changes. */
+  const [modifiedDeliveryCharges, setModifiedDeliveryCharges] = useState<Set<number>>(new Set());
 
   const customers = useMemo(() => new Map(data.customers.map((c) => [c.id, c])), [data.customers]);
 
@@ -106,13 +110,13 @@ export default function OrdersScreen() {
 
   const exportCsv = () =>
     downloadCsv("orders.csv", [
-      ["Order", "Type", "Placed", "Business", "Customer", "Email", "Phone", "City", "State", "PIN", "Address", "Units", "Amount (INR)", "Payment", "Status"],
+      ["Order", "Type", "Placed", "Business", "Customer", "Email", "Phone", "City", "State", "PIN", "Address", "Units", "Amount (INR)", "Delivery Charge (INR)", "Payment", "Status"],
       ...filtered.map((o) => {
         const c = customers.get(o.customerId);
         return [
           label(o.number), o.kind === "bulk" ? "Bulk" : "Normal", fmtDateTime(o.placedAt), o.businessName, o.shipName || c?.name || "", o.email || c?.email || "", o.shipPhone || c?.phone || "",
           o.location.city || c?.city || "", o.location.state || c?.state || "", o.location.pincode, o.address,
-          orderUnits(o), orderTotal(o), paymentLabel(o), o.status,
+          orderUnits(o), orderTotal(o), o.deliveryCharge ?? 0, paymentLabel(o), o.status,
         ];
       }),
     ]);
@@ -160,7 +164,7 @@ export default function OrdersScreen() {
                       onChange={(e) => setSelected(e.target.checked ? Array.from(new Set([...selected, ...rows.map((o) => o.number)])) : selected.filter((n) => !rows.some((o) => o.number === n)))}
                     />
                   </th>
-                  <th>Order</th><th>Customer</th><th className="o-loc">Customer location</th><th>Amount</th><th className="o-pay">Payment</th><th>Status</th><th aria-label="Edit" />
+                  <th>Order</th><th>Customer</th><th className="o-loc">Customer location</th><th>Amount</th><th>Delivery Charge</th><th className="o-pay">Payment</th><th>Status</th><th aria-label="Edit" />
                 </tr>
               </thead>
               <tbody>
@@ -189,16 +193,68 @@ export default function OrdersScreen() {
                         <b style={{ color: "var(--ink)" }}>{formatInr(orderTotal(o))}</b>
                         <span className="sub">{orderUnits(o)} item{orderUnits(o) === 1 ? "" : "s"}</span>
                       </td>
+                      <td style={{ lineHeight: 1.25 }} onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          className="adm-in"
+                          style={{ width: 80, height: 28, padding: "0 8px", fontSize: 12, MozAppearance: "textfield", WebkitAppearance: "none" }}
+                          aria-label={`Delivery charge for ${label(o.number)}`}
+                          placeholder={String(o.deliveryCharge ?? 0)}
+                          value={deliveryCharges[o.number] !== undefined ? String(deliveryCharges[o.number]) : ""}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/\D/g, "");
+                            const numVal = val === "" ? 0 : Number(val);
+                            setDeliveryCharges((prev) => ({ ...prev, [o.number]: numVal }));
+                            setModifiedDeliveryCharges((prev) => {
+                              const next = new Set(prev);
+                              if (numVal !== (o.deliveryCharge ?? 0)) {
+                                next.add(o.number);
+                              } else {
+                                next.delete(o.number);
+                              }
+                              return next;
+                            });
+                          }}
+                        />
+                      </td>
                       <td className="o-pay">{paymentLabel(o)}</td>
                       <td><Badge tone={orderTone(o.status)}>{o.status}</Badge></td>
                       <td onClick={(e) => e.stopPropagation()}>
-                        <button type="button" className="adm-btn sm" aria-label={`Edit order ${label(o.number)}`} onClick={() => { pickRow(o.number); setForm(o.number); }}>Edit</button>
+                        {modifiedDeliveryCharges.has(o.number) ? (
+                          <button
+                            type="button"
+                            className="adm-btn sm pri"
+                            aria-label={`Update delivery charge for ${label(o.number)}`}
+                            onClick={() => {
+                              const newDeliveryCharge = deliveryCharges[o.number] ?? 0;
+                              mutate<{ number: number }>(`/api/admin/orders/${o.number}/delivery-charge`, "PUT", { delivery_charge: newDeliveryCharge }, () => {
+                                setModifiedDeliveryCharges((prev) => {
+                                  const next = new Set(prev);
+                                  next.delete(o.number);
+                                  return next;
+                                });
+                                // Drop the staged value so the box shows the charge now saved on the order.
+                                setDeliveryCharges((prev) => {
+                                  const next = { ...prev };
+                                  delete next[o.number];
+                                  return next;
+                                });
+                                return "Delivery charge updated.";
+                              });
+                            }}
+                          >
+                            Update
+                          </button>
+                        ) : (
+                          <button type="button" className="adm-btn sm" aria-label={`Edit order ${label(o.number)}`} onClick={() => { pickRow(o.number); setForm(o.number); }}>Edit</button>
+                        )}
                       </td>
                     </tr>
                   );
                 })}
                 {!rows.length && (
-                  <tr><td colSpan={7}><div className="adm-empty">{data.orders.length ? "No orders match your search." : "No orders yet. Click “+ Add” to add one."}</div></td></tr>
+                  <tr><td colSpan={9}><div className="adm-empty">{data.orders.length ? "No orders match your search." : "No orders yet. Click “+ Add” to add one."}</div></td></tr>
                 )}
               </tbody>
             </table>

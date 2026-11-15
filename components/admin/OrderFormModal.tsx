@@ -89,6 +89,7 @@ export default function OrderFormModal({
   );
   const [shipping, setShipping] = useState(order ? String(order.shipping) : "0");
   const [discount, setDiscount] = useState(order ? String(order.discount ?? 0) : "0");
+  const [deliveryCharge, setDeliveryCharge] = useState(order ? String(order.deliveryCharge ?? 0) : "0");
   const [boxes, setBoxes] = useState(order?.boxes != null ? String(order.boxes) : "");
   const [weight, setWeight] = useState(order?.totalWeight ?? "");
   const [transporter, setTransporter] = useState(order?.tracking?.transporter ?? "");
@@ -108,7 +109,8 @@ export default function OrderFormModal({
   const subtotal = lines.reduce((s, l) => s + (Number.isFinite(priceOf(l)) ? priceOf(l) * l.qty : 0), 0);
   // Bulk orders are priced per line (bulk rates), so they have no separate discount.
   const discountNum = kind === "bulk" ? 0 : num(discount);
-  const total = Math.max(0, subtotal + num(shipping) - discountNum);
+  const deliveryChargeNum = num(deliveryCharge);
+  const total = Math.max(0, subtotal + num(shipping) + deliveryChargeNum - discountNum);
   const filledLines = lines.filter((l) => l.productId || l.name);
   const units = filledLines.reduce((s, l) => s + l.qty, 0);
   const advanceNum = Number(advance);
@@ -182,6 +184,7 @@ export default function OrderFormModal({
       note: note.trim(),
       shipping: num(shipping),
       discount: discountNum,
+      delivery_charge: deliveryChargeNum,
       boxes: boxes.trim() === "" ? null : Number(boxes),
       total_weight: weight.trim(),
       transporter: transporter.trim(),
@@ -493,11 +496,13 @@ export default function OrderFormModal({
                 <div className="mo-sr"><span>Units ({filledLines.length} product{filledLines.length === 1 ? "" : "s"})</span><b>{units}</b></div>
                 <div className="mo-sr"><span>Items</span><b>{formatInr(subtotal)}</b></div>
                 <div className="mo-sr"><span>Freight (paid to transporter)</span>{amount("mo-shipping", shipping, setShipping, "Freight")}</div>
+                <div className="mo-sr"><span>Delivery Charge</span>{amount("mo-delivery-charge", deliveryCharge, setDeliveryCharge, "Delivery Charge")}</div>
               </>
             ) : (
               <>
                 <div className="mo-sr"><span>Items ({units})</span><b>{formatInr(subtotal)}</b></div>
                 <div className="mo-sr"><span>Shipping</span>{amount("mo-shipping", shipping, setShipping, "Shipping")}</div>
+                <div className="mo-sr"><span>Delivery Charge</span>{amount("mo-delivery-charge", deliveryCharge, setDeliveryCharge, "Delivery Charge")}</div>
                 <div className="mo-sr"><span>Discount</span>{amount("mo-discount", discount, setDiscount, "Discount")}</div>
               </>
             )}

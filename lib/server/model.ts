@@ -75,6 +75,7 @@ export function mapOrder(r: Row): Order {
     paymentMode: r.payment_mode ?? "online",
     amountPaid: r.amount_paid ?? 0,
     discount: r.discount ?? 0,
+    deliveryCharge: r.delivery_charge ?? 0,
     boxes: r.boxes ?? null,
     totalWeight: r.total_weight ?? "",
     tracking: {
@@ -302,6 +303,7 @@ export interface OrderInput {
   note: string;
   shipping: number;
   discount: number;
+  delivery_charge: number;
   boxes: number | null;
   total_weight: string;
   transporter: string;
@@ -348,7 +350,8 @@ export function parseOrder(body: Row, editing: boolean): OrderInput {
   });
   const shipping = int(body.shipping ?? 0, kind === "bulk" ? "Freight" : "Shipping", 0, 1_000_000);
   const discount = int(body.discount ?? 0, "Discount", 0, 10_000_000);
-  const total = shipping - discount + items.reduce((s: number, i: { qty: number; price: number }) => s + i.qty * i.price, 0);
+  const deliveryCharge = int(body.delivery_charge ?? 0, "Delivery charge", 0, 1_000_000);
+  const total = shipping + deliveryCharge - discount + items.reduce((s: number, i: { qty: number; price: number }) => s + i.qty * i.price, 0);
   if (total < 0) throw bad("The discount can't be more than the order total.");
 
   // Parcels and manual tracking (bulk orders only).
@@ -380,6 +383,7 @@ export function parseOrder(body: Row, editing: boolean): OrderInput {
     note: str(body.note, "Note", 500),
     shipping,
     discount,
+    delivery_charge: deliveryCharge,
     boxes: kind === "bulk" ? boxes : null,
     total_weight: kind === "bulk" ? str(body.total_weight, "Total weight", 20) : "",
     transporter: kind === "bulk" ? str(body.transporter, "Transporter", 80) : "",

@@ -79,6 +79,8 @@ export interface Order {
   amountPaid: number;
   /** Taken off the total (total = items + shipping − discount). */
   discount: number;
+  /** Manual delivery charge entered by admin. */
+  deliveryCharge: number;
   /** Bulk orders: parcels and the transporter details the admin entered. */
   boxes: number | null;
   totalWeight: string;

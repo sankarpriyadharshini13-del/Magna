@@ -109,6 +109,7 @@ export default function DashboardScreen() {
   const customers = useMemo(() => new Map(data.customers.map((c) => [c.id, c])), [data.customers]);
   const recent = data.orders.slice(0, 7);
   const entries = (list: Order[]) => list.map((o) => ({ order: o, customer: customers.get(o.customerId)! }));
+  const totalDeliveryCharge = data.orders.reduce((sum, o) => sum + (o.deliveryCharge ?? 0), 0);
 
   // Chart geometry.
   const max = Math.max(1, ...stats.thisSeries, ...stats.prevSeries);
@@ -149,6 +150,10 @@ export default function DashboardScreen() {
         <div className="adm-kpi">
           <div className="l">Low Stock</div><div className="v">{low.length}</div>
           <div className={`d ${low.length ? "warn" : ""}`}>{low.length ? low.slice(0, 2).map((p) => `${p.name}${p.packSize ? ` ${p.packSize}` : ""}`).join(" · ") : "All products well stocked"}</div>
+        </div>
+        <div className="adm-kpi">
+          <div className="l">Delivery Charge</div><div className="v">{formatInr(totalDeliveryCharge)}</div>
+          <div className="d">Total across all orders</div>
         </div>
       </div>
 
@@ -219,7 +224,7 @@ export default function DashboardScreen() {
           <div className="adm-scroll">
             <table className="adm-table">
               <thead>
-                <tr><th>Order</th><th>Customer</th><th>Items</th><th>Amount</th><th>Status</th><th>Actions</th></tr>
+                <tr><th>Order</th><th>Customer</th><th>Items</th><th>Amount</th><th>Delivery Charge</th><th>Status</th><th>Actions</th></tr>
               </thead>
               <tbody>
                 {recent.map((o) => {
@@ -230,6 +235,7 @@ export default function DashboardScreen() {
                       <td>{c ? `${c.name} · ${customerSub(c)}` : "—"}</td>
                       <td>{orderUnits(o)}</td>
                       <td className="b">{formatInr(orderTotal(o))}</td>
+                      <td className="b">{formatInr(o.deliveryCharge ?? 0)}</td>
                       <td><Badge tone={orderTone(o.status)}>{o.status}</Badge></td>
                       <td style={{ whiteSpace: "nowrap" }}>
                         {o.status === "New" && (
@@ -240,7 +246,7 @@ export default function DashboardScreen() {
                     </tr>
                   );
                 })}
-                {!recent.length && <tr><td colSpan={6}><div className="adm-empty">No orders yet. They&apos;ll appear here as soon as customers place them.</div></td></tr>}
+                {!recent.length && <tr><td colSpan={7}><div className="adm-empty">No orders yet. They&apos;ll appear here as soon as customers place them.</div></td></tr>}
               </tbody>
             </table>
           </div>

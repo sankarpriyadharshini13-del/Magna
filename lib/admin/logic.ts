@@ -6,7 +6,7 @@ export const LOW_STOCK = 10;
 export const FEE_RATE = 0.02;
 
 export const orderSubtotal = (o: Order) => o.items.reduce((s, i) => s + i.price * i.qty, 0);
-export const orderTotal = (o: Order) => Math.max(0, orderSubtotal(o) + o.shipping - (o.discount ?? 0));
+export const orderTotal = (o: Order) => Math.max(0, orderSubtotal(o) + o.shipping + (o.deliveryCharge ?? 0) - (o.discount ?? 0));
 export const orderUnits = (o: Order) => o.items.reduce((s, i) => s + i.qty, 0);
 
 export type Tone = "green" | "yellow" | "blue" | "orange" | "red" | "gray";
