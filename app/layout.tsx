@@ -9,7 +9,7 @@ const fraunces = Fraunces({ subsets: ["latin"], style: ["normal", "italic"], var
 const manrope = Manrope({ subsets: ["latin"], variable: "--font-body", display: "swap" });
 
 export const metadata: Metadata = {
-  title: "Magna Eco Bites | A Little Tradition. A Lot of Flavour.",
+  title: "Magna Eco Bites | A Little Tradition.",
   description: "Idli podi, country sugar and moringa idli podi — stone-ground in small batches in Kolathur, Chennai.",
 };
 export const viewport: Viewport = { themeColor: "#1b3d2a", width: "device-width", initialScale: 1 };

@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { LeafIcon } from "@/components/ui/Icons";
 import type { Product } from "@/types";
 
 /** Animated product image carousel */
@@ -42,21 +41,6 @@ export default function ProductCarousel({ products }: { products: Product[] }) {
         <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-[28%] bg-gradient-to-t from-forest-deep/70 to-transparent" />
       </div>
 
-      {/* Product info overlay */}
-      <div className="absolute left-[5%] top-[4.5%] flex items-start gap-4 rounded-xl bg-cream px-3 py-2.5 shadow-soft sm:gap-6 sm:rounded-2xl sm:px-4 sm:py-3">
-        <div>
-          <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-ink/40 sm:text-[10px]">Purity</p>
-          <p className="font-display text-base text-forest sm:text-[1.15rem]">100% Organic</p>
-        </div>
-        <LeafIcon width={14} height={14} className="text-leaf sm:w-4 sm:h-4" />
-      </div>
-      <div className="absolute bottom-[14.5%] right-[3.5%] flex items-start gap-6 rounded-xl bg-cream px-3 py-2.5 shadow-soft sm:gap-8 sm:rounded-2xl sm:px-4 sm:py-3">
-        <div>
-          <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-ink/40 sm:text-[10px]">Process</p>
-          <p className="font-display text-base text-forest sm:text-[1.15rem]">No additives</p>
-        </div>
-        <LeafIcon width={14} height={14} className="text-leaf sm:w-4 sm:h-4" />
-      </div>
       <figcaption className="absolute bottom-[4.5%] left-[6.5%] right-4 text-cream">
         <p className="font-display text-[1.4rem] leading-tight sm:text-[1.65rem] lg:text-[1.9rem]">Stone-ground <span aria-hidden="true">•</span> Small batch</p>
         <p className="mt-1 text-[0.85rem] text-cream/70 sm:mt-1.5 sm:text-[0.95rem]">{currentProduct?.name || "Our Products"}</p>

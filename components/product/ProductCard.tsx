@@ -43,7 +43,7 @@ export default function ProductCard({ product, priority = false }: { product: Pr
       </Link>
 
       <div className="flex flex-1 flex-col px-2.5 pb-2 pt-4">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-ink/45">
+        <p className="text-sm font-extrabold uppercase tracking-[0.18em] text-ink/45">
           {product.packSize ?? "Pack size to be confirmed"}
         </p>
         <h3 className="mt-1 font-display text-xl leading-tight text-forest">

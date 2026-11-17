@@ -9,12 +9,15 @@ interface Props {
   tone?: "light" | "dark";
   action?: { href: string; label: string };
   id?: string;
+  /** Heading level — use "h1" when the section heading doubles as the page title. */
+  as?: "h1" | "h2";
 }
 
 /** Shared heading for the home page sections: eyebrow, display title, optional lead and link. */
-export default function SectionHeading({ eyebrow, title, lead, align = "left", tone = "light", action, id }: Props) {
+export default function SectionHeading({ eyebrow, title, lead, align = "left", tone = "light", action, id, as = "h2" }: Props) {
   const dark = tone === "dark";
   const centered = align === "center";
+  const Heading = as;
   return (
     <div className={`flex flex-col gap-5 ${centered ? "items-center text-center" : "md:flex-row md:items-end md:justify-between"}`}>
       <div className={centered ? "max-w-2xl" : "max-w-2xl"}>
@@ -22,9 +25,9 @@ export default function SectionHeading({ eyebrow, title, lead, align = "left", t
           <span aria-hidden="true" className={`h-px w-6 ${dark ? "bg-honey/70" : "bg-clay/60"}`} />
           {eyebrow}
         </p>
-        <h2 id={id} className={`mt-3 font-display text-[2rem] leading-[1.1] tracking-tight sm:text-4xl md:text-5xl ${dark ? "text-cream" : "text-forest"}`}>
+        <Heading id={id} className={`mt-3 font-display text-[2rem] leading-[1.1] tracking-tight sm:text-4xl md:text-5xl ${dark ? "text-cream" : "text-forest"}`}>
           {title}
-        </h2>
+        </Heading>
         {lead && <p className={`mt-4 text-base leading-relaxed sm:text-lg ${dark ? "text-cream/70" : "text-ink/65"}`}>{lead}</p>}
       </div>
       {action && (

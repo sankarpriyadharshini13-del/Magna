@@ -14,7 +14,7 @@ export const defaultSettings = (): Settings => ({
   razorpay: { mode: "Live", upi: true, cards: true, netbanking: true, cod: false, payoutAccount: "" },
   notifications: { newOrder: true, lowStock: true, orderEmail: true, whatsapp: false },
   invoice: {
-    footer: "Thank you for choosing organic. Questions? hello@magnaecobites.in",
+    footer: "Thank you for choosing natural. Questions? hello@magnaecobites.in",
     numberFormat: "MEB-0000",
     logo: null,
   },

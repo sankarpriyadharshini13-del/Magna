@@ -13,7 +13,7 @@ import Reveal from "./Reveal";
 export default function Reviews({ reviews, stats }: { reviews: PublicReview[]; stats: ReviewStats }) {
   if (!reviews.length) return null;
   return (
-    <section id="reviews" aria-labelledby="reviews-title" className="relative overflow-hidden bg-sand/40 py-16 md:py-24">
+    <section id="reviews" aria-labelledby="reviews-title" className="relative overflow-hidden bg-cream py-16 md:py-24">
       <div aria-hidden="true" className="pointer-events-none absolute -left-32 top-16 h-72 w-72 rounded-full bg-honey/15 blur-3xl" />
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 gap-10 lg:grid-cols-12 lg:gap-12">

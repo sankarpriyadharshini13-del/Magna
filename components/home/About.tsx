@@ -13,7 +13,7 @@ const values = [
 
 const AVATAR = ["from-clay to-honey", "from-leaf to-forest", "from-honey to-clay"];
 
-export default function About({ aboutLink = true }: { aboutLink?: boolean }) {
+export default function About({ aboutLink = true, titleAs = "h2" }: { aboutLink?: boolean; titleAs?: "h1" | "h2" }) {
   return (
     <section id="about" aria-labelledby="about-title" className="relative overflow-hidden bg-sand/45 py-16 md:py-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -21,6 +21,7 @@ export default function About({ aboutLink = true }: { aboutLink?: boolean }) {
           <Reveal className="lg:col-span-6">
             <SectionHeading
               id="about-title"
+              as={titleAs}
               eyebrow="Our story"
               title={<>Rooted in South Indian <span className="italic text-clay">tradition</span></>}
             />

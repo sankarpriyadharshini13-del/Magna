@@ -7,7 +7,7 @@ import SectionHeading from "./SectionHeading";
 
 const icons = { cultivation: SproutIcon, sourcing: PinIcon, choices: BasketIcon };
 
-export default function OrganicSourcing({ learnMore = true }: { learnMore?: boolean }) {
+export default function NaturalSourcing({ learnMore = true }: { learnMore?: boolean }) {
   return (
     <section id="sourcing" aria-labelledby="sourcing-title" className="relative overflow-hidden bg-cream py-16 md:py-24">
       <div className="mx-auto grid max-w-7xl items-center gap-10 px-4 sm:px-6 lg:grid-cols-2 lg:gap-16 lg:px-8">

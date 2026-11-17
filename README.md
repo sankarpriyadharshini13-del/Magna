@@ -1,6 +1,6 @@
 # Magna Eco Bites — Storefront
 
-A modern, responsive e-commerce storefront for Magna Eco Bites - traditional South Indian food products made with organic ingredients.
+A modern, responsive e-commerce storefront for Magna Eco Bites - traditional South Indian food products made with natural ingredients.
 
 ## Tech Stack
 - **Next.js 14** (App Router)

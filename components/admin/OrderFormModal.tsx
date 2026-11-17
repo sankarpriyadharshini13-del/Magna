@@ -296,7 +296,7 @@ export default function OrderFormModal({
             <>
               <h3 className="mo-sec">Business / customer</h3>
               <div className="mo-row">
-                {field("mo-business", "Business name", input("mo-business", business, setBusiness, { err: errors.business, placeholder: "e.g. Sri Organics Store" }), errors.business)}
+                {field("mo-business", "Business name", input("mo-business", business, setBusiness, { err: errors.business, placeholder: "e.g. Sri Naturals Store" }), errors.business)}
                 {field("mo-name", "Contact person", input("mo-name", name, setName, { err: errors.name }), errors.name)}
                 {field("mo-phone", "Phone", input("mo-phone", phone, setPhone, { err: errors.phone, inputMode: "tel", placeholder: "+91" }), errors.phone)}
               </div>

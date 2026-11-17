@@ -16,12 +16,12 @@ export const story = {
     "Two founders run the show: Mageshwaran oversees sourcing and quality, and Sathish runs the kitchen. Small batches, made fresh.",
 };
 
-/** Organic cultivation, ingredient sourcing and thoughtful food choices. */
+/** Natural cultivation, ingredient sourcing and thoughtful food choices. */
 export const sourcingPrinciples = [
   {
     key: "cultivation",
-    title: "Organic cultivation",
-    body: "We favour organically grown ingredients from trusted farms in Tamil Nadu, chosen for flavour and freshness.",
+    title: "Natural cultivation",
+    body: "We favour naturally grown ingredients from trusted farms in Tamil Nadu, chosen for flavour and freshness.",
   },
   {
     key: "sourcing",
@@ -108,35 +108,51 @@ export const servingIdeas: ServingIdea[] = [
 
 export const faqs = [
   {
-    q: "How do I place an order?",
-    a: "Add products to your cart, choose “Place order”, sign in, enter your delivery location and pay securely. You get an order confirmation email straight away and another when your order is delivered.",
+    q: "Is this 100% vegetarian?",
+    a: "Yes, all our products are 100% vegetarian. We use only lentils, spices, moringa leaf and country sugar — no non-veg ingredients at all.",
   },
   {
-    q: "What payment methods do you accept?",
-    a: "Pay online at checkout by UPI, credit/debit card or netbanking. You can also choose to order by email from your cart.",
+    q: "Does it contain any preservatives or added colours?",
+    a: "No preservatives, no artificial colours, no additives. We grind and pack our podis fresh in small batches, just like homemade.",
   },
   {
-    q: "How are your products sourced?",
-    a: "We source from trusted farms in Tamil Nadu, and every product is ground and packed in small batches in our Kolathur, Chennai kitchen.",
+    q: "How long will the product stay fresh?",
+    a: "When stored in an airtight container in a cool, dry place, our podis stay fresh for 3–4 months. Country sugar can last 6–8 months if kept dry.",
   },
   {
-    q: "How should I store the products?",
-    a: "Store in a cool, dry place away from direct sunlight. Once opened, keep in an airtight container to maintain freshness.",
+    q: "Is the country sugar real or just coloured white sugar?",
+    a: "This is authentic country sugar (naatu sakkarai) — minimally processed from sugarcane, not coloured white sugar. It has a natural golden colour and rich flavour.",
   },
   {
-    q: "What is your shipping policy?",
-    a: "We ship across India. Orders are typically processed within 1–2 business days; delivery times vary by location.",
+    q: "Is the podi too spicy? Can kids eat it?",
+    a: "Our idli podi has a balanced spice level — not too hot, not too mild. Many families give it to kids. If you prefer less spicy, mix with more oil or ghee.",
   },
   {
-    q: "Can I return or exchange products?",
-    a: "Because these are food products, we accept returns only for damaged or incorrect items. Please contact us within 48 hours of delivery.",
+    q: "How much podi should I use per serving?",
+    a: "Usually 1–2 teaspoons per idli or dosa is enough. Mix with sesame oil or ghee to make a paste. Adjust based on your taste.",
   },
   {
-    q: "Do the products suit my diet or allergies?",
-    a: "Please check the ingredients on the pack, and contact us before ordering if you have specific dietary requirements or allergies — we're happy to help.",
+    q: "Do you deliver to my area?",
+    a: "We deliver across India. Delivery time depends on your location — usually 3–7 business days after order. Enter your pincode at checkout to confirm.",
   },
   {
-    q: "Do you take bulk orders for businesses?",
-    a: "Yes — we welcome bulk orders from restaurants, cafés and retail stores. Contact us for pricing and availability.",
+    q: "Can I order by phone or WhatsApp?",
+    a: "You can order directly on our website. For bulk orders or special requests, WhatsApp us at your convenience — we're happy to help.",
+  },
+  {
+    q: "What if I receive a damaged or wrong product?",
+    a: "Please send us a photo of the damaged or wrong item within 48 hours of delivery. We'll replace it or refund you — no questions asked.",
+  },
+  {
+    q: "Is moringa podi good for health?",
+    a: "Moringa leaf is naturally rich in nutrients. Our moringa idli podi blends moringa with traditional spices for flavour — but we don't make health claims. Consult your doctor for dietary advice.",
+  },
+  {
+    q: "Can I use this for dosa and rice too?",
+    a: "Absolutely! Our podis work with idli, dosa, upma and even mixed with hot rice. Just add oil or ghee and enjoy.",
+  },
+  {
+    q: "Do you offer discounts for bulk orders?",
+    a: "Yes, we offer special pricing for restaurants, cafés, wedding functions and retail stores. Contact us with your requirements.",
   },
 ];

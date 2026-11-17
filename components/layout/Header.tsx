@@ -46,7 +46,7 @@ export default function Header() {
       href={l.href}
       aria-current={isActive(l.href) ? "page" : undefined}
       onClick={() => mobile && close()}
-      className={`focus-ring rounded-full transition-colors ${mobile ? "block px-4 py-3.5 font-display text-2xl" : "px-3 py-2 text-[15px] font-medium lg:px-4"} ${
+      className={`focus-ring whitespace-nowrap rounded-full transition-colors ${mobile ? "block px-4 py-3.5 font-display text-2xl" : "px-3 py-2 text-[15px] font-medium"} ${
         isActive(l.href) ? "bg-forest text-white" : "text-ink/75 hover:text-forest hover:bg-sand/70"
       }`}
     >
@@ -59,14 +59,19 @@ export default function Header() {
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-2 focus:z-[70] focus:rounded-full focus:bg-forest focus:px-4 focus:py-2 focus:text-cream">
         Skip to content
       </a>
-      <div className="mx-auto flex max-w-[1180px] items-center justify-between gap-4 px-4 py-3.5 sm:px-6 lg:px-8">
-        <Logo />
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3.5 sm:px-6 lg:grid lg:grid-cols-[1fr_auto_1fr] lg:gap-3 lg:px-8">
+        <div className="flex lg:justify-self-start">
+          <Logo priority />
+        </div>
 
-        <nav aria-label="Primary" className="hidden items-center gap-0.5 md:flex">
+        <nav
+          aria-label="Primary"
+          className="hidden items-center gap-0.5 lg:flex lg:justify-self-center xl:gap-1"
+        >
           {site.nav.map((l) => navLink(l))}
         </nav>
 
-        <div className="flex items-center gap-1 sm:gap-2">
+        <div className="flex items-center gap-1 sm:gap-2 lg:justify-self-end">
           <button type="button" className="icon-btn" aria-label="Search products" onClick={() => open("search")}>
             <SearchIcon />
           </button>
@@ -82,17 +87,17 @@ export default function Header() {
               </span>
             )}
           </button>
-          <Link href="/shop" className="focus-ring ml-1 hidden items-center gap-2 rounded-full bg-forest px-6 py-3 text-sm font-semibold text-white shadow-soft transition-all hover:-translate-y-0.5 hover:bg-forest-deep lg:inline-flex">
+          <Link href="/shop" className="focus-ring ml-1 hidden items-center gap-2 whitespace-nowrap rounded-full bg-forest px-6 py-3 text-sm font-semibold text-white shadow-soft transition-all hover:-translate-y-0.5 hover:bg-forest-deep xl:inline-flex">
             Shop Now <ArrowIcon width={16} height={16} />
           </Link>
-          <button type="button" className="icon-btn md:hidden" aria-label={menuOpen ? "Close menu" : "Open menu"} aria-expanded={menuOpen} aria-controls="mobile-menu" onClick={() => (menuOpen ? close() : open("menu"))}>
+          <button type="button" className="icon-btn lg:hidden" aria-label={menuOpen ? "Close menu" : "Open menu"} aria-expanded={menuOpen} aria-controls="mobile-menu" onClick={() => (menuOpen ? close() : open("menu"))}>
             {menuOpen ? <CloseIcon /> : <MenuIcon />}
           </button>
         </div>
       </div>
 
       {menuOpen && (
-        <nav id="mobile-menu" aria-label="Mobile" className="border-t border-leaf/10 bg-cream px-4 pb-8 pt-4 md:hidden">
+        <nav id="mobile-menu" aria-label="Mobile" className="border-t border-leaf/10 bg-cream px-4 pb-8 pt-4 lg:hidden">
           {site.nav.map((l) => navLink(l, true))}
           <Link href="/shop" onClick={close} className="btn-primary mt-6 w-full">Shop Now <ArrowIcon /></Link>
         </nav>
