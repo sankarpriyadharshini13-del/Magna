@@ -10,11 +10,12 @@ import type { Order } from "@/lib/admin/types";
 import { formatInr } from "@/lib/format";
 import { Badge, Topbar } from "../ui";
 
-type Range = "today" | "week" | "month";
+type Range = "today" | "week" | "month" | "custom";
 const RANGES: { id: Range; label: string; days: number; prev: string }[] = [
   { id: "today", label: "Today", days: 1, prev: "yesterday" },
   { id: "week", label: "This week", days: 7, prev: "last week" },
   { id: "month", label: "Month", days: 30, prev: "last month" },
+  { id: "custom", label: "Custom", days: 0, prev: "" },
 ];
 
 const DAY = 86_400_000;
@@ -51,25 +52,42 @@ export default function DashboardScreen() {
   const { data, now, label, mutate } = useAdminData();
   const [range, setRange] = useState<Range>("week");
   const [query, setQuery] = useState("");
+  const [customStartDate, setCustomStartDate] = useState<string>("");
+  const [customEndDate, setCustomEndDate] = useState<string>("");
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const R = RANGES.find((r) => r.id === range)!;
 
   const stats = useMemo(() => {
     const valid = data.orders.filter((o) => o.status !== "Cancelled");
     const today0 = startOfDay(now).getTime();
-    const from = today0 - (R.days - 1) * DAY;
+    
+    let from: number;
+    let to: number;
+    let span: number;
+    
+    if (range === "custom" && customStartDate && customEndDate) {
+      from = startOfDay(new Date(customStartDate)).getTime();
+      to = startOfDay(new Date(customEndDate)).getTime() + DAY;
+      const dayDiff = Math.round((to - from) / DAY);
+      span = Math.max(1, Math.min(dayDiff, 365));
+    } else {
+      from = today0 - (R.days - 1) * DAY;
+      to = now.getTime() + 1;
+      span = range === "month" ? 30 : 7;
+    }
+    
     const inWin = (o: Order, a: number, b: number) => {
       const t = new Date(o.placedAt).getTime();
       return t >= a && t < b;
     };
-    const cur = valid.filter((o) => inWin(o, from, now.getTime() + 1));
-    const prev = valid.filter((o) => inWin(o, from - R.days * DAY, from));
-    const curAll = data.orders.filter((o) => inWin(o, from, now.getTime() + 1));
+    const cur = valid.filter((o) => inWin(o, from, to));
+    const prev = valid.filter((o) => inWin(o, from - span * DAY, from));
+    const curAll = data.orders.filter((o) => inWin(o, from, to));
 
     // Sales trend: one point per day over the chart span, vs the same span before it.
-    const span = range === "month" ? 30 : 7;
     const series = (offsetDays: number) =>
       Array.from({ length: span }, (_, i) => {
-        const dayStart = today0 - (span - 1 - i + offsetDays) * DAY;
+        const dayStart = from + i * DAY + offsetDays * DAY;
         return sum(valid.filter((o) => inWin(o, dayStart, dayStart + DAY)));
       });
     const thisSeries = series(0);
@@ -102,7 +120,7 @@ export default function DashboardScreen() {
       topCity,
       status: ["Delivered", "Packed", "New", "Cancelled"].map((n) => ({ n, v: curAll.filter((o) => o.status === n).length, c: STATUS_COLORS[n] })),
     };
-  }, [data.orders, data.customers, now, R.days, range]);
+  }, [data.orders, data.customers, now, R.days, range, customStartDate, customEndDate]);
 
   const live = data.products.filter((p) => p.visible);
   const low = live.filter((p) => p.stock <= LOW_STOCK);
@@ -116,18 +134,33 @@ export default function DashboardScreen() {
   const x = (i: number) => 4 + (i * 392) / Math.max(1, stats.span - 1);
   const y = (v: number) => 124 - (v / max) * 100;
   const line = (vs: number[]) => vs.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(" ");
-  const tickDates = Array.from({ length: stats.span }, (_, i) => new Date(startOfDay(now).getTime() - (stats.span - 1 - i) * DAY));
-  const ticks = tickDates.map((d, i) => ({ i, text: stats.span === 7 ? d.toLocaleDateString("en-IN", { weekday: "short" }) : fmtDate(d) })).filter((t) => stats.span === 7 || t.i % 6 === 0 || t.i === stats.span - 1);
+  
+  let tickDates: Date[];
+  if (range === "custom" && customStartDate) {
+    const startDate = startOfDay(new Date(customStartDate));
+    tickDates = Array.from({ length: stats.span }, (_, i) => new Date(startDate.getTime() + i * DAY));
+  } else {
+    tickDates = Array.from({ length: stats.span }, (_, i) => new Date(startOfDay(now).getTime() - (stats.span - 1 - i) * DAY));
+  }
+  
+  const ticks = tickDates.map((d, i) => ({ i, text: stats.span <= 7 ? d.toLocaleDateString("en-IN", { weekday: "short" }) : fmtDate(d) })).filter((t) => stats.span <= 7 || t.i % Math.max(1, Math.floor(stats.span / 6)) === 0 || t.i === stats.span - 1);
   const topMax = Math.max(1, ...stats.top.map((t) => t[1]));
 
   const salesDelta = delta(stats.sales, stats.prevSales, (n) => `${Math.round((n / stats.prevSales) * 100)}%`, ` vs ${R.prev}`);
   const countDelta = delta(stats.count, stats.prevCount, (n) => String(n), ` vs ${R.prev}`);
   const avgDelta = delta(stats.avg, stats.prevAvg, (n) => formatInr(n), ` vs ${R.prev}`);
   const owner = data.settings.store.owner || data.me.name || "there";
+  
+  const getSubtitle = () => {
+    if (range === "custom" && customStartDate && customEndDate) {
+      return `Here's how ${data.settings.store.name} is doing from ${fmtDate(customStartDate)} to ${fmtDate(customEndDate)}`;
+    }
+    return `Here's how ${data.settings.store.name} is doing ${range === "today" ? "today" : range === "week" ? "this week" : "this month"}`;
+  };
 
   return (
     <>
-      <Topbar title={`Vanakkam, ${owner}`} subtitle={`Here's how ${data.settings.store.name} is doing ${range === "today" ? "today" : range === "week" ? "this week" : "this month"}`}>
+      <Topbar title={`Vanakkam, ${owner}`} subtitle={getSubtitle()}>
         <input
           className="adm-search"
           placeholder="Search order ID or customer..."
@@ -138,10 +171,52 @@ export default function DashboardScreen() {
         />
         <div className="adm-seg" role="group" aria-label="Range">
           {RANGES.map((r) => (
-            <button key={r.id} type="button" className={range === r.id ? "on" : ""} aria-pressed={range === r.id} onClick={() => setRange(r.id)}>{r.label}</button>
+            <button key={r.id} type="button" className={range === r.id ? "on" : ""} aria-pressed={range === r.id} onClick={() => {
+              setRange(r.id);
+              if (r.id !== "custom") setShowDatePicker(false);
+            }}>{r.label}</button>
           ))}
         </div>
       </Topbar>
+      
+      {range === "custom" && (
+        <div className="adm-date-picker">
+          <div className="adm-date-picker-inner">
+            <div className="adm-date-field">
+              <label className="adm-fl">From</label>
+              <input
+                type="date"
+                className="adm-in"
+                value={customStartDate}
+                onChange={(e) => setCustomStartDate(e.target.value)}
+                max={customEndDate || new Date().toISOString().split('T')[0]}
+              />
+            </div>
+            <div className="adm-date-field">
+              <label className="adm-fl">To</label>
+              <input
+                type="date"
+                className="adm-in"
+                value={customEndDate}
+                onChange={(e) => setCustomEndDate(e.target.value)}
+                min={customStartDate}
+                max={new Date().toISOString().split('T')[0]}
+              />
+            </div>
+            <button
+              type="button"
+              className="adm-btn"
+              onClick={() => {
+                setCustomStartDate("");
+                setCustomEndDate("");
+              }}
+              disabled={!customStartDate && !customEndDate}
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="adm-kpis d-kpis">
         <div className="adm-kpi"><div className="l">Total Sales</div><div className="v">{formatInr(stats.sales)}</div><div className={`d ${salesDelta?.startsWith("▼") ? "bad" : ""}`}>{salesDelta ?? `${stats.count} order${stats.count === 1 ? "" : "s"} so far`}</div></div>
@@ -206,7 +281,7 @@ export default function DashboardScreen() {
         </section>
 
         <section className="adm-card">
-          <div className="adm-card-h"><h2>Order status</h2><span>{range === "today" ? "today" : range === "week" ? "this week" : "this month"}</span></div>
+          <div className="adm-card-h"><h2>Order status</h2><span>{range === "custom" ? "custom range" : range === "today" ? "today" : range === "week" ? "this week" : "this month"}</span></div>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
             <Donut parts={stats.status} />
             <ul className="d-legend">

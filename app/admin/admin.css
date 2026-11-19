@@ -227,6 +227,28 @@
 .d-legend li { display: flex; align-items: center; gap: 7px; margin: 5px 0; color: var(--ink); }
 .d-legend i { width: 8px; height: 8px; border-radius: 50%; }
 
+/* ---------------- date picker ---------------- */
+.adm-date-picker {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 14px;
+}
+.adm-date-picker-inner {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.adm-date-field {
+  flex: 1;
+  min-width: 140px;
+}
+.adm-date-field .adm-in {
+  width: 100%;
+}
+
 .d-row3 .adm-scroll { margin: 0 -8px; }
 .d-row3 .adm-table th { padding: 0 4px 9px; font-size: 10px; }
 .d-row3 .adm-table td { padding: 0 4px; font-size: 11.5px; height: 42px; }

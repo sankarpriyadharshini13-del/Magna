@@ -6,7 +6,6 @@ import { getReviewStats, getReviewsPage } from "@/lib/server/publicReviews";
 
 const Hero = dynamic(() => import("@/components/home/Hero"), { loading: () => <div className="h-screen bg-cream" /> });
 const FeaturedProducts = dynamic(() => import("@/components/home/FeaturedProducts"), { loading: () => <div className="h-96 bg-cream" /> });
-const ProductGuide = dynamic(() => import("@/components/home/ProductGuide"), { loading: () => <div className="h-96 bg-cream" /> });
 const NaturalSourcing = dynamic(() => import("@/components/home/NaturalSourcing"), { loading: () => <div className="h-96 bg-cream" /> });
 const FAQ = dynamic(() => import("@/components/home/FAQ"), { loading: () => <div className="h-96 bg-cream" /> });
 const Contact = dynamic(() => import("@/components/home/Contact"), { loading: () => <div className="h-96 bg-cream" /> });
@@ -20,7 +19,6 @@ export default async function Home() {
       <BrandStatement />
       <NaturalSourcing />
       <FeaturedProducts />
-      <ProductGuide />
       <Reviews reviews={reviews} stats={reviewStats} />
       <FAQ />
       <Contact />

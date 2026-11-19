@@ -4,8 +4,8 @@ import { notFound } from "next/navigation";
 import nextDynamic from "next/dynamic";
 import SiteShell from "@/components/layout/SiteShell";
 import ProductCard, { stockState } from "@/components/product/ProductCard";
-import { ArrowIcon, LeafIcon, PinIcon, StoneIcon } from "@/components/ui/Icons";
-import { servingIdeas } from "@/data/brand";
+import { ArrowIcon, CheckIcon, CloseIcon, PinIcon, StoneIcon } from "@/components/ui/Icons";
+import { ingredientGuide } from "@/data/dietary";
 import { recommend } from "@/lib/recommend";
 import { getPublicProduct, getPublicProducts } from "@/lib/server/publicProducts";
 import Price, { percentOff } from "@/components/ui/Price";
@@ -29,10 +29,10 @@ export default async function ProductPage({ params }: { params: { slug: string }
   const [product, catalogue] = await Promise.all([getPublicProduct(params.slug), getPublicProducts()]);
   if (!product) notFound();
   const related = recommend(product, catalogue, 3);
-  const idea = servingIdeas.find((s) => s.productSlug === product.id);
   const stock = stockState(product);
   const out = stock?.tone === "out";
   const off = percentOff(product.priceInr, product.originalPriceInr);
+  const ingredientInfo = ingredientGuide.find((row) => row.slug === product.id);
 
   return (
     <SiteShell>
@@ -78,19 +78,56 @@ export default async function ProductPage({ params }: { params: { slug: string }
           </div>
         </div>
 
-        {idea && (
-          <section aria-labelledby="serve-title" className="mt-14 rounded-[1.75rem] bg-sand/50 p-6 sm:mt-20 sm:p-10">
-            <p className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.22em] text-clay sm:text-xs"><LeafIcon width={14} height={14} /> Serving idea</p>
-            <h2 id="serve-title" className="mt-2 font-display text-2xl text-forest sm:text-3xl">{idea.dish}</h2>
-            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-ink/65 sm:text-base">{idea.summary}</p>
-            <ol className="mt-6 grid gap-4 md:grid-cols-3">
-              {idea.steps.map((s, i) => (
-                <li key={i} className="flex gap-3 rounded-2xl bg-white/80 p-4 text-sm leading-relaxed text-ink/75">
-                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-forest text-xs font-bold text-cream">{i + 1}</span>
-                  {s}
-                </li>
-              ))}
-            </ol>
+        {ingredientInfo && (
+          <section aria-labelledby="ingredient-title" className="mt-14 rounded-[1.75rem] bg-sand/50 p-6 sm:mt-20 sm:p-10">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-clay sm:text-xs">Know your pack</p>
+                <h2 id="ingredient-title" className="mt-2 font-display text-2xl text-forest sm:text-3xl">Ingredients & Benefits</h2>
+              </div>
+            </div>
+            
+            <div className="mt-6 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              <div className="rounded-2xl bg-white/80 p-5">
+                <h3 className="text-sm font-bold uppercase tracking-[0.16em] text-forest mb-3">Ingredients</h3>
+                <p className="text-sm leading-relaxed text-ink/70">{ingredientInfo.ingredients}</p>
+              </div>
+              
+              <div className="rounded-2xl bg-white/80 p-5">
+                <h3 className="text-sm font-bold uppercase tracking-[0.16em] text-forest mb-3">Benefits</h3>
+                <p className="text-sm leading-relaxed text-ink/70">{ingredientInfo.benefits}</p>
+              </div>
+              
+              <div className="rounded-2xl bg-white/80 p-5 md:col-span-2 lg:col-span-1">
+                <h3 className="text-sm font-bold uppercase tracking-[0.16em] text-forest mb-3">Who can eat</h3>
+                <ul className="space-y-2">
+                  {ingredientInfo.eat.map((line, i) => (
+                    <li key={i} className="flex gap-2.5 text-sm leading-relaxed text-ink/70">
+                      <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-leaf/10 text-leaf">
+                        <CheckIcon width={12} height={12} />
+                      </span>
+                      {line}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            {ingredientInfo.careful.length > 0 && (
+              <div className="mt-6 rounded-2xl bg-honey/15 p-5">
+                <h3 className="text-sm font-bold uppercase tracking-[0.16em] text-forest-deep mb-3">Who should be careful</h3>
+                <ul className="space-y-2">
+                  {ingredientInfo.careful.map((line, i) => (
+                    <li key={i} className="flex gap-2.5 text-sm leading-relaxed text-forest-deep">
+                      <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-clay/20 text-clay">
+                        <CloseIcon width={12} height={12} />
+                      </span>
+                      {line}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </section>
         )}
 
