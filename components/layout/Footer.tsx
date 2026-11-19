@@ -83,7 +83,7 @@ export default function Footer() {
               A little tradition.
             </p>
             <p className="mt-4 max-w-[21rem] text-sm leading-relaxed text-cream/60">
-              Stone-ground and packed in small batches in our Kolathur, Chennai kitchen.
+              Carefully prepared and packed with care in our kitchen.
             </p>
             <div className="mt-7 flex gap-2.5">
               {socialLinks.map((social) => (
@@ -187,7 +187,7 @@ export default function Footer() {
                 )}
               </ul>
               <a
-                href="https://maps.google.com/?q=Kolathur,+Chennai"
+                href="https://maps.google.com/?q=Chennai"
                 target="_blank"
                 rel="noreferrer"
                 className="focus-ring group mt-5 flex items-center justify-between gap-2 rounded border-t border-cream/10 pt-4 text-xs font-semibold text-cream/65 transition-colors duration-200 hover:text-honey"

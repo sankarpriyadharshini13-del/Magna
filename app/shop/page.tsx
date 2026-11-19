@@ -9,7 +9,7 @@ const ProductCard = nextDynamic(() => import("@/components/product/ProductCard")
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = { title: "Shop | Magna Eco Bites", description: "Idli podi, country sugar and moringa idli podi from Magna Eco Bites, Kolathur, Chennai." };
+export const metadata: Metadata = { title: "Shop | Magna Eco Bites", description: "Idli podi, country sugar and moringa idli podi from Magna Eco Bites, Chennai." };
 
 export default async function ShopPage() {
   const products = await getPublicProducts();

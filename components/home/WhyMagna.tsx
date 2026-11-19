@@ -18,7 +18,7 @@ export default function WhyMagna({ learnMore = true }: { learnMore?: boolean }) 
             tone="dark"
             eyebrow="Why Magna Bites"
             title={<>Made the slow way, <span className="italic text-honey">on purpose</span></>}
-            lead="Three things we do every day, in our own kitchen in Kolathur."
+            lead="Three things we do every day, in our own kitchen in Chennai."
             action={learnMore ? { href: "/about", label: "About us" } : undefined}
           />
         </Reveal>

@@ -1,6 +1,6 @@
 export const site = {
   name: "Magna Eco Bites",
-  location: "Kolathur, Chennai",
+  location: "Chennai",
   email: "hello@magnaecobites.com", // from existing site — confirm before launch
   phone: null as string | null, // missing on existing site
   nav: [
@@ -16,12 +16,12 @@ export const site = {
 /** Differentiators — all taken from the existing site's own copy. Owner to confirm. */
 export const differentiators = [
   {
-    title: "Sourced & packed in Kolathur",
-    body: "Every pack is sourced and packed locally in Kolathur, Chennai — close enough that the founders can trace what goes in.",
+    title: "Sourced & packed in Chennai",
+    body: "Every pack is sourced and packed locally in Chennai — close enough that the founders can trace what goes in.",
     icon: "pin",
   },
   {
-    title: "Stone-ground, the traditional way",
+    title: "Our Traditional Way of Making",
     body: "Time-honoured recipes, ground on stone in our own kitchen. No factory lines, no shortcuts to the taste you grew up with.",
     icon: "stone",
   },

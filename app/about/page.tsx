@@ -4,7 +4,7 @@ import About from "@/components/home/About";
 
 export const metadata: Metadata = {
   title: "About Us | Magna Eco Bites",
-  description: "Family-run from Kolathur, Chennai — traditional South Indian podis and country sugar, stone-ground in small batches.",
+  description: "Family-run from Chennai — bringing you South Indian podis and country sugar, carefully prepared with quality ingredients.",
 };
 
 export default function AboutPage() {

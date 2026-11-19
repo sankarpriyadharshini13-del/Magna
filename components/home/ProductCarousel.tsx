@@ -42,7 +42,7 @@ export default function ProductCarousel({ products }: { products: Product[] }) {
       </div>
 
       <figcaption className="absolute bottom-[4.5%] left-[6.5%] right-4 text-cream">
-        <p className="font-display text-[1.4rem] leading-tight sm:text-[1.65rem] lg:text-[1.9rem]">Stone-ground <span aria-hidden="true">•</span> Small batch</p>
+        <p className="font-display text-[1.4rem] leading-tight sm:text-[1.65rem] lg:text-[1.9rem]">Made with care <span aria-hidden="true">•</span> Packed with love</p>
         <p className="mt-1 text-[0.85rem] text-cream/70 sm:mt-1.5 sm:text-[0.95rem]">{currentProduct?.name || "Our Products"}</p>
       </figcaption>
 

@@ -37,6 +37,90 @@ html, body { overflow-x: clip; }
   .icon-btn { @apply focus-ring grid h-11 w-11 place-items-center rounded-full text-forest transition-colors hover:bg-sand; }
   .qty-btn { @apply focus-ring grid h-10 w-10 place-items-center rounded-full text-forest transition-colors hover:bg-sand disabled:cursor-not-allowed disabled:opacity-35; }
   .field { @apply w-full rounded-xl border border-leaf/20 bg-white/70 px-4 py-3 text-ink outline-none transition-all placeholder:text-ink/35 focus:border-forest focus:ring-4 focus:ring-leaf/15; }
+
+  /* ---- Brand lockup ----
+     Scale system for the seal + MAGNA wordmark + supporting lines.
+     --brand-wm    = rendered ink width of MAGNA (966px in the source file).
+     --brand-stack = width of the two supporting lines. It is intentionally
+                     wider than MAGNA: the artwork's "Eco Bites" and tagline are
+                     only 26% / 10% of the MAGNA cap height, which turns them
+                     into unreadable 4-5px type at header size. Widening the
+                     lower lines lets both stay comfortably legible.
+     --brand-wm steps up per breakpoint (68 → 78 → 88 → 94 → 100 → 104) so the
+     lockup never crowds the icon row on small phones and still reads at 1x. */
+  .brand-lockup {
+    --brand-wm: 68px;
+    --brand-stack: calc(var(--brand-wm) * 1.56);
+    display: inline-flex;
+    align-items: center;
+    gap: calc(var(--brand-wm) * 0.181);
+    color: var(--color-forest-ink);
+  }
+  .brand-lockup--dark { color: var(--color-ivory); }
+  .brand-lockup__emblem {
+    flex: none;
+    width: calc(var(--brand-wm) * 0.466);
+    height: calc(var(--brand-wm) * 0.466);
+  }
+  .brand-lockup__stack {
+    display: flex;
+    width: var(--brand-stack);
+    flex-direction: column;
+    align-items: center;
+    white-space: nowrap;
+  }
+  .brand-lockup__mark {
+    display: block;
+    width: var(--brand-wm);
+    height: auto;
+  }
+  .brand-lockup__eco {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    margin-top: calc(var(--brand-wm) * 0.028);
+    font-family: var(--font-wordmark), "Cormorant Garamond", Georgia, serif;
+    font-size: calc(var(--brand-stack) * 0.094);
+    line-height: 1;
+    letter-spacing: 0.15em;
+  }
+  .brand-lockup__eco-rule { flex: 1 1 auto; height: 1px; background-color: currentColor; }
+  .brand-lockup__eco-text {
+    padding-left: calc(var(--brand-wm) * 0.028);
+    padding-right: calc(var(--brand-wm) * 0.012);
+    margin-right: -0.15em;
+  }
+  .brand-lockup__tag {
+    margin-top: calc(var(--brand-wm) * 0.032);
+    margin-right: -0.07em;
+    font-family: var(--font-wordmark), "Cormorant Garamond", Georgia, serif;
+    font-size: calc(var(--brand-stack) * 0.0585);
+    line-height: 1;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+  }
+  .brand-lockup__eco-text { text-transform: uppercase; }
+
+  @media (min-width: 400px) {
+    .brand-lockup { --brand-wm: 78px; }
+  }
+  @media (min-width: 480px) {
+    .brand-lockup { --brand-wm: 88px; }
+  }
+  @media (min-width: 640px) {
+    .brand-lockup { --brand-wm: 94px; }
+  }
+  @media (min-width: 768px) {
+    .brand-lockup { --brand-wm: 100px; }
+  }
+  @media (min-width: 1024px) {
+    /* The desktop nav appears here, so the lockup gives some width back. */
+    .brand-lockup { --brand-wm: 92px; }
+  }
+  @media (min-width: 1280px) {
+    .brand-lockup { --brand-wm: 104px; }
+  }
+
 }
 
 /* ---- Scroll reveal ---- */

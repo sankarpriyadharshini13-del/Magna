@@ -5,7 +5,7 @@ export const defaultSettings = (): Settings => ({
   store: {
     name: "Magna Eco Bites",
     owner: "Magesh",
-    address: "Kolathur, Chennai – 600099, Tamil Nadu",
+    address: "Chennai – 600099, Tamil Nadu",
     phone: "",
     email: "hello@magnaecobites.in",
     gstin: "",

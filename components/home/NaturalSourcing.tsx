@@ -23,8 +23,8 @@ export default function NaturalSourcing({ learnMore = true }: { learnMore?: bool
               />
             </div>
             <div className="absolute -bottom-5 left-5 right-5 rounded-2xl bg-forest p-5 text-cream shadow-lift sm:left-auto sm:right-6 sm:w-72">
-              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-honey">From Kolathur, Chennai</p>
-              <p className="mt-1.5 font-display text-lg leading-snug">Sourced, stone-ground and packed in our own kitchen.</p>
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-honey">From Chennai</p>
+              <p className="mt-1.5 font-display text-lg leading-snug">Prepared and packed with care in our own kitchen.</p>
             </div>
           </div>
         </Reveal>
@@ -34,8 +34,8 @@ export default function NaturalSourcing({ learnMore = true }: { learnMore?: bool
             <SectionHeading
               id="sourcing-title"
               eyebrow="Thoughtfully sourced"
-              title={<>Good food starts <span className="italic text-clay">long before the kitchen</span></>}
-              lead="Where our ingredients come from matters as much as how we grind them."
+              title="Good food begins with good ingredients"
+              lead="We believe that good food starts with the quality of its ingredients. That's why we carefully select our ingredients and pay attention to every step of preparation and packaging."
             />
           </Reveal>
           <ol className="mt-8 space-y-4">

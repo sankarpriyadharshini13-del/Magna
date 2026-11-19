@@ -9,9 +9,9 @@
 
 export const story = {
   inspiration:
-    "Magna Eco Bites draws inspiration from traditional South Indian cooking — stone-ground podis, slow methods and the care that goes into every step.",
+    "Magna Eco Bites draws inspiration from traditional South Indian cooking — authentic recipes, quality ingredients and the care that goes into every step.",
   roots:
-    "We are family-run from Kolathur, Chennai, close to where our ingredients come from and to the people we cook for.",
+    "We are family-run from Chennai, close to where our ingredients come from and to the people we cook for.",
   family:
     "Two founders run the show: Mageshwaran oversees sourcing and quality, and Sathish runs the kitchen. Small batches, made fresh.",
 };
@@ -20,18 +20,18 @@ export const story = {
 export const sourcingPrinciples = [
   {
     key: "cultivation",
-    title: "Natural cultivation",
-    body: "We favour naturally grown ingredients from trusted farms in Tamil Nadu, chosen for flavour and freshness.",
+    title: "Carefully chosen ingredients",
+    body: "We source our ingredients from trusted suppliers, giving importance to quality, freshness, and the care taken in selecting each one.",
   },
   {
     key: "sourcing",
-    title: "Ingredient sourcing",
-    body: "Every pack is sourced and packed locally in Kolathur, Chennai — close enough that the founders can trace what goes in.",
+    title: "Made close to home",
+    body: "Our products are prepared and packed in Chennai. We pay attention to every step, from selecting the ingredients to carefully packing each product.",
   },
   {
     key: "choices",
-    title: "Thoughtful food choices",
-    body: "Simple, traditional recipes — lentils, spices, moringa leaf and minimally processed country sugar — so you know what is on your plate.",
+    title: "Goodness in every pack",
+    body: "We bring together familiar ingredients like lentils, spices, moringa leaves, and other wholesome ingredients to prepare food products that fit naturally into your everyday meals.",
   },
 ] as const;
 
@@ -45,7 +45,7 @@ export const team = [
   {
     name: "Sathish",
     role: "Branch Manager",
-    focus: "Runs the kitchen where every batch is stone-ground.",
+    focus: "Oversees the kitchen and ensures quality in every product.",
     founder: true,
   },
   {
@@ -72,7 +72,7 @@ export const servingIdeas: ServingIdea[] = [
     dish: "Idli with podi & sesame oil",
     productSlug: "idli-podi",
     productName: "Idli Podi",
-    summary: "The classic South Indian breakfast: soft, steamed idlis with a spoon of stone-ground podi.",
+    summary: "A wholesome South Indian meal made with simple ingredients and traditional recipes.",
     steps: [
       "Spoon one or two teaspoons of idli podi onto your plate.",
       "Make a small well and pour in sesame (gingelly) oil or a little ghee.",

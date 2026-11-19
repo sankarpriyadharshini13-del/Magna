@@ -69,8 +69,8 @@ export default async function ProductPage({ params }: { params: { slug: string }
             <div className="mt-7"><AddToCartPanel productId={product.id} name={product.name} disabled={out} /></div>
 
             <ul className="mt-8 grid gap-3 border-t border-forest/10 pt-6 sm:grid-cols-2">
-              <li className="flex items-center gap-3 text-sm text-ink/70"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-leaf/10 text-leaf"><PinIcon width={18} height={18} /></span>Sourced &amp; packed in Kolathur, Chennai</li>
-              <li className="flex items-center gap-3 text-sm text-ink/70"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-leaf/10 text-leaf"><StoneIcon width={18} height={18} /></span>Stone-ground in small batches</li>
+              <li className="flex items-center gap-3 text-sm text-ink/70"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-leaf/10 text-leaf"><PinIcon width={18} height={18} /></span>Sourced &amp; packed in Chennai</li>
+              <li className="flex items-center gap-3 text-sm text-ink/70"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-leaf/10 text-leaf"><StoneIcon width={18} height={18} /></span>Made with care and quality ingredients</li>
             </ul>
             <Link href="/about" className="focus-ring mt-5 inline-flex items-center gap-1.5 rounded text-sm font-semibold text-forest underline-offset-4 hover:text-clay hover:underline">
               Learn more about how we make it <ArrowIcon width={15} height={15} />

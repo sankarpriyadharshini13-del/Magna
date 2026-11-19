@@ -18,9 +18,9 @@ export const products: Product[] = [
     slug: "idli-podi",
     name: "Idli Podi",
     tag: "Bestseller",
-    description: "Traditional stone-ground idli podi — a lentil and spice blend.",
+    description: "Traditional idli podi made with a blend of lentils and spices.",
     longDescription:
-      "Our classic idli podi: a traditional lentil and spice blend, stone-ground in small batches in Kolathur, Chennai. Stir into sesame or ghee oil and serve with idli, dosa or hot rice.",
+      "A perfect companion for idli, dosa and hot rice. Simply mix with oil or ghee and enjoy.",
     packSize: null,
     priceInr: null,
     originalPriceInr: null,
@@ -36,7 +36,7 @@ export const products: Product[] = [
     tag: "Unrefined",
     description: "Minimally processed country sugar with a rich, rustic flavour.",
     longDescription:
-      "Minimally processed country sugar, packed in Kolathur, Chennai. A rustic alternative for tea, coffee, payasam and everyday sweets.",
+      "Minimally processed country sugar, packed in Chennai. A rustic alternative for tea, coffee, payasam and everyday sweets.",
     packSize: null,
     priceInr: null,
     originalPriceInr: null,
@@ -52,7 +52,7 @@ export const products: Product[] = [
     tag: "New",
     description: "Classic idli podi blended with moringa leaf — our newest blend.",
     longDescription:
-      "Our classic idli podi blended with moringa leaf. Stone-ground in small batches in Kolathur, Chennai — traditional taste, naturally yours.",
+      "Our idli podi combined with nutrient-rich moringa leaves, bringing traditional South Indian goodness to your everyday meals.",
     packSize: null,
     priceInr: null,
     originalPriceInr: null,

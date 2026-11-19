@@ -1,14 +1,8 @@
-import { LeafIcon, SproutIcon, CheckIcon } from "@/components/ui/Icons";
+import { SproutIcon, CheckIcon } from "@/components/ui/Icons";
 import Reveal from "./Reveal";
 import SectionHeading from "./SectionHeading";
 
 const brandPoints = [
-  {
-    icon: "soil",
-    title: "Soil as Connector",
-    body: "The soil is the great connector of lives - the healer and restorer of our world.",
-    Icon: LeafIcon,
-  },
   {
     icon: "conscious",
     title: "Conscious Choices",

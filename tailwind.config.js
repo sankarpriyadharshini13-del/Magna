@@ -15,6 +15,7 @@ module.exports = {
         forest: "#1B3D2A",
         "forest-deep": "#12291C",
         "forest-card": "#1F4A31",
+        "forest-ink": "#073722",
         clay: "#E8672A",
         honey: "#D9A441",
         husk: "#D8CBA8",
@@ -23,6 +24,7 @@ module.exports = {
       fontFamily: {
         display: ["var(--font-display)", "Georgia", "serif"],
         body: ["var(--font-body)", "system-ui", "sans-serif"],
+        wordmark: ["var(--font-wordmark)", "Cormorant Garamond", "Georgia", "serif"],
       },
       boxShadow: {
         soft: "0 10px 30px -12px rgba(20, 42, 30, 0.18)",

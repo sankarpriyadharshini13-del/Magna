@@ -279,15 +279,15 @@ create policy admin_assets_delete on storage.objects
 insert into public.products (id, name, sku, price, stock, pack_size, tag, description, long_description, barcode, visible, images, color, created_at)
 values
   ('idli-podi', 'Idli Podi', 'MEB-IP-200', 180, 84, '200 g', 'Bestseller',
-   'Traditional stone-ground idli podi — a lentil and spice blend.',
-   'Our classic idli podi: a traditional lentil and spice blend, stone-ground in small batches in Kolathur, Chennai. Stir into sesame or ghee oil and serve with idli, dosa or hot rice.',
+   'Traditional idli podi made with a blend of lentils and spices.',
+   'Our classic idli podi is made with a blend of lentils and spices. Mix with sesame oil or ghee and enjoy with idli, dosa or hot rice.',
    '890123450017', true, '{}', '#c8602b', now() - interval '3 minutes'),
   ('country-sugar', 'Country Sugar', 'MEB-CS-1000', 120, 40, '1 kg', 'Unrefined',
    'Minimally processed country sugar with a rich, rustic flavour.',
-   'Minimally processed country sugar, packed in Kolathur, Chennai. A rustic alternative for tea, coffee, payasam and everyday sweets.',
+   'Minimally processed country sugar, packed in Chennai. A rustic alternative for tea, coffee, payasam and everyday sweets.',
    '890123450024', true, '{}', '#d9a441', now() - interval '2 minutes'),
   ('moringa-idli-podi', 'Moringa Idli Podi', 'MEB-MP-200', 210, 46, '200 g', 'New',
    'Classic idli podi blended with moringa leaf — our newest blend.',
-   'Our classic idli podi blended with moringa leaf. Stone-ground in small batches in Kolathur, Chennai — traditional taste, naturally yours.',
+   'Our classic idli podi blended with moringa leaves, bringing together traditional ingredients for your everyday meals.',
    '890123450031', true, array['/images/products/moringa-idli-podi.jpg'], '#3b5a3a', now() - interval '1 minute')
 on conflict (id) do nothing;

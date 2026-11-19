@@ -5,8 +5,8 @@ import Reveal from "./Reveal";
 import SectionHeading from "./SectionHeading";
 
 const values = [
-  { icon: StoneIcon, title: "Traditional recipes", body: "Stone-ground podis, inspired by South Indian home cooking." },
-  { icon: PinIcon, title: "Local roots", body: "Sourced and packed in Kolathur, Chennai." },
+  { icon: StoneIcon, title: "Traditional recipes", body: "Traditional podis, inspired by South Indian home cooking." },
+  { icon: PinIcon, title: "Local roots", body: "Sourced and packed in Chennai." },
   { icon: FamilyIcon, title: "Family run", body: "Two founders, personally involved in every batch." },
   { icon: SproutIcon, title: "Thoughtful choices", body: "Simple ingredients, selected with care." },
 ];

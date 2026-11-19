@@ -59,7 +59,7 @@ export default function Header() {
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-2 focus:z-[70] focus:rounded-full focus:bg-forest focus:px-4 focus:py-2 focus:text-cream">
         Skip to content
       </a>
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3.5 sm:px-6 lg:grid lg:grid-cols-[1fr_auto_1fr] lg:gap-3 lg:px-8">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-3 py-3.5 sm:gap-4 sm:px-6 lg:grid lg:grid-cols-[1fr_auto_1fr] lg:gap-3 lg:px-8">
         <div className="flex lg:justify-self-start">
           <Logo priority />
         </div>
@@ -71,7 +71,7 @@ export default function Header() {
           {site.nav.map((l) => navLink(l))}
         </nav>
 
-        <div className="flex items-center gap-1 sm:gap-2 lg:justify-self-end">
+        <div className="flex items-center gap-1 sm:gap-2 lg:justify-self-end [&_.icon-btn]:h-10 [&_.icon-btn]:w-10 sm:[&_.icon-btn]:h-11 sm:[&_.icon-btn]:w-11">
           <button type="button" className="icon-btn" aria-label="Search products" onClick={() => open("search")}>
             <SearchIcon />
           </button>

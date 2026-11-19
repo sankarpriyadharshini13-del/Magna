@@ -38,8 +38,7 @@ export default function FeaturedProducts() {
                 Straight from our kitchen, <span className="italic text-clay">to yours</span>
               </h2>
               <p className="mt-4 max-w-xl text-base leading-relaxed text-ink/65 sm:text-lg">
-                Stone-ground in small batches in Kolathur, Chennai — pick a favourite or try them all.
-              </p>
+     Made with care in Chennai — pick a favourite or try them all.              </p>
             </div>
             <div className="flex min-w-0 flex-col gap-4 lg:col-span-5 lg:items-end">
               {tags.length > 1 && (
@@ -85,7 +84,7 @@ export default function FeaturedProducts() {
 
         <div className="mt-8 flex flex-col items-center justify-between gap-4 rounded-[1.5rem] bg-forest px-6 py-5 text-cream sm:mt-12 sm:flex-row sm:px-8">
           <p className="text-center text-sm text-cream/80 sm:text-left sm:text-base">
-            <span className="font-display text-lg text-cream">{products.length} product{products.length === 1 ? "" : "s"}</span> — sourced, stone-ground and packed in our own kitchen.
+            <span className="font-display text-lg text-cream">{products.length} product{products.length === 1 ? "" : "s"}</span> — sourced, Prepared and packed in our own kitchen.
           </p>
           <Link href="/shop" className="focus-ring group inline-flex shrink-0 items-center gap-2 rounded-full bg-cream px-5 py-2.5 text-sm font-semibold text-forest transition-colors hover:bg-honey">
             View all products <ArrowIcon width={16} height={16} className="transition-transform group-hover:translate-x-0.5" />

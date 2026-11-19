@@ -2,54 +2,52 @@ import Image from "next/image";
 import Link from "next/link";
 
 /**
- * Brand lockup: the real logo artwork from /public/images/LOGO 2.png is shown
- * cropped to its circular emblem (positioned with CSS, so the original file is
- * used as-is), followed by the lockup wording set in the logo's own style —
- * uppercase serif "MAGNA" above wide-tracked "ECO BITES".
+ * Horizontal brand lockup, matching the reference artwork exactly:
+ * the engraved circular emblem on the left and a centred wordmark stack on the
+ * right — "MAGNA" (the artwork's leaf-cut letterforms), "— ECO BITES —" and
+ * "Connecting your soul with nature"
+ *
+ * MAGNA and the emblem are cropped from the master logo (green for light
+ * surfaces, cream for dark ones) so the leaf details and engraving survive, and
+ * the two supporting lines are set in Cormorant Garamond. All sizes are derived
+ * from `--brand-wm` (rendered ink width of MAGNA) and `--brand-stack` (width of
+ * the two lower lines) in `app/globals.css`, so every part keeps its proportion
+ * at every breakpoint.
  */
 export default function Logo({ onDark = false, priority = false }: { onDark?: boolean; priority?: boolean }) {
   return (
-    <Link href="/" aria-label="Magna Eco Bites — home" className="focus-ring group inline-flex items-center gap-3 rounded-xl">
-      <span
-        className={`relative block h-12 w-12 shrink-0 overflow-hidden rounded-full bg-cream shadow-soft ring-1 transition-transform duration-300 group-hover:scale-105 sm:h-14 sm:w-14 ${
-          onDark ? "ring-cream/25" : "ring-leaf/10"
-        }`}
-      >
+    <Link
+      href="/"
+      aria-label="Magna Eco Bites — home"
+      className={`brand-lockup focus-ring rounded-xl${onDark ? " brand-lockup--dark" : ""}`}
+    >
+      <Image
+        src={onDark ? "/images/magna-emblem-cream.png" : "/images/magna-emblem-green.png"}
+        alt=""
+        width={320}
+        height={320}
+        priority={priority}
+        sizes="56px"
+        className="brand-lockup__emblem"
+      />
+
+      {/* Wordmark stack — every line is centred under the one above it. */}
+      <span className="brand-lockup__stack">
         <Image
-          src="/images/LOGO 2.png"
+          src={onDark ? "/images/magna-wordmark-cream.png" : "/images/magna-wordmark-green.png"}
           alt=""
-          width={1254}
-          height={1254}
+          width={480}
+          height={78}
           priority={priority}
-          sizes="96px"
-          className="absolute max-w-none"
-          style={{ width: "151.3%", height: "151.3%", left: "-26.1%", top: "-4.2%" }}
+          sizes="110px"
+          className="brand-lockup__mark"
         />
-      </span>
-      <span className="flex flex-col items-start whitespace-nowrap leading-none">
-        <span
-          className={`block font-display text-[1.25rem] font-bold uppercase leading-none tracking-[0.08em] sm:text-[1.4rem] md:text-[1.5rem] ${
-            onDark ? "text-cream" : "text-forest"
-          }`}
-        >
-          Magna
+        <span className="brand-lockup__eco">
+          <span aria-hidden="true" className="brand-lockup__eco-rule" />
+          <span className="brand-lockup__eco-text">Eco Bites</span>
+          <span aria-hidden="true" className="brand-lockup__eco-rule" />
         </span>
-        <span
-          className={`mt-1.5 flex items-center gap-1.5 text-[0.55rem] font-bold uppercase leading-none tracking-[0.32em] sm:text-[0.6rem] ${
-            onDark ? "text-cream/85" : "text-forest/75"
-          }`}
-        >
-          <span aria-hidden="true" className="h-px w-2.5 shrink-0 bg-current sm:w-3.5" />
-          Eco Bites
-          <span aria-hidden="true" className="h-px w-2.5 shrink-0 bg-current sm:w-3.5" />
-        </span>
-        <span
-          className={`mt-3 text-[0.6rem] font-bold uppercase leading-none tracking-[0.2em] sm:text-[0.65rem] ${
-            onDark ? "text-cream/90" : "text-forest/80"
-          }`}
-        >
-          Pure Nature. Powerful You
-        </span>
+        <span className="brand-lockup__tag">Connecting your soul with nature</span>
       </span>
     </Link>
   );
