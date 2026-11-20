@@ -82,6 +82,7 @@ export function mapOrder(r: Row): Order {
     shipPhone: r.ship_phone ?? "",
     location: { city: r.ship_city ?? "", state: r.ship_state ?? "", pincode: r.ship_pincode ?? "" },
     deliveredAt: r.delivered_at ?? null,
+    cancelReason: r.cancel_reason ?? "",
     kind: r.kind === "bulk" ? "bulk" : "normal",
     source: r.source === "admin" ? "admin" : "online",
     businessName: r.business_name ?? "",

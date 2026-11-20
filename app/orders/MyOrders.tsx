@@ -32,6 +32,8 @@ interface MyOrder {
   method: string;
   testPayment: boolean;
   deliveredAt: string | null;
+  /** Why the shop cancelled the order (empty when no reason was given). */
+  cancelReason: string;
   timeline: { label: string; note: string | null; at: string }[];
 }
 
@@ -62,8 +64,19 @@ const STEPS: { key: MyOrder["status"]; label: string }[] = [
   { key: "Delivered", label: "Delivered" },
 ];
 
-function Progress({ status }: { status: MyOrder["status"] }) {
-  if (status === "Cancelled") return <p className="text-sm font-semibold text-ink/60">This order was cancelled.</p>;
+function Progress({ status, reason }: { status: MyOrder["status"]; reason?: string }) {
+  if (status === "Cancelled") {
+    return (
+      <div>
+        <p className="text-sm font-semibold text-ink/60">This order was cancelled.</p>
+        {reason && (
+          <p className="mt-1 text-sm leading-relaxed text-ink/75">
+            <b className="font-semibold text-forest">Reason:</b> {reason}
+          </p>
+        )}
+      </div>
+    );
+  }
   const reached = STEPS.findIndex((s) => s.key === status);
   return (
     <ol className="flex items-center" aria-label="Order progress">
@@ -106,7 +119,7 @@ function OrderCard({ o, defaultOpen, remind, onReviewed }: { o: MyOrder; default
       </header>
 
       <div className="space-y-5 p-5 sm:p-6">
-        <Progress status={o.status} />
+        <Progress status={o.status} reason={o.cancelReason} />
 
         <ul className="divide-y divide-forest/[0.07]">
           {o.items.map((i, idx) => {
@@ -180,6 +193,10 @@ function OrderCard({ o, defaultOpen, remind, onReviewed }: { o: MyOrder; default
                 {o.address || "—"}
               </p>
               {o.deliveredAt && <p className="mt-2 text-xs font-semibold text-leaf">Delivered on {fmtDate(o.deliveredAt)}</p>}
+              {o.status === "Cancelled" && (() => {
+                const cancelled = o.timeline.find((e) => e.label === "Cancelled");
+                return cancelled ? <p className="mt-2 text-xs font-semibold text-ink/60">Cancelled on {fmtDate(cancelled.at)}</p> : null;
+              })()}
               {o.tracking && (
                 <div className="mt-3 rounded-xl bg-white/80 p-3 text-xs leading-relaxed text-ink/75 ring-1 ring-forest/[0.06]">
                   <p className="font-bold uppercase tracking-[0.12em] text-forest">Shipment</p>

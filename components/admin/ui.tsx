@@ -123,13 +123,19 @@ export function ConfirmModal({
   confirmLabel,
   onConfirm,
   onClose,
+  input,
 }: {
   title: string;
   body: React.ReactNode;
   confirmLabel: string;
-  onConfirm: () => void;
+  /** Receives the optional input's text (empty when there is no input or it was left blank). */
+  onConfirm: (value: string) => void;
   onClose: () => void;
+  /** Optional free-text box, e.g. why an order was cancelled. */
+  input?: { label: string; placeholder?: string; hint?: string; maxLength?: number };
 }) {
+  const fieldId = useId();
+  const [value, setValue] = useState("");
   return (
     <Modal
       title={title}
@@ -141,7 +147,7 @@ export function ConfirmModal({
             type="button"
             className="adm-btn pri"
             onClick={() => {
-              onConfirm();
+              onConfirm(value.trim());
               onClose();
             }}
           >
@@ -151,6 +157,21 @@ export function ConfirmModal({
       }
     >
       <p style={{ color: "var(--text)", lineHeight: 1.55 }}>{body}</p>
+      {input && (
+        <div style={{ marginTop: 14 }}>
+          <label className="adm-fl" htmlFor={fieldId}>{input.label}</label>
+          <textarea
+            id={fieldId}
+            className="adm-ta"
+            rows={3}
+            value={value}
+            maxLength={input.maxLength ?? 300}
+            placeholder={input.placeholder}
+            onChange={(e) => setValue(e.target.value)}
+          />
+          {input.hint && <p className="adm-muted" style={{ marginTop: 4 }}>{input.hint}</p>}
+        </div>
+      )}
     </Modal>
   );
 }

@@ -9,12 +9,15 @@ import { useAdminData } from "@/lib/admin/store";
 import type { Order } from "@/lib/admin/types";
 import { formatInr } from "@/lib/format";
 import OrderFormModal from "../OrderFormModal";
-import { Badge, Topbar, useQueryParam } from "../ui";
+import { Badge, ConfirmModal, Topbar, useQueryParam } from "../ui";
 
 const PAGE = 9;
 
-type Filter = "All" | "New" | "Packed" | "Delivered";
-const FILTERS: Filter[] = ["All", "New", "Packed", "Delivered"];
+type Filter = "All" | "New" | "Packed" | "Delivered" | "Cancelled";
+const FILTERS: Filter[] = ["All", "New", "Packed", "Delivered", "Cancelled"];
+
+/** Courier the shop ships with. Bulk orders can carry their own tracking link, which wins. */
+const TRACK_DELIVERY_URL = "https://theprofessionalcouriertracking.com/";
 
 const matchesFilter = (o: Order, f: Filter) => (f === "All" ? true : o.status === f);
 
@@ -32,6 +35,12 @@ export default function OrdersScreen() {
         ? `${r.delivered} order${r.delivered > 1 ? "s" : ""} marked delivered — confirmation emailed.${r.skipped ? ` ${r.skipped} skipped (not packed yet).` : ""}`
         : "Only packed orders can be marked delivered.",
     );
+  const cancel = (numbers: number[], reason = "") =>
+    mutate<{ cancelled: number; skipped: number }>("/api/admin/orders/cancel", "POST", { numbers, reason }, (r) =>
+      r.cancelled
+        ? `${r.cancelled} order${r.cancelled > 1 ? "s" : ""} cancelled — stock returned to the shop.${r.skipped ? ` ${r.skipped} skipped (already delivered or cancelled).` : ""}`
+        : "Nothing to cancel — those orders are already delivered or cancelled.",
+    );
   const qParam = useQueryParam("q");
   const orderParam = useQueryParam("order");
 
@@ -42,6 +51,8 @@ export default function OrdersScreen() {
   const [activeNo, setActiveNo] = useState<number | null>(null);
   /** "+ Add" (new) or "Edit" (order number) popup. */
   const [form, setForm] = useState<null | "new" | number>(null);
+  /** Order waiting for the "Cancel order?" confirmation. */
+  const [cancelTarget, setCancelTarget] = useState<number | null>(null);
   const initialised = useRef(false);
   /** Track delivery charge changes per order. */
   const [deliveryCharges, setDeliveryCharges] = useState<Record<number, number>>({});
@@ -97,6 +108,8 @@ export default function OrdersScreen() {
 
   const active = data.orders.find((o) => o.number === activeNo) ?? null;
   const activeCustomer = active ? customers.get(active.customerId) : undefined;
+  /** When the order was cancelled (from its timeline), for the details panel. */
+  const cancelledAt = active?.timeline.find((e) => e.label === "Cancelled")?.at ?? null;
 
   // Ticking a checkbox only selects the order for bulk actions; clicking the row opens its details.
   const toggleSel = (n: number) => setSelected((s) => (s.includes(n) ? s.filter((x) => x !== n) : [...s, n]));
@@ -315,9 +328,22 @@ export default function OrdersScreen() {
               {active.status === "Packed" && (
                 <div className="adm-box plain">
                   <div className="adm-box-h">Packed · out for delivery</div>
-                  <p>Mark it delivered once the customer has received it — they get a delivery confirmation email.</p>
+                  <p>
+                    {active.tracking.url
+                      ? "Follow the tracking link, then mark it delivered once the customer has received it — they get a delivery confirmation email."
+                      : "Track the parcel with Professional Courier, then mark it delivered once the customer has received it — they get a delivery confirmation email."}
+                  </p>
                   <div className="adm-box-a">
                     <button className="adm-btn pri sm" onClick={() => deliver([active.number])}>Mark delivered</button>
+                    <a
+                      className="adm-btn sm"
+                      href={active.tracking.url || TRACK_DELIVERY_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ textDecoration: "none" }}
+                    >
+                      Track delivery <span aria-hidden="true">↗</span>
+                    </a>
                   </div>
                 </div>
               )}
@@ -337,6 +363,8 @@ export default function OrdersScreen() {
                 <div className="adm-fl">Delivery location</div>
                 <div style={{ lineHeight: 1.5 }}>{active.address || "—"}</div>
                 {active.deliveredAt && <div className="adm-muted" style={{ marginTop: 4 }}>Delivered {fmtDateTime(active.deliveredAt)}</div>}
+                {active.status === "Cancelled" && cancelledAt && <div className="adm-muted" style={{ marginTop: 4 }}>Cancelled {fmtDateTime(cancelledAt)}</div>}
+                {active.status === "Cancelled" && active.cancelReason && <div className="adm-muted" style={{ marginTop: 2 }}>Reason: {active.cancelReason}</div>}
               </div>
               <div className="o-sec">
                 <div className="adm-fl">Items</div>
@@ -395,6 +423,9 @@ export default function OrdersScreen() {
                 <button className="adm-btn" onClick={() => setForm(active.number)}>Edit order</button>
                 <button className="adm-btn" onClick={() => printInvoices(entries([active]), data.settings)}>Invoice PDF</button>
                 <button className="adm-btn" onClick={() => router.push(`/admin/payments?order=${active.number}`)}>Refund</button>
+                {(active.status === "New" || active.status === "Packed") && (
+                  <button className="adm-btn dng" style={{ marginLeft: "auto" }} onClick={() => setCancelTarget(active.number)}>Cancel order</button>
+                )}
               </div>
             </>
         </aside>
@@ -417,6 +448,24 @@ export default function OrdersScreen() {
           }}
         />
       )}
+
+      {cancelTarget !== null && (() => {
+        const target = data.orders.find((o) => o.number === cancelTarget);
+        return target ? (
+          <ConfirmModal
+            title={`Cancel order #${label(target.number)}?`}
+            body={`The order will show as Cancelled on the customer's My orders page and its stock goes back to the shop. Money already paid is refunded separately from Payments & Refunds.`}
+            confirmLabel="Cancel order"
+            input={{
+              label: "Reason for cancelling (optional)",
+              placeholder: "e.g. Customer asked to cancel · item out of stock · delivery not possible",
+              hint: "Shown to the customer on My orders. Leave it blank to cancel without a reason.",
+            }}
+            onConfirm={(reason) => cancel([target.number], reason)}
+            onClose={() => setCancelTarget(null)}
+          />
+        ) : null;
+      })()}
     </>
   );
 }

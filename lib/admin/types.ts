@@ -70,6 +70,8 @@ export interface Order {
   shipPhone: string;
   location: { city: string; state: string; pincode: string };
   deliveredAt: string | null;
+  /** Why the shop cancelled it (empty when the order wasn't cancelled, or no reason was given). */
+  cancelReason: string;
   /** Bulk = shops, events, large quantities (added by an admin). */
   kind: "normal" | "bulk";
   /** online = placed on the website; admin = added in Admin → Orders. */

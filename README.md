@@ -267,12 +267,25 @@ new-order email on/off. Without email keys, orders still work and the emails are
 - **Edit** on every row (and in the order panel) changes any order: customer details, address, products,
   quantities, prices, payment and the packing note. Stock moves by the difference. Website payments are never
   changed (refunds stay in Payments & Refunds). Each save is noted on the order's timeline.
+- **Cancel order** in the order panel cancels a **New** or **Packed** order: its stock goes back to the shop
+  (noted under Recent stock changes) and the customer sees **Cancelled** on My orders, with the date under
+  the delivery details. The confirmation box takes an **optional reason** (type it or leave it blank); a typed
+  reason is saved on the order and shown to the customer as **Reason: …** right under “This order was
+  cancelled.” in the order card.
+  A delivered order can't be cancelled; money already paid is refunded separately from
+  Payments & Refunds. The **Cancelled** filter chip lists these orders.
+- A **Packed** order's panel has a **Track delivery** button that opens Professional Courier tracking
+  (`https://theprofessionalcouriertracking.com/`); when a bulk order has its own tracking link, that link is
+  opened instead.
 - Normal orders also take a **shipping** charge and a **discount** (edited in the order summary). Bulk orders
   take **freight**, **boxes / parcels**, **total weight** and a **manual tracking** box: transporter, tracking /
   LR number, dispatch date, status and an optional tracking link. The customer sees the tracking on My orders.
 - Setup: run `supabase/migrations/20261101000000_manual_orders.sql`, then
   `supabase/migrations/20261102000000_order_delivery.sql`, then `supabase/migrations/20261103000000_order_customer_sync.sql`
-  (editing an order then also updates that customer on the Customers page).
+  (editing an order then also updates that customer on the Customers page), then
+  `supabase/migrations/20261120020000_order_cancel.sql` for **Cancel order**, then
+  `supabase/migrations/20261120030000_order_cancel_reason.sql` for the optional cancellation reason
+  (it replaces the cancel function with a version that also saves the reason).
 
 ### Live stock
 
