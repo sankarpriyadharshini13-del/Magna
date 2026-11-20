@@ -2,6 +2,7 @@ import { HttpError, dbError, handle, json, readJson } from "@/lib/server/http";
 import { requireAdmin } from "@/lib/server/guard";
 import { mapProduct, nextBarcode, parseProduct, skuFor, slugify } from "@/lib/server/model";
 import { PRODUCT_COLORS } from "@/lib/admin/defaults";
+import { guidePackFor } from "@/data/dietary";
 import { packHasContent } from "@/lib/pack";
 
 export const dynamic = "force-dynamic";
@@ -48,6 +49,8 @@ export const POST = handle(async (req) => {
     pack_benefits: input.pack.benefits,
     pack_who_can_eat: input.pack.whoCanEat,
     pack_who_should_be_careful: input.pack.whoShouldBeCareful,
+    // Sticky once set: quick actions (show/hide) never clear the admin's own copy.
+    pack_customized: Boolean(existing?.pack_customized) || input.pack.customized === true,
   };
 
   /** Columns that arrived with their own migration. If one is missing, save the rest without it. */
@@ -58,6 +61,7 @@ export const POST = handle(async (req) => {
     "pack_benefits",
     "pack_who_can_eat",
     "pack_who_should_be_careful",
+    "pack_customized",
   ];
   const packContent = packHasContent(input.pack);
 
@@ -87,8 +91,16 @@ export const POST = handle(async (req) => {
       if (missing.length) {
         if (missing.includes("original_price") && input.originalPrice != null)
           throw new HttpError(503, "To save an original price, run supabase/migrations/20261029000000_original_price.sql in the Supabase SQL Editor first.", "SCHEMA_MISSING");
-        if (missing.some((c) => c.startsWith("pack_")) && packContent)
-          throw new HttpError(503, "To save the Know your pack section, run supabase/migrations/20261120000000_product_pack_info.sql in the Supabase SQL Editor first.", "SCHEMA_MISSING");
+        const guide = guidePackFor(id);
+        // The pack columns are missing: saving copy, or choosing to hide/clear the block, needs the SQL first.
+        if (
+          missing.some((c) => c.startsWith("pack_") && c !== "pack_customized") &&
+          (packContent || (input.pack.customized && guide))
+        )
+          throw new HttpError(503, "To save the Know your pack section, run supabase/migrations/20261120000000_product_pack_info.sql and supabase/migrations/20261120010000_product_pack_customized.sql in the Supabase SQL Editor first.", "SCHEMA_MISSING");
+        // Clearing every box must stay cleared, otherwise the built-in guide would come back.
+        if (missing.includes("pack_customized") && input.pack.customized && input.pack.enabled && !packContent && guide)
+          throw new HttpError(503, "To keep the Know your pack section cleared, run supabase/migrations/20261120010000_product_pack_customized.sql in the Supabase SQL Editor first.", "SCHEMA_MISSING");
         for (const c of missing) delete row[c];
         attempt--;
         continue;

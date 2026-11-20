@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { fmtDateTime, fmtTime, groupBarcode, initials } from "@/lib/admin/format";
 import { compressImage } from "@/lib/admin/image";
 import { LOW_STOCK, nextBarcode, productStatus } from "@/lib/admin/logic";
@@ -8,6 +8,7 @@ import { PRODUCT_COLORS } from "@/lib/admin/defaults";
 import { useAdminData } from "@/lib/admin/store";
 import type { AdminProduct } from "@/lib/admin/types";
 import { guidePackFor } from "@/data/dietary";
+import { packEdited } from "@/lib/pack";
 import { formatInr } from "@/lib/format";
 import { Badge, BarcodeSvg, ConfirmModal, Modal, PromptModal, Toggle, Topbar } from "../ui";
 import ProductPreviewCard from "./ProductPreviewCard";
@@ -33,10 +34,12 @@ interface Draft {
 }
 
 const toDraft = (p: AdminProduct | null): Draft => {
-  // Products that haven't been edited yet start from the built-in guide, so the form matches the website.
-  const guide = p ? guidePackFor(p.id) : null;
-  const text = (saved: string | undefined, fallback: string | undefined) =>
-    saved && saved.trim() !== "" ? saved : fallback ?? "";
+  // Until the block is saved once, start from the built-in guide so the form matches the website.
+  // After that, show exactly what was saved — a box the admin cleared stays cleared.
+  const saved = p?.pack;
+  const guide = p && !packEdited(saved) ? guidePackFor(p.id) : null;
+  const text = (value: string | undefined, fallback: string | undefined) =>
+    value && value.trim() !== "" ? value : fallback ?? "";
   return {
     name: p?.name ?? "",
     originalPrice: p?.originalPrice != null ? String(p.originalPrice) : "",
@@ -46,11 +49,11 @@ const toDraft = (p: AdminProduct | null): Draft => {
     tag: p?.tag ?? "",
     description: p?.description ?? "",
     // New products start with the block off; existing ones keep whatever was saved.
-    packEnabled: p?.pack?.enabled ?? false,
-    packIngredients: text(p?.pack?.ingredients, guide?.ingredients),
-    packBenefits: text(p?.pack?.benefits, guide?.benefits),
-    packWhoCanEat: text(p?.pack?.whoCanEat, guide?.whoCanEat),
-    packWhoShouldBeCareful: text(p?.pack?.whoShouldBeCareful, guide?.whoShouldBeCareful),
+    packEnabled: saved?.enabled ?? false,
+    packIngredients: text(saved?.ingredients, guide?.ingredients),
+    packBenefits: text(saved?.benefits, guide?.benefits),
+    packWhoCanEat: text(saved?.whoCanEat, guide?.whoCanEat),
+    packWhoShouldBeCareful: text(saved?.whoShouldBeCareful, guide?.whoShouldBeCareful),
     visible: p?.visible ?? false,
     images: p?.images ?? [],
   };
@@ -76,6 +79,8 @@ export default function ProductsScreen() {
   /** Opens the Edit product panel for a product and brings it into view. */
   const openEdit = (id: string) => {
     setSelectedId(id);
+    setDraft(toDraft(data.products.find((p) => p.id === id) ?? null));
+    setErrors({});
     requestAnimationFrame(() => panelRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }));
   };
   const closePanel = () => setSelectedId(null);
@@ -90,10 +95,8 @@ export default function ProductsScreen() {
     });
   };
 
-  useEffect(() => {
-    setDraft(toDraft(product));
-    setErrors({});
-  }, [product, selectedId]);
+  // The panel refreshes its data every 20 s in the background. The draft is only filled when a
+  // product is opened (or after a save), so typing and the Know your pack switch survive refreshes.
 
   const live = data.products.filter((p) => p.visible);
   const drafts = data.products.length - live.length;
@@ -185,11 +188,20 @@ export default function ProductsScreen() {
           benefits: draft.packBenefits.trim(),
           whoCanEat: draft.packWhoCanEat.trim(),
           whoShouldBeCareful: draft.packWhoShouldBeCareful.trim(),
+          // Saving the form makes this the admin's own copy: cleared boxes stay cleared.
+          customized: true,
         },
         visible: draft.visible,
         images: draft.images,
       },
-      (r) => (isNew ? `${r.product.name} added — it's saved to the database.` : "Changes saved to the database."),
+      (r) => {
+        if (isNew) {
+          return r.product.visible
+            ? `“${r.product.name}” is now live in the shop.`
+            : `“${r.product.name}” was added. Switch on “Visible on website” when it's ready.`;
+        }
+        return `Saved — “${r.product.name}” is up to date.`;
+      },
     );
     setBusy(false);
     if (res.ok && isNew && res.data) setSelectedId(res.data.product.id);
@@ -442,7 +454,7 @@ export default function ProductsScreen() {
                     id="pf-pack-eat"
                     className="adm-ta"
                     rows={4}
-                    placeholder={"Adults and older children who enjoy spicy foods.\nPeople looking to add plant-based protein and fibre."}
+                    placeholder="One point per line — e.g. Adults and older children."
                     value={draft.packWhoCanEat}
                     onChange={(e) => set("packWhoCanEat", e.target.value)}
                   />
@@ -455,12 +467,12 @@ export default function ProductsScreen() {
                     id="pf-pack-careful"
                     className="adm-ta"
                     rows={4}
-                    placeholder={"People allergic to any of the ingredients should avoid it.\nPeople following a low-sodium diet should monitor their salt intake."}
+                    placeholder="One point per line — e.g. People with a chilli allergy."
                     value={draft.packWhoShouldBeCareful}
                     onChange={(e) => set("packWhoShouldBeCareful", e.target.value)}
                   />
                 </div>
-                <p className="p-pack-note">These appear under the description on the product page. Leave a box empty to skip that card; clearing all boxes restores the built-in guide, if the pack has one.</p>
+                <p className="p-pack-note">These appear under the description on the product page. Only boxes with text are shown, so leave a box empty to skip that card; clearing every box hides the section.</p>
               </div>
             ) : (
               <p className="p-pack-note">Hidden on the product page. Switch on to list the ingredients, benefits and who the pack suits.</p>

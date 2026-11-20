@@ -38,6 +38,7 @@ export function mapProduct(r: Row): AdminProduct {
           benefits: r.pack_benefits ?? "",
           whoCanEat: r.pack_who_can_eat ?? "",
           whoShouldBeCareful: r.pack_who_should_be_careful ?? "",
+          customized: r.pack_customized === true,
         };
   return {
     id: r.id,
@@ -248,6 +249,8 @@ export function parseProduct(body: Row): ProductInput {
       benefits: str(body.pack?.benefits, "Benefits", 1200),
       whoCanEat: packList(body.pack?.whoCanEat, "Who can eat"),
       whoShouldBeCareful: packList(body.pack?.whoShouldBeCareful, "Who should be careful"),
+      // Set by the full product form so a cleared box stays cleared instead of falling back to the guide.
+      customized: body.pack?.customized === true,
     },
   };
 }

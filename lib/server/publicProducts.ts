@@ -1,7 +1,7 @@
 import "server-only";
 import { guidePackFor } from "@/data/dietary";
 import { products as fallbackProducts, getProduct as fallbackProduct } from "@/data/products";
-import { packHasContent } from "@/lib/pack";
+import { packEdited } from "@/lib/pack";
 import type { Product, ProductPack } from "@/types";
 import { anonClient, supabaseConfigured } from "./supabase";
 
@@ -14,6 +14,7 @@ const OPTIONAL_COLUMNS = [
   "pack_benefits",
   "pack_who_can_eat",
   "pack_who_should_be_careful",
+  "pack_customized",
 ];
 const missingColumn = (e: { code?: string } | null) => e?.code === "42703" || e?.code === "PGRST204";
 
@@ -36,7 +37,7 @@ async function selectRows(query: (cols: string) => PromiseLike<QueryResult>): Pr
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-/** Saved copy when the admin wrote any, otherwise the built-in guide (unless the section was switched off). */
+/** Admin-saved copy once the block has been edited, otherwise the built-in guide (unless the section is off). */
 function packOf(r: any): ProductPack | null {
   const saved: ProductPack | null =
     r.pack_enabled === undefined && r.pack_ingredients === undefined
@@ -47,8 +48,9 @@ function packOf(r: any): ProductPack | null {
           benefits: r.pack_benefits ?? "",
           whoCanEat: r.pack_who_can_eat ?? "",
           whoShouldBeCareful: r.pack_who_should_be_careful ?? "",
+          customized: r.pack_customized === true,
         };
-  if (saved && packHasContent(saved)) return saved;
+  if (saved && packEdited(saved)) return saved;
   const fallback = guidePackFor(r.id);
   if (!fallback) return saved;
   return { ...fallback, enabled: saved?.enabled ?? true };

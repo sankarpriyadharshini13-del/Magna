@@ -22,3 +22,11 @@ export function packHasContent(pack: ProductPack | null | undefined): boolean {
   if (!pack) return false;
   return [pack.ingredients, pack.benefits, pack.whoCanEat, pack.whoShouldBeCareful].some((text) => text.trim() !== "");
 }
+
+/**
+ * True once the admin owns this block: either it was saved from the product form, or it already has
+ * copy from before the "customized" flag existed. Before that, the built-in guide is only a starting point.
+ */
+export function packEdited(pack: ProductPack | null | undefined): boolean {
+  return !!pack && (pack.customized === true || packHasContent(pack));
+}

@@ -11,6 +11,11 @@ export interface ProductPack {
   whoCanEat: string;
   /** One bullet per line. */
   whoShouldBeCareful: string;
+  /**
+   * True once the admin saved this block from the product form. Until then, products with built-in
+   * guide copy keep showing it; afterwards a cleared box stays cleared. Not edited by hand.
+   */
+  customized?: boolean;
 }
 
 export interface Product {

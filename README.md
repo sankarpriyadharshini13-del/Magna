@@ -301,12 +301,18 @@ new-order email on/off. Without email keys, orders still work and the emails are
   **Know your pack** on and fill **Ingredients**, **Benefits**, **Who can eat** and **Who should be careful**.
   The last two take one point per line and become tick / cross bullets on the product page.
 - The product page shows the block under the description as **Ingredients & Benefits**: the three white cards
-  (Ingredients · Benefits · Who can eat) and the full-width **Who should be careful** panel. Leave a box empty to
-  skip that card; switch the block off to hide the whole section.
-- Products that haven't been edited yet keep showing the built-in guide from `data/dietary.ts`; the admin form is
-  pre-filled with that copy the first time you open it, and saving replaces it.
-- Setup: run `supabase/migrations/20261120000000_product_pack_info.sql`. Until then the website keeps working and
-  saving the block returns a message asking for the migration.
+  (Ingredients · Benefits · Who can eat) and the full-width **Who should be careful** panel. Every box is
+  optional — only the boxes with text appear, so you can publish just ingredients, or just one bullet list.
+- Products that haven't been saved yet show the built-in guide from `data/dietary.ts`; the admin form starts from
+  that copy the first time you open it. The first save makes the form and the page show exactly what you saved:
+  clearing a box removes that card, clearing every box hides the section, and switching the block off hides it
+  regardless. The form no longer resets while the panel refreshes in the background, so the block stays open
+  until you close it.
+- Saving a product shows a short confirmation such as “Saved — ‘Idli Podi’ is up to date.” or
+  “‘Masala Podi’ is now live in the shop.” instead of a technical message.
+- Setup: run `supabase/migrations/20261120000000_product_pack_info.sql` and
+  `supabase/migrations/20261120010000_product_pack_customized.sql`. Until then the website keeps working and
+  saving the block returns a message asking for the migrations.
 
 ### Admin login
 
