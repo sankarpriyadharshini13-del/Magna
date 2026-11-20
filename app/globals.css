@@ -95,6 +95,7 @@ html, body { overflow-x: clip; }
     margin-right: -0.07em;
     font-family: var(--font-wordmark), "Cormorant Garamond", Georgia, serif;
     font-size: calc(var(--brand-stack) * 0.0585);
+    font-style: italic;
     line-height: 1;
     letter-spacing: 0.07em;
     text-transform: uppercase;

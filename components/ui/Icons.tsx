@@ -55,6 +55,39 @@ export const FamilyIcon = (p: P) => (
 export const SproutIcon = (p: P) => (
   <svg {...base} {...p}><path d="M12 21v-9" /><path d="M12 12C12 8 9 5 4 5c0 5 3 7 8 7Z" /><path d="M12 14c0-3 2.5-6 8-6 0 4.5-3 6-8 6Z" /></svg>
 );
+export const HandSproutIcon = (p: P) => (
+  <svg {...base} {...p}>
+    <path d="M12 13V8.5" />
+    <path d="M12 10.5C12 8.2 10.2 6.5 7 6.5c0 2.7 1.7 4 5 4Z" />
+    <path d="M12 11.5c0-2.3 1.8-3.7 5-3.7 0 2.5-1.6 3.7-5 3.7Z" />
+    <path d="M3.5 15.5h2.7c.5 0 1 .2 1.4.5l1.7 1.4h3" />
+    <path d="M3.5 15.5v3.2c0 1.3 1.1 2.3 2.4 2.3h4.8c.7 0 1.4-.3 2-.7l4.3-3.5a1.3 1.3 0 0 0-1.7-2l-2.6 2.1" />
+  </svg>
+);
+export const HeartIcon = (p: P) => (
+  <svg {...base} {...p}><path d="M20.8 5.6a5.5 5.5 0 0 0-7.8 0L12 6.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 22l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z" /></svg>
+);
+export const LandscapeIcon = (p: P) => (
+  <svg {...base} {...p}>
+    <path d="M2 20h20" />
+    <path d="M2 20c2.6-2.4 5-3.6 7.4-3.6" />
+    <path d="M22 20c-2.6-2.4-5-3.6-7.4-3.6" />
+    <path d="M9 20v-4.4L12 13l3 2.6V20" />
+    <path d="M12 20v-2.6" />
+    <path d="M5.5 20v-3.8" />
+    <path d="m4 17 1.5-1.4L7 17" />
+    <path d="M18.5 20v-3.8" />
+    <path d="m17 17 1.5-1.4L20 17" />
+  </svg>
+);
+/** Filled two-leaf sprig used as the decorative rule ornament. */
+export const LeafPairIcon = (p: P) => (
+  <svg {...base} width={30} height={30} {...p}>
+    <path d="M12 21v-6" />
+    <path d="M12 15.5c-1.2-4.6-4.3-7.2-8-7.2.4 4.6 3.2 7.2 8 7.2Z" fill="currentColor" stroke="none" />
+    <path d="M12 15.5c1.2-4.6 4.3-7.2 8-7.2-.4 4.6-3.2 7.2-8 7.2Z" fill="currentColor" stroke="none" />
+  </svg>
+);
 export const BasketIcon = (p: P) => (
   <svg {...base} {...p}><path d="M3 10h18l-2 10H5L3 10Z" /><path d="m8 10 4-6 4 6M9 14v3M15 14v3M12 14v3" /></svg>
 );

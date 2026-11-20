@@ -7,7 +7,7 @@ import "./globals.css";
 
 const fraunces = Fraunces({ subsets: ["latin"], style: ["normal", "italic"], variable: "--font-display", display: "swap" });
 const manrope = Manrope({ subsets: ["latin"], variable: "--font-body", display: "swap" });
-const cormorant = Cormorant_Garamond({ subsets: ["latin"], weight: ["400"], style: ["normal"], variable: "--font-wordmark", display: "swap" });
+const cormorant = Cormorant_Garamond({ subsets: ["latin"], weight: ["400"], style: ["normal", "italic"], variable: "--font-wordmark", display: "swap" });
 
 export const metadata: Metadata = {
   title: "Magna Eco Bites | A Little Tradition.",
