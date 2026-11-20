@@ -1,3 +1,5 @@
+import type { ProductPack } from "@/types";
+
 /**
  * "Know your pack" guide shown on the home page: one row per product with the
  * ingredients, what they bring to the plate, who can eat it and who should avoid it.
@@ -179,4 +181,21 @@ export const ingredientGuide: IngredientGuideRow[] = [
     ],
   },
 ];
+
+/**
+ * The built-in guide for a product, shaped like the copy an admin saves.
+ * Used until the product page gets its own "Know your pack" text from Admin → Products & Stock,
+ * so the section never disappears for products that haven't been edited yet.
+ */
+export function guidePackFor(slug: string): ProductPack | null {
+  const row = ingredientGuide.find((r) => r.slug === slug);
+  if (!row) return null;
+  return {
+    enabled: true,
+    ingredients: row.ingredients,
+    benefits: row.benefits,
+    whoCanEat: row.eat.join("\n"),
+    whoShouldBeCareful: row.careful.join("\n"),
+  };
+}
 

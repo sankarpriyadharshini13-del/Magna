@@ -1,6 +1,8 @@
 import "server-only";
 import { defaultSettings, PRODUCT_COLORS } from "@/lib/admin/defaults";
 import { TRACKING_STATUSES } from "@/lib/admin/types";
+import { emptyPack } from "@/lib/pack";
+import type { ProductPack } from "@/types";
 import type {
   AdminProduct,
   Customer,
@@ -26,6 +28,17 @@ export const BUCKET = "admin-assets";
 export const storagePrefix = () => `${publicUrl.replace(/\/$/, "")}/storage/v1/object/public/${BUCKET}/`;
 
 export function mapProduct(r: Row): AdminProduct {
+  // Before the pack migration runs, none of the pack_* columns exist — the form falls back to the built-in guide.
+  const saved: ProductPack | null =
+    r.pack_enabled === undefined && r.pack_ingredients === undefined
+      ? null
+      : {
+          enabled: r.pack_enabled ?? true,
+          ingredients: r.pack_ingredients ?? "",
+          benefits: r.pack_benefits ?? "",
+          whoCanEat: r.pack_who_can_eat ?? "",
+          whoShouldBeCareful: r.pack_who_should_be_careful ?? "",
+        };
   return {
     id: r.id,
     name: r.name,
@@ -40,6 +53,7 @@ export function mapProduct(r: Row): AdminProduct {
     visible: !!r.visible,
     images: r.images ?? [],
     color: r.color ?? PRODUCT_COLORS[0],
+    pack: saved ?? emptyPack(),
   };
 }
 
@@ -183,7 +197,18 @@ export interface ProductInput {
   description: string;
   visible: boolean;
   images: string[];
+  pack: ProductPack;
 }
+
+/** "Who can eat" / "Who should be careful": one point per line, trimmed and normalised. */
+const packList = (v: unknown, field: string) => {
+  if (v === undefined || v === null) return "";
+  if (typeof v !== "string") throw bad(`${field} must be text.`);
+  const points = v.split(/\r?\n/).map((p) => p.trim()).filter(Boolean);
+  if (points.length > 15) throw bad(`${field} can have at most 15 points.`);
+  if (points.some((p) => p.length > 240)) throw bad(`Each point under “${field}” must be at most 240 characters.`);
+  return points.join("\n");
+};
 
 export function parseProduct(body: Row): ProductInput {
   const name = str(body.name, "Product name", 120, { required: true });
@@ -216,6 +241,14 @@ export function parseProduct(body: Row): ProductInput {
     description: str(body.description, "Description", 2000),
     visible: body.visible,
     images: Array.from(new Set(images as string[])),
+    pack: {
+      // Switch on unless the admin turned it off; individual blank boxes simply hide that card.
+      enabled: body.pack?.enabled !== false,
+      ingredients: str(body.pack?.ingredients, "Ingredients", 600),
+      benefits: str(body.pack?.benefits, "Benefits", 1200),
+      whoCanEat: packList(body.pack?.whoCanEat, "Who can eat"),
+      whoShouldBeCareful: packList(body.pack?.whoShouldBeCareful, "Who should be careful"),
+    },
   };
 }
 

@@ -1,3 +1,5 @@
+import type { ProductPack } from "@/types";
+
 export type OrderStatus = "New" | "Packed" | "Delivered" | "Cancelled";
 
 export type PayMethod = "UPI" | "Card" | "NetBanking" | "Wallet" | "Cash" | "Other";
@@ -26,6 +28,8 @@ export interface AdminProduct {
   images: string[];
   /** Tile colour used when there is no photo. */
   color: string;
+  /** Optional "Know your pack" copy shown under the description on the product page. */
+  pack: ProductPack;
 }
 
 export interface OrderItem {

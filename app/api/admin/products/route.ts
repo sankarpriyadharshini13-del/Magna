@@ -2,6 +2,7 @@ import { HttpError, dbError, handle, json, readJson } from "@/lib/server/http";
 import { requireAdmin } from "@/lib/server/guard";
 import { mapProduct, nextBarcode, parseProduct, skuFor, slugify } from "@/lib/server/model";
 import { PRODUCT_COLORS } from "@/lib/admin/defaults";
+import { packHasContent } from "@/lib/pack";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +43,23 @@ export const POST = handle(async (req) => {
     description: input.description,
     visible: input.visible,
     images: input.images,
+    pack_enabled: input.pack.enabled,
+    pack_ingredients: input.pack.ingredients,
+    pack_benefits: input.pack.benefits,
+    pack_who_can_eat: input.pack.whoCanEat,
+    pack_who_should_be_careful: input.pack.whoShouldBeCareful,
   };
+
+  /** Columns that arrived with their own migration. If one is missing, save the rest without it. */
+  const OPTIONAL_COLUMNS = [
+    "original_price",
+    "pack_enabled",
+    "pack_ingredients",
+    "pack_benefits",
+    "pack_who_can_eat",
+    "pack_who_should_be_careful",
+  ];
+  const packContent = packHasContent(input.pack);
 
   let saved: Record<string, unknown> | null = null;
   for (let attempt = 0; attempt < 3 && !saved; attempt++) {
@@ -63,13 +80,19 @@ export const POST = handle(async (req) => {
       saved = data;
       break;
     }
-    // Before the original-price migration is applied, products without one still save normally.
-    if (["PGRST204", "42703"].includes(error.code ?? "") && "original_price" in row) {
-      if (input.originalPrice != null)
-        throw new HttpError(503, "To save an original price, run supabase/migrations/20261029000000_original_price.sql in the Supabase SQL Editor first.", "SCHEMA_MISSING");
-      delete row.original_price;
-      attempt--;
-      continue;
+    // A migration hasn't been applied yet: drop the missing optional columns and try again.
+    if (["PGRST204", "42703"].includes(error.code ?? "")) {
+      const named = OPTIONAL_COLUMNS.filter((c) => c in row && (error.message ?? "").includes(c));
+      const missing = named.length ? named : OPTIONAL_COLUMNS.filter((c) => c in row);
+      if (missing.length) {
+        if (missing.includes("original_price") && input.originalPrice != null)
+          throw new HttpError(503, "To save an original price, run supabase/migrations/20261029000000_original_price.sql in the Supabase SQL Editor first.", "SCHEMA_MISSING");
+        if (missing.some((c) => c.startsWith("pack_")) && packContent)
+          throw new HttpError(503, "To save the Know your pack section, run supabase/migrations/20261120000000_product_pack_info.sql in the Supabase SQL Editor first.", "SCHEMA_MISSING");
+        for (const c of missing) delete row[c];
+        attempt--;
+        continue;
+      }
     }
     // Two admins creating products at the same moment can race for a barcode; try the next one.
     if (error.code === "23505" && !existing && attempt < 2) {

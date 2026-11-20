@@ -295,6 +295,19 @@ new-order email on/off. Without email keys, orders still work and the emails are
 - On every product card and product page, **Add** turns into a **[−] qty [+]** stepper once the product is in
   the cart (capped at the stock left and 20 per order). Going below 1 removes it.
 
+### Know your pack (product page)
+
+- Under **Description** in Admin → Products & Stock there is an optional **Know your pack** block. Switch
+  **Know your pack** on and fill **Ingredients**, **Benefits**, **Who can eat** and **Who should be careful**.
+  The last two take one point per line and become tick / cross bullets on the product page.
+- The product page shows the block under the description as **Ingredients & Benefits**: the three white cards
+  (Ingredients · Benefits · Who can eat) and the full-width **Who should be careful** panel. Leave a box empty to
+  skip that card; switch the block off to hide the whole section.
+- Products that haven't been edited yet keep showing the built-in guide from `data/dietary.ts`; the admin form is
+  pre-filled with that copy the first time you open it, and saving replaces it.
+- Setup: run `supabase/migrations/20261120000000_product_pack_info.sql`. Until then the website keeps working and
+  saving the block returns a message asking for the migration.
+
 ### Admin login
 
 Opening **/admin** (or any admin page) while signed out shows the admin sign-in screen. The panel opens

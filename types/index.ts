@@ -1,3 +1,18 @@
+/**
+ * Optional "Know your pack" copy shown under the description on a product page.
+ * Managed from Admin → Products & Stock; stored as newline-separated points for the two lists.
+ */
+export interface ProductPack {
+  /** Off hides the whole section on the product page, even when the fields have text. */
+  enabled: boolean;
+  ingredients: string;
+  benefits: string;
+  /** One bullet per line. */
+  whoCanEat: string;
+  /** One bullet per line. */
+  whoShouldBeCareful: string;
+}
+
 export interface Product {
   id: string;
   slug: string;
@@ -21,6 +36,8 @@ export interface Product {
   featured: boolean;
   /** Units in stock. null when stock isn't tracked (static fallback catalogue). */
   stock: number | null;
+  /** Admin-managed "Know your pack" block. Missing/null falls back to the built-in guide in data/dietary.ts. */
+  pack?: ProductPack | null;
 }
 
 export interface CartItem {

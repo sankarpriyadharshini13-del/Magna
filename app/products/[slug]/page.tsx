@@ -5,7 +5,8 @@ import nextDynamic from "next/dynamic";
 import SiteShell from "@/components/layout/SiteShell";
 import ProductCard, { stockState } from "@/components/product/ProductCard";
 import { ArrowIcon, CheckIcon, CloseIcon, PinIcon, StoneIcon } from "@/components/ui/Icons";
-import { ingredientGuide } from "@/data/dietary";
+import { guidePackFor } from "@/data/dietary";
+import { packPoints } from "@/lib/pack";
 import { recommend } from "@/lib/recommend";
 import { getPublicProduct, getPublicProducts } from "@/lib/server/publicProducts";
 import Price, { percentOff } from "@/components/ui/Price";
@@ -32,7 +33,11 @@ export default async function ProductPage({ params }: { params: { slug: string }
   const stock = stockState(product);
   const out = stock?.tone === "out";
   const off = percentOff(product.priceInr, product.originalPriceInr);
-  const ingredientInfo = ingredientGuide.find((row) => row.slug === product.id);
+  // Saved admin copy wins. Products that haven't been edited keep the built-in guide; the switch can hide it.
+  const storedPack = product.pack;
+  const pack = storedPack && !storedPack.enabled ? null : storedPack ?? guidePackFor(product.id);
+  const whoCanEat = pack ? packPoints(pack.whoCanEat) : [];
+  const careful = pack ? packPoints(pack.whoShouldBeCareful) : [];
 
   return (
     <SiteShell>
@@ -78,46 +83,52 @@ export default async function ProductPage({ params }: { params: { slug: string }
           </div>
         </div>
 
-        {ingredientInfo && (
+        {pack && (pack.ingredients.trim() !== "" || pack.benefits.trim() !== "" || whoCanEat.length > 0 || careful.length > 0) && (
           <section aria-labelledby="ingredient-title" className="mt-14 rounded-[1.75rem] bg-sand/50 p-6 sm:mt-20 sm:p-10">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-clay sm:text-xs">Know your pack</p>
-                <h2 id="ingredient-title" className="mt-2 font-display text-2xl text-forest sm:text-3xl">Ingredients & Benefits</h2>
-              </div>
-            </div>
-            
-            <div className="mt-6 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              <div className="rounded-2xl bg-white/80 p-5">
-                <h3 className="text-sm font-bold uppercase tracking-[0.16em] text-forest mb-3">Ingredients</h3>
-                <p className="text-sm leading-relaxed text-ink/70">{ingredientInfo.ingredients}</p>
-              </div>
-              
-              <div className="rounded-2xl bg-white/80 p-5">
-                <h3 className="text-sm font-bold uppercase tracking-[0.16em] text-forest mb-3">Benefits</h3>
-                <p className="text-sm leading-relaxed text-ink/70">{ingredientInfo.benefits}</p>
-              </div>
-              
-              <div className="rounded-2xl bg-white/80 p-5 md:col-span-2 lg:col-span-1">
-                <h3 className="text-sm font-bold uppercase tracking-[0.16em] text-forest mb-3">Who can eat</h3>
-                <ul className="space-y-2">
-                  {ingredientInfo.eat.map((line, i) => (
-                    <li key={i} className="flex gap-2.5 text-sm leading-relaxed text-ink/70">
-                      <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-leaf/10 text-leaf">
-                        <CheckIcon width={12} height={12} />
-                      </span>
-                      {line}
-                    </li>
-                  ))}
-                </ul>
+                <h2 id="ingredient-title" className="mt-2 font-display text-2xl text-forest sm:text-3xl">Ingredients &amp; Benefits</h2>
               </div>
             </div>
 
-            {ingredientInfo.careful.length > 0 && (
+            <div className="mt-6 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {pack.ingredients.trim() !== "" && (
+                <div className="rounded-2xl bg-white/80 p-5">
+                  <h3 className="text-sm font-bold uppercase tracking-[0.16em] text-forest mb-3">Ingredients</h3>
+                  <p className="whitespace-pre-line text-sm leading-relaxed text-ink/70">{pack.ingredients}</p>
+                </div>
+              )}
+
+              {pack.benefits.trim() !== "" && (
+                <div className="rounded-2xl bg-white/80 p-5">
+                  <h3 className="text-sm font-bold uppercase tracking-[0.16em] text-forest mb-3">Benefits</h3>
+                  <p className="whitespace-pre-line text-sm leading-relaxed text-ink/70">{pack.benefits}</p>
+                </div>
+              )}
+
+              {whoCanEat.length > 0 && (
+                <div className="rounded-2xl bg-white/80 p-5 md:col-span-2 lg:col-span-1">
+                  <h3 className="text-sm font-bold uppercase tracking-[0.16em] text-forest mb-3">Who can eat</h3>
+                  <ul className="space-y-2">
+                    {whoCanEat.map((line, i) => (
+                      <li key={i} className="flex gap-2.5 text-sm leading-relaxed text-ink/70">
+                        <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-leaf/10 text-leaf">
+                          <CheckIcon width={12} height={12} />
+                        </span>
+                        {line}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+
+            {careful.length > 0 && (
               <div className="mt-6 rounded-2xl bg-honey/15 p-5">
                 <h3 className="text-sm font-bold uppercase tracking-[0.16em] text-forest-deep mb-3">Who should be careful</h3>
                 <ul className="space-y-2">
-                  {ingredientInfo.careful.map((line, i) => (
+                  {careful.map((line, i) => (
                     <li key={i} className="flex gap-2.5 text-sm leading-relaxed text-forest-deep">
                       <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-clay/20 text-clay">
                         <CloseIcon width={12} height={12} />

@@ -7,6 +7,7 @@ import { LOW_STOCK, nextBarcode, productStatus } from "@/lib/admin/logic";
 import { PRODUCT_COLORS } from "@/lib/admin/defaults";
 import { useAdminData } from "@/lib/admin/store";
 import type { AdminProduct } from "@/lib/admin/types";
+import { guidePackFor } from "@/data/dietary";
 import { formatInr } from "@/lib/format";
 import { Badge, BarcodeSvg, ConfirmModal, Modal, PromptModal, Toggle, Topbar } from "../ui";
 import ProductPreviewCard from "./ProductPreviewCard";
@@ -21,21 +22,39 @@ interface Draft {
   packSize: string;
   tag: string;
   description: string;
+  /** "Know your pack" block — optional, shown on the product page when switched on. */
+  packEnabled: boolean;
+  packIngredients: string;
+  packBenefits: string;
+  packWhoCanEat: string;
+  packWhoShouldBeCareful: string;
   visible: boolean;
   images: string[];
 }
 
-const toDraft = (p: AdminProduct | null): Draft => ({
-  name: p?.name ?? "",
-  originalPrice: p?.originalPrice != null ? String(p.originalPrice) : "",
-  price: p?.price != null ? String(p.price) : "",
-  stock: p ? String(p.stock) : "0",
-  packSize: p?.packSize ?? "",
-  tag: p?.tag ?? "",
-  description: p?.description ?? "",
-  visible: p?.visible ?? false,
-  images: p?.images ?? [],
-});
+const toDraft = (p: AdminProduct | null): Draft => {
+  // Products that haven't been edited yet start from the built-in guide, so the form matches the website.
+  const guide = p ? guidePackFor(p.id) : null;
+  const text = (saved: string | undefined, fallback: string | undefined) =>
+    saved && saved.trim() !== "" ? saved : fallback ?? "";
+  return {
+    name: p?.name ?? "",
+    originalPrice: p?.originalPrice != null ? String(p.originalPrice) : "",
+    price: p?.price != null ? String(p.price) : "",
+    stock: p ? String(p.stock) : "0",
+    packSize: p?.packSize ?? "",
+    tag: p?.tag ?? "",
+    description: p?.description ?? "",
+    // New products start with the block off; existing ones keep whatever was saved.
+    packEnabled: p?.pack?.enabled ?? false,
+    packIngredients: text(p?.pack?.ingredients, guide?.ingredients),
+    packBenefits: text(p?.pack?.benefits, guide?.benefits),
+    packWhoCanEat: text(p?.pack?.whoCanEat, guide?.whoCanEat),
+    packWhoShouldBeCareful: text(p?.pack?.whoShouldBeCareful, guide?.whoShouldBeCareful),
+    visible: p?.visible ?? false,
+    images: p?.images ?? [],
+  };
+};
 
 export default function ProductsScreen() {
   const { data, mutate, uploadImage, toast, lastSync } = useAdminData();
@@ -118,6 +137,7 @@ export default function ProductsScreen() {
     packSize: p.packSize,
     tag: p.tag,
     description: p.description,
+    pack: p.pack,
     visible,
     images: p.images,
   });
@@ -159,6 +179,13 @@ export default function ProductsScreen() {
         packSize: draft.packSize.trim(),
         tag: draft.tag.trim(),
         description: draft.description.trim(),
+        pack: {
+          enabled: draft.packEnabled,
+          ingredients: draft.packIngredients.trim(),
+          benefits: draft.packBenefits.trim(),
+          whoCanEat: draft.packWhoCanEat.trim(),
+          whoShouldBeCareful: draft.packWhoShouldBeCareful.trim(),
+        },
         visible: draft.visible,
         images: draft.images,
       },
@@ -366,6 +393,78 @@ export default function ProductsScreen() {
           <div className="adm-fg">
             <label className="adm-fl" htmlFor="pf-desc">Description</label>
             <textarea id="pf-desc" className="adm-ta" rows={3} value={draft.description} onChange={(e) => set("description", e.target.value)} />
+          </div>
+
+          <div className="p-pack">
+            <div className="p-pack-h">
+              <div>
+                <b>Know your pack</b>
+                <small>Ingredients &amp; benefits · optional</small>
+              </div>
+              <Toggle
+                checked={draft.packEnabled}
+                label="Show Know your pack on the product page"
+                onChange={(v) => set("packEnabled", v)}
+              />
+            </div>
+            {draft.packEnabled ? (
+              <div className="p-pack-b">
+                <p className="p-pack-sub">Ingredients &amp; Benefits</p>
+                <div className="adm-fg">
+                  <label className="adm-fl" htmlFor="pf-pack-ing">Ingredients</label>
+                  <textarea
+                    id="pf-pack-ing"
+                    className="adm-ta"
+                    rows={3}
+                    maxLength={600}
+                    placeholder="e.g. Urad dal · chana dal · red chilli · curry leaves · salt"
+                    value={draft.packIngredients}
+                    onChange={(e) => set("packIngredients", e.target.value)}
+                  />
+                </div>
+                <div className="adm-fg">
+                  <label className="adm-fl" htmlFor="pf-pack-benefits">Benefits</label>
+                  <textarea
+                    id="pf-pack-benefits"
+                    className="adm-ta"
+                    rows={3}
+                    maxLength={1200}
+                    placeholder="What the ingredients bring — protein, fibre, warmth…"
+                    value={draft.packBenefits}
+                    onChange={(e) => set("packBenefits", e.target.value)}
+                  />
+                </div>
+                <div className="adm-fg">
+                  <label className="adm-fl" htmlFor="pf-pack-eat">
+                    Who can eat <span className="p-pack-hint">one point per line</span>
+                  </label>
+                  <textarea
+                    id="pf-pack-eat"
+                    className="adm-ta"
+                    rows={4}
+                    placeholder={"Adults and older children who enjoy spicy foods.\nPeople looking to add plant-based protein and fibre."}
+                    value={draft.packWhoCanEat}
+                    onChange={(e) => set("packWhoCanEat", e.target.value)}
+                  />
+                </div>
+                <div className="adm-fg">
+                  <label className="adm-fl" htmlFor="pf-pack-careful">
+                    Who should be careful <span className="p-pack-hint">one point per line</span>
+                  </label>
+                  <textarea
+                    id="pf-pack-careful"
+                    className="adm-ta"
+                    rows={4}
+                    placeholder={"People allergic to any of the ingredients should avoid it.\nPeople following a low-sodium diet should monitor their salt intake."}
+                    value={draft.packWhoShouldBeCareful}
+                    onChange={(e) => set("packWhoShouldBeCareful", e.target.value)}
+                  />
+                </div>
+                <p className="p-pack-note">These appear under the description on the product page. Leave a box empty to skip that card; clearing all boxes restores the built-in guide, if the pack has one.</p>
+              </div>
+            ) : (
+              <p className="p-pack-note">Hidden on the product page. Switch on to list the ingredients, benefits and who the pack suits.</p>
+            )}
           </div>
 
           <div className="adm-fl">Barcode (auto-generated)</div>
