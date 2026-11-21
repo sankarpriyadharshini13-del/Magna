@@ -189,7 +189,7 @@ export default function OrdersScreen() {
                         <input type="checkbox" className="adm-cb" aria-label={`Select ${label(o.number)}`} checked={selected.includes(o.number)} onChange={() => toggleSel(o.number)} />
                       </td>
                       <td style={{ lineHeight: 1.25 }}>
-                        <b style={{ color: "var(--ink)" }}>#{label(o.number)}</b>{o.kind === "bulk" && <span className="o-kind">BULK</span>}
+                        <b style={{ color: "var(--ink)" }}>#{label(o.number)}</b>{o.source === "enquiry" ? <span className="o-kind">ENQUIRY</span> : o.kind === "bulk" && <span className="o-kind">BULK</span>}
                         <span className="sub">{fmtDateTime(o.placedAt)}</span>
                       </td>
                       <td style={{ lineHeight: 1.25 }}>
@@ -307,16 +307,24 @@ export default function OrdersScreen() {
                 </span>
               </div>
               <p className="adm-muted" style={{ margin: "4px 0 14px" }}>
-                {active.source === "admin" ? "Added by admin" : "Placed"} {fmtDateTime(active.placedAt)} ·{" "}
+                {active.source === "admin" ? "Added by admin" : active.source === "enquiry" ? "Enquiry received" : "Placed"} {fmtDateTime(active.placedAt)} ·{" "}
                 {active.source === "admin"
                   ? paymentLabel(active)
-                  : isTestPayment(active.payment.id)
-                    ? `Test payment via ${active.method} (no money collected)`
-                    : `${active.payment.status === "pending" ? "Payment pending" : "Paid"} via ${active.method} (Razorpay)`}
-                {active.kind === "bulk" && <span className="o-kind">BULK</span>}
+                  : active.source === "enquiry"
+                    ? "No payment or stock involved"
+                    : isTestPayment(active.payment.id)
+                      ? `Test payment via ${active.method} (no money collected)`
+                      : `${active.payment.status === "pending" ? "Payment pending" : "Paid"} via ${active.method} (Razorpay)`}
+                {active.source !== "enquiry" && active.kind === "bulk" && <span className="o-kind">BULK</span>}
               </p>
 
-              {active.status === "New" && (
+              {active.source === "enquiry" && (
+                <div className="adm-box plain">
+                  <div className="adm-box-h">Website enquiry</div>
+                  <p>This is an enquiry from the Business, Distributors or Export page — no payment was taken and no stock was reserved. Reply to the customer, then mark it delivered or cancelled to close it.</p>
+                </div>
+              )}
+              {active.source !== "enquiry" && active.status === "New" && (
                 <div className="adm-box plain">
                   <div className="adm-box-h">Ready to pack</div>
                   <p>Mark it packed once every item has been scanned and boxed.</p>
@@ -325,7 +333,7 @@ export default function OrdersScreen() {
                   </div>
                 </div>
               )}
-              {active.status === "Packed" && (
+              {active.status === "Packed" && active.source !== "enquiry" && (
                 <div className="adm-box plain">
                   <div className="adm-box-h">Packed · out for delivery</div>
                   <p>
@@ -387,7 +395,7 @@ export default function OrdersScreen() {
                     <div className="o-items" style={{ color: "var(--clay)", fontWeight: 600 }}><span>Balance due</span><span>{formatInr(Math.max(0, orderTotal(active) - active.amountPaid))}</span></div>
                   </>
                 )}
-                {(active.paymentMode === "pending" || active.paymentMode === "cod") && (
+                {(active.paymentMode === "pending" || active.paymentMode === "cod") && orderTotal(active) > 0 && (
                   <div className="o-items" style={{ color: "var(--clay)", fontWeight: 600 }}><span>Balance due</span><span>{formatInr(orderTotal(active))}</span></div>
                 )}
               </div>
@@ -414,7 +422,7 @@ export default function OrdersScreen() {
               )}
               {active.note && (
                 <div className="o-sec">
-                  <div className="adm-fl">Note for packing</div>
+                  <div className="adm-fl">{active.source === "enquiry" ? "Enquiry details" : "Note for packing"}</div>
                   <div style={{ lineHeight: 1.5 }}>{active.note}</div>
                 </div>
               )}

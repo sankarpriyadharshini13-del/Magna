@@ -271,7 +271,7 @@ export default function OrderFormModal({
         <>
           <span className="mo-foot-note">
             {editing
-              ? `Placed ${new Date(order!.placedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}${order!.source === "online" ? " on the website" : " by an admin"}`
+              ? `Placed ${new Date(order!.placedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}${order!.source === "online" ? " on the website" : order!.source === "enquiry" ? " via a website enquiry" : " by an admin"}`
               : "Order number is created automatically"}
           </span>
           <button type="button" className="mo-btn" onClick={onClose} disabled={busy}>Cancel</button>

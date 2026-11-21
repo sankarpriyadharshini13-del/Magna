@@ -84,7 +84,7 @@ export function mapOrder(r: Row): Order {
     deliveredAt: r.delivered_at ?? null,
     cancelReason: r.cancel_reason ?? "",
     kind: r.kind === "bulk" ? "bulk" : "normal",
-    source: r.source === "admin" ? "admin" : "online",
+    source: r.source === "admin" ? "admin" : r.source === "enquiry" ? "enquiry" : "online",
     businessName: r.business_name ?? "",
     gstNumber: r.gst_number ?? "",
     note: r.note ?? "",

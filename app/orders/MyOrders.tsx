@@ -29,6 +29,10 @@ interface MyOrder {
   address: string;
   shipName: string;
   shipPhone: string;
+  /** City / port captured with an export enquiry. */
+  shipCity?: string;
+  /** "enquiry" for Business / Distributors / Export enquiries saved as orders. */
+  source?: "online" | "admin" | "enquiry";
   method: string;
   testPayment: boolean;
   deliveredAt: string | null;
@@ -102,24 +106,39 @@ function OrderCard({ o, defaultOpen, remind, onReviewed }: { o: MyOrder; default
   const { getById } = useProducts();
   const [open, setOpen] = useState(defaultOpen);
   const [reviewingItem, setReviewingItem] = useState<{ productId: string; idx: number } | null>(null);
-  const st = STATUS[o.status];
-  const canReview = o.status === "Delivered";
+  const isEnquiry = o.source === "enquiry";
+  // Enquiries are saved as orders too, so a fresh one would read "Order placed" — say what it really is.
+  const st = isEnquiry && o.status === "New" ? { label: "Enquiry received", cls: STATUS.New.cls } : STATUS[o.status];
+  const canReview = o.status === "Delivered" && !isEnquiry;
+  const count = o.items.reduce((n, i) => n + i.qty, 0);
 
   return (
     <article className="overflow-hidden rounded-[1.75rem] bg-white shadow-soft ring-1 ring-forest/[0.06]">
       <header className="flex flex-wrap items-start justify-between gap-3 border-b border-forest/[0.07] p-5 sm:p-6">
         <div>
-          <h2 className="font-display text-xl text-forest sm:text-2xl">Order #{o.label}</h2>
-          <p className="mt-0.5 text-sm text-ink/55">Placed {fmtDate(o.placedAt)} · {o.items.reduce((n, i) => n + i.qty, 0)} item{o.items.reduce((n, i) => n + i.qty, 0) === 1 ? "" : "s"}</p>
+          <h2 className="font-display text-xl text-forest sm:text-2xl">{isEnquiry ? "Enquiry" : "Order"} #{o.label}</h2>
+          <p className="mt-0.5 text-sm text-ink/55">
+            {isEnquiry ? "Sent" : "Placed"} {fmtDate(o.placedAt)} · {isEnquiry ? "no payment or stock involved" : `${count} item${count === 1 ? "" : "s"}`}
+          </p>
         </div>
         <div className="flex items-center gap-3">
           <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] ${st.cls}`}>{st.label}</span>
-          <span className="font-display text-xl text-forest">{formatInr(o.total)}</span>
+          {!isEnquiry && <span className="font-display text-xl text-forest">{formatInr(o.total)}</span>}
         </div>
       </header>
 
       <div className="space-y-5 p-5 sm:p-6">
-        <Progress status={o.status} reason={o.cancelReason} />
+        {isEnquiry ? (
+          o.status === "Cancelled" ? (
+            <Progress status="Cancelled" reason={o.cancelReason} />
+          ) : (
+            <p className="rounded-2xl bg-sand/50 p-4 text-sm leading-relaxed text-ink/75">
+              <b className="font-semibold text-forest">Enquiry received.</b> Our team will get back to you soon — open the details below to follow its progress.
+            </p>
+          )
+        ) : (
+          <Progress status={o.status} reason={o.cancelReason} />
+        )}
 
         <ul className="divide-y divide-forest/[0.07]">
           {o.items.map((i, idx) => {
@@ -136,7 +155,11 @@ function OrderCard({ o, defaultOpen, remind, onReviewed }: { o: MyOrder; default
                   ) : (
                     <p className="font-display text-base leading-tight text-forest sm:text-lg">{i.name}</p>
                   )}
-                  <p className="text-xs text-ink/55">{i.packSize ? `${i.packSize} · ` : ""}{i.qty} × {formatInr(i.price)}</p>
+                  {isEnquiry ? (
+                    <p className="text-xs leading-relaxed text-ink/55">Our team will contact you on the phone number or email you shared.</p>
+                  ) : (
+                    <p className="text-xs text-ink/55">{i.packSize ? `${i.packSize} · ` : ""}{i.qty} × {formatInr(i.price)}</p>
+                  )}
 
                   {i.productId && o.status !== "Cancelled" && (
                     i.review ? (
@@ -167,7 +190,7 @@ function OrderCard({ o, defaultOpen, remind, onReviewed }: { o: MyOrder; default
                     ) : null
                   )}
                 </div>
-                <span className="shrink-0 font-semibold text-forest">{formatInr(i.price * i.qty)}</span>
+                {!isEnquiry && <span className="shrink-0 font-semibold text-forest">{formatInr(i.price * i.qty)}</span>}
               </li>
             );
           })}
@@ -180,17 +203,17 @@ function OrderCard({ o, defaultOpen, remind, onReviewed }: { o: MyOrder; default
         )}
 
         <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} className="focus-ring inline-flex items-center gap-1.5 rounded text-sm font-semibold text-forest underline-offset-4 hover:text-clay hover:underline">
-          {open ? "Hide details" : "View delivery & payment details"} <ArrowIcon width={14} height={14} className={`transition-transform ${open ? "-rotate-90" : "rotate-90"}`} />
+          {open ? "Hide details" : isEnquiry ? "View enquiry details" : "View delivery & payment details"} <ArrowIcon width={14} height={14} className={`transition-transform ${open ? "-rotate-90" : "rotate-90"}`} />
         </button>
 
         {open && (
           <div className="grid gap-5 rounded-2xl bg-sand/40 p-4 text-sm sm:grid-cols-2 sm:p-5">
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-clay">Delivery location</p>
+              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-clay">{isEnquiry ? "Contact & location" : "Delivery location"}</p>
               <p className="mt-1.5 leading-relaxed text-ink/80">
                 {o.shipName && <b className="text-forest">{o.shipName}</b>}{o.shipPhone && <> · {o.shipPhone}</>}
                 <br />
-                {o.address || "—"}
+                {o.address || o.shipCity || (isEnquiry ? "Details shared in your enquiry" : "—")}
               </p>
               {o.deliveredAt && <p className="mt-2 text-xs font-semibold text-leaf">Delivered on {fmtDate(o.deliveredAt)}</p>}
               {o.status === "Cancelled" && (() => {
@@ -216,15 +239,21 @@ function OrderCard({ o, defaultOpen, remind, onReviewed }: { o: MyOrder; default
               )}
             </div>
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-clay">Payment</p>
-              <div className="mt-1.5 space-y-1 text-ink/80">
-                <p className="flex justify-between"><span>Items</span><span>{formatInr(o.subtotal)}</span></p>
-                <p className="flex justify-between"><span>Delivery</span><span>{o.shipping ? formatInr(o.shipping) : "Free"}</span></p>
-                {!!o.discount && <p className="flex justify-between text-leaf"><span>Discount</span><span>−{formatInr(o.discount)}</span></p>}
-                <p className="flex justify-between font-semibold text-forest"><span>Total</span><span>{formatInr(o.total)}</span></p>
-                {o.refunded > 0 && <p className="flex justify-between text-clay"><span>Refunded</span><span>{formatInr(o.refunded)}</span></p>}
-                <p className="pt-1 text-xs text-ink/55">{paymentText(o)}</p>
-              </div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-clay">{isEnquiry ? "Enquiry" : "Payment"}</p>
+              {isEnquiry ? (
+                <p className="mt-1.5 leading-relaxed text-ink/80">
+                  No payment is needed for an enquiry. Our team will reply with pricing and the next steps.
+                </p>
+              ) : (
+                <div className="mt-1.5 space-y-1 text-ink/80">
+                  <p className="flex justify-between"><span>Items</span><span>{formatInr(o.subtotal)}</span></p>
+                  <p className="flex justify-between"><span>Delivery</span><span>{o.shipping ? formatInr(o.shipping) : "Free"}</span></p>
+                  {!!o.discount && <p className="flex justify-between text-leaf"><span>Discount</span><span>−{formatInr(o.discount)}</span></p>}
+                  <p className="flex justify-between font-semibold text-forest"><span>Total</span><span>{formatInr(o.total)}</span></p>
+                  {o.refunded > 0 && <p className="flex justify-between text-clay"><span>Refunded</span><span>{formatInr(o.refunded)}</span></p>}
+                  <p className="pt-1 text-xs text-ink/55">{paymentText(o)}</p>
+                </div>
+              )}
             </div>
             {o.timeline.length > 0 && (
               <div className="sm:col-span-2">

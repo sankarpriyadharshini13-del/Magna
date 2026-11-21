@@ -27,7 +27,8 @@ export default function PaymentsScreen() {
 
   const customers = useMemo(() => new Map(data.customers.map((c) => [c.id, c])), [data.customers]);
 
-  const payments = useMemo(() => data.orders.map((o) => ({ o, v: paymentView(o, now) })), [data.orders, now]);
+  // Website enquiries (source 'enquiry') aren't payments — they never move money.
+  const payments = useMemo(() => data.orders.filter((o) => o.source !== "enquiry").map((o) => ({ o, v: paymentView(o, now) })), [data.orders, now]);
 
   const pick = (no: number | null) => {
     setSelectedNo(no);

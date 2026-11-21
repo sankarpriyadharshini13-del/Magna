@@ -58,7 +58,8 @@ export default function DashboardScreen() {
   const R = RANGES.find((r) => r.id === range)!;
 
   const stats = useMemo(() => {
-    const valid = data.orders.filter((o) => o.status !== "Cancelled");
+    // Enquiries (Business / Distributors / Export forms) aren't sales — they carry no items or payment.
+    const valid = data.orders.filter((o) => o.status !== "Cancelled" && o.source !== "enquiry");
     const today0 = startOfDay(now).getTime();
     
     let from: number;
@@ -82,7 +83,7 @@ export default function DashboardScreen() {
     };
     const cur = valid.filter((o) => inWin(o, from, to));
     const prev = valid.filter((o) => inWin(o, from - span * DAY, from));
-    const curAll = data.orders.filter((o) => inWin(o, from, to));
+    const curAll = data.orders.filter((o) => inWin(o, from, to) && o.source !== "enquiry");
 
     // Sales trend: one point per day over the chart span, vs the same span before it.
     const series = (offsetDays: number) =>
@@ -313,7 +314,7 @@ export default function DashboardScreen() {
                       <td className="b">{formatInr(o.deliveryCharge ?? 0)}</td>
                       <td><Badge tone={orderTone(o.status)}>{o.status}</Badge></td>
                       <td style={{ whiteSpace: "nowrap" }}>
-                        {o.status === "New" && (
+                        {o.status === "New" && o.source !== "enquiry" && (
                           <button type="button" className="adm-btn sm pri" style={{ marginRight: 4 }} onClick={() => mutate("/api/admin/orders/pack", "POST", { numbers: [o.number] }, "1 order marked packed.")}>Mark packed</button>
                         )}
                         <button type="button" className="adm-btn sm" onClick={() => c && printInvoices(entries([o]), data.settings)}>Invoice</button>

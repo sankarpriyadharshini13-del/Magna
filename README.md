@@ -285,7 +285,23 @@ new-order email on/off. Without email keys, orders still work and the emails are
   (editing an order then also updates that customer on the Customers page), then
   `supabase/migrations/20261120020000_order_cancel.sql` for **Cancel order**, then
   `supabase/migrations/20261120030000_order_cancel_reason.sql` for the optional cancellation reason
-  (it replaces the cancel function with a version that also saves the reason).
+  (it replaces the cancel function with a version that also saves the reason), then
+  `supabase/migrations/20261121000000_enquiries.sql` for website enquiries.
+
+### Website enquiries (Business / Distributors / Export)
+
+- The forms on **/business**, **/distributors** and **/export** post to `POST /api/enquiries` (public,
+  honeypot-protected). Each enquiry is saved as an order with `source = 'enquiry'`, `kind = 'bulk'`,
+  one ₹0 line ("Business enquiry" / "Distributor application" / "Export enquiry") and the form details
+  in the order note — so it appears in **Admin → Orders** with an **ENQUIRY** tag.
+- Enquiries take no payment and reserve no stock. They don't count in Dashboard sales or Payments &
+  Refunds. The details panel shows the enquiry text instead of packing notes; the admin replies to
+  the customer and marks it delivered or cancelled.
+- The customer is reused when the email (or name + phone) already exists, same rule as admin orders.
+- Signed-in customers see their enquiry on **My orders** as an *Enquiry* (no payment or stock), so they
+  can follow the shop's reply. Enquiries sent while signed out stay email-only and show up in Admin →
+  Orders only.
+- Without `SUPABASE_SERVICE_ROLE_KEY` the endpoint returns 503 and the form shows an error.
 
 ### Live stock
 

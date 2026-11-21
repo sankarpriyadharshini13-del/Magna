@@ -21,9 +21,9 @@ interface SavedReview {
 export const GET = handle(async (req) => {
   const { client } = await requireUser(req);
   const base =
-    "number, placed_at, status, shipping, address, ship_name, ship_phone, method, payment_id, payment_refunded, delivered_at, order_items(product_id, name, pack_size, qty, price), order_events(label, note, at)";
+    "number, placed_at, status, shipping, address, ship_name, ship_phone, ship_city, method, payment_id, payment_refunded, delivered_at, order_items(product_id, name, pack_size, qty, price), order_events(label, note, at)";
   // Payment mode, discount, the transporter details and the cancellation reason arrive with later migrations.
-  const extra = ", payment_mode, amount_paid, discount, transporter, tracking_number, dispatch_date, tracking_status, tracking_url, cancel_reason";
+  const extra = ", payment_mode, amount_paid, discount, transporter, tracking_number, dispatch_date, tracking_status, tracking_url, cancel_reason, source";
   const query = (cols: string) => client.from("orders").select(cols).order("number", { ascending: false }).limit(100);
   let { data, error } = await query(`${base}${extra}`);
   // Before those migrations are applied, still show orders (just without the newer details).
@@ -66,6 +66,8 @@ export const GET = handle(async (req) => {
       label: orderLabel(Number(o.number), format),
       placedAt: o.placed_at,
       status: o.status as "New" | "Packed" | "Delivered" | "Cancelled",
+      /** "enquiry" for Business / Distributors / Export enquiries saved as orders. */
+      source: o.source === "enquiry" ? "enquiry" : o.source === "admin" ? "admin" : "online",
       items,
       subtotal,
       shipping: o.shipping ?? 0,
@@ -80,6 +82,7 @@ export const GET = handle(async (req) => {
       address: o.address ?? "",
       shipName: o.ship_name ?? "",
       shipPhone: o.ship_phone ?? "",
+      shipCity: o.ship_city ?? "",
       method: o.method,
       testPayment: String(o.payment_id ?? "").startsWith("dummy_"),
       deliveredAt: o.delivered_at ?? null,

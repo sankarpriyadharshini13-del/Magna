@@ -74,8 +74,8 @@ export interface Order {
   cancelReason: string;
   /** Bulk = shops, events, large quantities (added by an admin). */
   kind: "normal" | "bulk";
-  /** online = placed on the website; admin = added in Admin → Orders. */
-  source: "online" | "admin";
+  /** online = placed on the website; admin = added in Admin → Orders; enquiry = Business/Distributors/Export form. */
+  source: "online" | "admin" | "enquiry";
   businessName: string;
   gstNumber: string;
   /** Note for packing. */

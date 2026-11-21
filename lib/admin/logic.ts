@@ -85,6 +85,7 @@ export function customerStats(data: AdminData): Map<string, CustomerStat> {
   const map = new Map<string, CustomerStat>();
   for (const c of data.customers) map.set(c.id, { orders: 0, spent: 0, last: null, tag: "New" });
   for (const o of data.orders) {
+    if (o.source === "enquiry") continue;
     const s = map.get(o.customerId);
     if (!s) continue;
     s.orders += 1;

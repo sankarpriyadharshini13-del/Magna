@@ -1,144 +1,116 @@
 "use client";
 
 import SiteShell from "@/components/layout/SiteShell";
-import { ArrowIcon, CheckIcon, FactoryIcon, LeafIcon, StoreIcon } from "@/components/ui/Icons";
+import { CheckIcon, FactoryIcon, LeafIcon, StoreIcon } from "@/components/ui/Icons";
+import EnquiryForm from "@/components/enquiry/EnquiryForm";
 import Reveal from "@/components/home/Reveal";
 import SectionHeading from "@/components/home/SectionHeading";
+
+const buyers = [
+  {
+    Icon: StoreIcon,
+    title: "Restaurants & Cafés",
+    body: "Idli Podi and Moringa Idli Podi for idli, dosa and hot rice, plus Country Sugar for payasam, tea and coffee. The same taste in every batch.",
+  },
+  {
+    Icon: FactoryIcon,
+    title: "Retail Stores",
+    body: "Retail-ready packs of our full range — made in our Chennai kitchen, with clear labels your customers can trust.",
+  },
+  {
+    Icon: LeafIcon,
+    title: "Catering & Events",
+    body: "Weddings, corporate events and festivals. Tell us your date and quantity, and we'll plan production and delivery around it.",
+  },
+];
+
+const reasons = [
+  "Stone-ground in our own Chennai kitchen — we control quality from grinding to packing",
+  "Natural ingredients — no preservatives, no artificial colours",
+  "Flexible quantities — start with a few packs and scale up to bulk orders",
+  "Wholesale pricing that leaves room for your margin",
+  "Sourced and packed locally — visit our kitchen and check the quality yourself",
+  "A small, family-run team you can reach directly",
+];
 
 export default function BusinessPage() {
   return (
     <SiteShell>
-      <section className="bg-cream py-12 md:py-16">
+      <section className="bg-cream py-14 md:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <Reveal>
             <SectionHeading
+              align="center"
               eyebrow="For Business"
               title={<>Quality ingredients for <span className="italic text-clay">your business</span></>}
-              lead="From restaurants to retail stores, we supply traditional South Indian podis and country sugar in bulk quantities."
+              lead="We supply Idli Podi, Moringa Idli Podi and Country Sugar in wholesale quantities to restaurants, cafés, stores and caterers — made in our own kitchen in Chennai."
+              action={{ href: "/shop", label: "See retail prices" }}
             />
           </Reveal>
         </div>
       </section>
 
-      <section className="py-10 md:py-14">
+      <section className="bg-sand/45 py-12 md:py-16">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <Reveal>
             <SectionHeading
               eyebrow="Who we serve"
               title="Partner with us"
-              lead="We work with businesses across India that value authentic, traditional ingredients."
+              lead="Tell us what your kitchen or shelf needs — we'll match it to our range."
             />
           </Reveal>
-
           <div className="mt-8 grid gap-6 md:grid-cols-3">
-            <Reveal delay={60} className="rounded-2xl border border-forest/10 bg-white p-8 shadow-soft">
-              <span className="grid h-14 w-14 place-items-center rounded-2xl bg-leaf/10 text-leaf">
-                <StoreIcon width={28} height={28} />
-              </span>
-              <h3 className="mt-6 font-display text-xl font-semibold text-forest">Restaurants & Cafés</h3>
-              <p className="mt-3 text-sm leading-relaxed text-ink/70">
-                Traditional idli podi, moringa podi and country sugar for your kitchen. Consistent quality, authentic taste.
-              </p>
-            </Reveal>
-
-            <Reveal delay={120} className="rounded-2xl border border-forest/10 bg-white p-8 shadow-soft">
-              <span className="grid h-14 w-14 place-items-center rounded-2xl bg-clay/10 text-clay">
-                <FactoryIcon width={28} height={28} />
-              </span>
-              <h3 className="mt-6 font-display text-xl font-semibold text-forest">Retail Stores</h3>
-              <p className="mt-3 text-sm leading-relaxed text-ink/70">
-                Stock our products on your shelves. Attractive packaging, competitive wholesale pricing, and reliable supply.
-              </p>
-            </Reveal>
-
-            <Reveal delay={180} className="rounded-2xl border border-forest/10 bg-white p-8 shadow-soft">
-              <span className="grid h-14 w-14 place-items-center rounded-2xl bg-honey/10 text-honey">
-                <LeafIcon width={28} height={28} />
-              </span>
-              <h3 className="mt-6 font-display text-xl font-semibold text-forest">Catering & Events</h3>
-              <p className="mt-3 text-sm leading-relaxed text-ink/70">
-                Wedding functions, corporate events, and special occasions. Bulk orders with custom packaging options.
-              </p>
-            </Reveal>
-          </div>
-        </div>
-      </section>
-
-      <section className="bg-sand/45 py-10 md:py-14">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <Reveal>
-            <SectionHeading
-              eyebrow="Why choose us"
-              title="Quality you can trust"
-              lead="What makes Magna Eco Bites the right partner for your business."
-            />
-          </Reveal>
-
-          <div className="mt-8 grid gap-4 md:grid-cols-2">
-            {[
-              "Carefully prepared with quality ingredients — authentic taste, consistent quality.",
-              "Natural ingredients — no preservatives, no artificial colours",
-              "Flexible order quantities — from trial packs to bulk orders",
-              "Competitive wholesale pricing with volume discounts",
-              "Reliable supply chain — timely delivery across India",
-              "Custom packaging options available for bulk orders",
-            ].map((item, i) => (
-              <Reveal key={i} delay={i * 40} className="flex items-start gap-4 rounded-xl bg-white/60 p-5">
-                <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-leaf text-cream">
-                  <CheckIcon width={12} height={12} />
-                </span>
-                <span className="text-sm leading-relaxed text-ink/80">{item}</span>
+            {buyers.map((b, i) => (
+              <Reveal key={b.title} delay={i * 90} className="h-full">
+                <div className="flex h-full flex-col rounded-[1.5rem] border border-forest/10 bg-white p-8 shadow-soft">
+                  <span className="grid h-14 w-14 place-items-center rounded-2xl bg-clay/10 text-clay">
+                    <b.Icon width={26} height={26} />
+                  </span>
+                  <h3 className="mt-6 font-display text-xl font-semibold text-forest">{b.title}</h3>
+                  <p className="mt-3 text-sm leading-relaxed text-ink/70">{b.body}</p>
+                </div>
               </Reveal>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="py-10 md:py-14">
+      <section className="relative overflow-hidden bg-forest py-14 text-cream md:py-20">
+        <div aria-hidden="true" className="pointer-events-none absolute -right-32 -top-32 h-96 w-96 rounded-full bg-clay/15 blur-3xl" />
+        <div aria-hidden="true" className="pointer-events-none absolute -bottom-40 -left-24 h-96 w-96 rounded-full bg-leaf/30 blur-3xl" />
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <Reveal>
+            <SectionHeading
+              tone="dark"
+              align="center"
+              eyebrow="Why choose us"
+              title={<>Made the traditional way, <span className="italic text-honey">for your business</span></>}
+            />
+          </Reveal>
+          <div className="mx-auto mt-10 grid max-w-4xl gap-4 sm:grid-cols-2">
+            {reasons.map((item, i) => (
+              <Reveal key={i} delay={i * 50} className="flex items-start gap-4 rounded-2xl bg-cream/[0.05] p-5 ring-1 ring-cream/10">
+                <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-honey text-forest">
+                  <CheckIcon width={12} height={12} />
+                </span>
+                <span className="text-sm leading-relaxed text-cream/80">{item}</span>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="enquire" className="bg-cream py-12 md:py-16">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
           <Reveal>
-            <div className="rounded-2xl border border-forest/10 bg-white p-6 shadow-lift md:p-8">
+            <div className="rounded-[2rem] border border-forest/10 bg-white p-6 shadow-lift md:p-10">
               <SectionHeading
+                align="center"
                 eyebrow="Get in touch"
                 title="Ready to partner?"
-                lead="Tell us about your business and requirements. We'll get back to you within 24 hours."
+                lead="Tell us the products and monthly quantity you need. We'll reply with wholesale pricing and lead times."
               />
-              <form
-                className="mt-6 grid gap-4"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  const d = new FormData(e.currentTarget);
-                  const body = `Business Name: ${d.get("business")}\nContact Person: ${d.get("name")}\nPhone: ${d.get("phone")}\nEmail: ${d.get("email")}\n\n${d.get("message")}`;
-                  window.location.href = `mailto:hello@magnaecobites.com?subject=${encodeURIComponent("Business enquiry")}&body=${encodeURIComponent(body)}`;
-                }}
-              >
-                <div>
-                  <label htmlFor="b-business" className="mb-2 block text-sm font-semibold text-forest">Business Name</label>
-                  <input id="b-business" name="business" required type="text" placeholder="Your business name" className="w-full rounded-xl border border-forest/10 bg-cream/60 px-4 py-3 text-ink outline-none transition-all placeholder:text-ink/35 focus:border-leaf focus:bg-white focus:ring-4 focus:ring-leaf/15" />
-                </div>
-                <div className="grid gap-5 sm:grid-cols-2">
-                  <div>
-                    <label htmlFor="b-name" className="mb-2 block text-sm font-semibold text-forest">Contact Person</label>
-                    <input id="b-name" name="name" required type="text" placeholder="Your name" className="w-full rounded-xl border border-forest/10 bg-cream/60 px-4 py-3 text-ink outline-none transition-all placeholder:text-ink/35 focus:border-leaf focus:bg-white focus:ring-4 focus:ring-leaf/15" />
-                  </div>
-                  <div>
-                    <label htmlFor="b-phone" className="mb-2 block text-sm font-semibold text-forest">Phone</label>
-                    <input id="b-phone" name="phone" required type="tel" placeholder="Your phone number" className="w-full rounded-xl border border-forest/10 bg-cream/60 px-4 py-3 text-ink outline-none transition-all placeholder:text-ink/35 focus:border-leaf focus:bg-white focus:ring-4 focus:ring-leaf/15" />
-                  </div>
-                </div>
-                <div>
-                  <label htmlFor="b-email" className="mb-2 block text-sm font-semibold text-forest">Email</label>
-                  <input id="b-email" name="email" required type="email" placeholder="your@email.com" className="w-full rounded-xl border border-forest/10 bg-cream/60 px-4 py-3 text-ink outline-none transition-all placeholder:text-ink/35 focus:border-leaf focus:bg-white focus:ring-4 focus:ring-leaf/15" />
-                </div>
-                <div>
-                  <label htmlFor="b-message" className="mb-2 block text-sm font-semibold text-forest">Your Requirements</label>
-                  <textarea id="b-message" name="message" required rows={4} placeholder="Tell us about your business and what you need" className="w-full rounded-xl border border-forest/10 bg-cream/60 px-4 py-3 text-ink outline-none transition-all placeholder:text-ink/35 focus:border-leaf focus:bg-white focus:ring-4 focus:ring-leaf/15 resize-none" />
-                </div>
-                <button type="submit" className="btn-primary group">
-                  Send enquiry <ArrowIcon width={16} height={16} className="transition-transform group-hover:translate-x-1" />
-                </button>
-                <p className="text-xs text-ink/50">Opens your email app with the message ready to send.</p>
-              </form>
+              <EnquiryForm type="business" />
             </div>
           </Reveal>
         </div>

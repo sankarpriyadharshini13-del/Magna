@@ -20,6 +20,9 @@ export const SearchIcon = (p: P) => (
 export const UserIcon = (p: P) => (
   <svg {...base} {...p}><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></svg>
 );
+export const LogOutIcon = (p: P) => (
+  <svg {...base} width={18} height={18} {...p}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="m16 17 5-5-5-5" /><path d="M21 12H9" /></svg>
+);
 export const BagIcon = (p: P) => (
   <svg {...base} {...p}><path d="M5 8h14l-1 12H6L5 8Z" /><path d="M9 8V6a3 3 0 0 1 6 0v2" /></svg>
 );

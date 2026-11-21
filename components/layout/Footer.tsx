@@ -51,7 +51,6 @@ const policies = [
   { href: "/privacy", label: "Privacy Policy" },
   { href: "/terms", label: "Terms of Service" },
   { href: "/shipping", label: "Shipping Policy" },
-  { href: "/returns", label: "Returns & Refunds" },
 ];
 
 const headingClass = "text-[11px] font-bold uppercase tracking-[0.24em] text-honey";
