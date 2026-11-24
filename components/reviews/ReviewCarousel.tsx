@@ -8,7 +8,15 @@ import ReviewCard, { type ReviewCardData } from "./ReviewCard";
  * Horizontal, swipeable row of review cards: about 1 card on phones, 2 on tablets and desktop.
  * Arrow buttons and a progress bar appear only when there's more than fits.
  */
-export default function ReviewCarousel({ reviews }: { reviews: ReviewCardData[] }) {
+export default function ReviewCarousel({
+  reviews,
+  tone = "light",
+}: {
+  reviews: ReviewCardData[];
+  /** "dark" is for the forest band on the home page. */
+  tone?: "light" | "dark";
+}) {
+  const dark = tone === "dark";
   const track = useRef<HTMLUListElement>(null);
   const [pos, setPos] = useState({ start: true, end: true, progress: 1 });
   // Card the arrows are heading to; cleared once scrolling settles, so quick repeated clicks add up.
@@ -53,7 +61,9 @@ export default function ReviewCarousel({ reviews }: { reviews: ReviewCardData[] 
 
   const scrollable = !(pos.start && pos.end);
   const btn =
-    "focus-ring grid h-11 w-11 place-items-center rounded-full border border-forest/15 bg-white text-forest shadow-soft transition-colors hover:border-forest hover:bg-forest hover:text-cream disabled:pointer-events-none disabled:opacity-35";
+    dark
+      ? "focus-ring grid h-11 w-11 place-items-center rounded-full border border-cream/25 bg-cream/[0.06] text-cream transition-colors hover:border-cream hover:bg-cream hover:text-forest disabled:pointer-events-none disabled:opacity-30"
+      : "focus-ring grid h-11 w-11 place-items-center rounded-full border border-forest/15 bg-white text-forest shadow-soft transition-colors hover:border-forest hover:bg-forest hover:text-cream disabled:pointer-events-none disabled:opacity-35";
 
   return (
     <div className="min-w-0">
@@ -72,8 +82,14 @@ export default function ReviewCarousel({ reviews }: { reviews: ReviewCardData[] 
 
       {scrollable && (
         <div className="mt-6 flex items-center gap-4">
-          <div className="h-1 flex-1 overflow-hidden rounded-full bg-forest/10" aria-hidden="true">
-            <div className="h-full rounded-full bg-forest transition-[width] duration-300" style={{ width: `${Math.max(8, pos.progress * 100)}%` }} />
+          <div
+            className={`h-1 flex-1 overflow-hidden rounded-full ${dark ? "bg-cream/15" : "bg-forest/10"}`}
+            aria-hidden="true"
+          >
+            <div
+              className={`h-full rounded-full transition-[width] duration-300 ${dark ? "bg-honey" : "bg-forest"}`}
+              style={{ width: `${Math.max(8, pos.progress * 100)}%` }}
+            />
           </div>
           <div className="flex gap-2">
             <button type="button" className={btn} onClick={() => go(-1)} disabled={pos.start} aria-label="Previous reviews">

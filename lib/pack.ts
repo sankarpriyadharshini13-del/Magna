@@ -1,4 +1,4 @@
-import type { ProductPack } from "@/types";
+import type { Product, ProductPack } from "@/types";
 
 /** Empty "Know your pack" block — every product starts here. */
 export const emptyPack = (): ProductPack => ({
@@ -29,4 +29,30 @@ export function packHasContent(pack: ProductPack | null | undefined): boolean {
  */
 export function packEdited(pack: ProductPack | null | undefined): boolean {
   return !!pack && (pack.customized === true || packHasContent(pack));
+}
+
+/** Clean a list of pack sizes: trim, drop blanks, de-duplicate (case-insensitive), cap at 8 entries. */
+export function cleanPackSizes(sizes: readonly string[] | null | undefined, fallback = ""): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of [...(sizes ?? []), fallback]) {
+    const size = String(raw ?? "").trim().slice(0, 40);
+    const key = size.toLowerCase();
+    if (!size || seen.has(key)) continue;
+    seen.add(key);
+    out.push(size);
+    if (out.length === 8) break;
+  }
+  return out;
+}
+
+/** Every pack size for a product, always at least one entry (`[""]` when none is set yet). */
+export function packSizesOf(product: Pick<Product, "packSize" | "packSizes"> | null | undefined): string[] {
+  const sizes = cleanPackSizes(product?.packSizes, product?.packSize ?? "");
+  return sizes.length ? sizes : [""];
+}
+
+/** The size to preselect on shop cards / product pages. */
+export function defaultPackSize(product: Pick<Product, "packSize" | "packSizes"> | null | undefined): string {
+  return packSizesOf(product)[0];
 }

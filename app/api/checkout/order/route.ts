@@ -1,6 +1,7 @@
 import { HttpError, dbError, handle, json, readJson } from "@/lib/server/http";
 import { requireUser } from "@/lib/server/guard";
 import { str } from "@/lib/server/model";
+import { cleanPackSizes } from "@/lib/pack";
 import { loadSettings } from "@/lib/server/orders";
 import { randomUUID } from "node:crypto";
 import { paymentProvider } from "@/lib/server/payments";
@@ -38,25 +39,66 @@ export const POST = handle(async (req) => {
   const raw = Array.isArray(body.items) ? body.items : [];
   if (!raw.length) throw new HttpError(400, "Your cart is empty.");
   if (raw.length > MAX_LINES) throw new HttpError(400, "Too many different items in one order.");
-  const wanted = new Map<string, number>();
-  for (const it of raw as { productId?: unknown; quantity?: unknown }[]) {
+  /** One entry per product + pack size, so the same product can be ordered in two sizes. */
+  const wanted = new Map<string, { productId: string; packSize: string; qty: number }>();
+  /** Units per product across every size — stock and the per-order limit are shared. */
+  const totals = new Map<string, number>();
+  for (const it of raw as { productId?: unknown; quantity?: unknown; packSize?: unknown }[]) {
     const id = typeof it.productId === "string" ? it.productId : "";
     const qty = Number(it.quantity);
+    const packSize = typeof it.packSize === "string" ? it.packSize.trim().slice(0, 40) : "";
     if (!id || !Number.isInteger(qty) || qty < 1 || qty > MAX_QTY) throw new HttpError(400, "One of the cart items isn't valid.");
-    wanted.set(id, (wanted.get(id) ?? 0) + qty);
+    const key = `${id}\u0000${packSize}`;
+    const line = wanted.get(key);
+    if (line) line.qty += qty;
+    else wanted.set(key, { productId: id, packSize, qty });
+    totals.set(id, (totals.get(id) ?? 0) + qty);
   }
+  if (Array.from(totals.values()).some((qty) => qty > MAX_QTY))
+    throw new HttpError(400, `You can order up to ${MAX_QTY} units of one product online.`);
 
   const sb = serviceClient();
-  const { data: rows, error } = await sb.from("products").select("id, name, pack_size, price, stock, visible").in("id", Array.from(wanted.keys()));
+  const select = (cols: string) =>
+    sb.from("products").select(cols).in("id", Array.from(totals.keys()));
+  // `pack_sizes` and `channel` arrive with a later migration: fall back until then.
+  let res = await select("id, name, pack_size, pack_sizes, channel, price, stock, visible");
+  if (res.error && ["42703", "PGRST204"].includes(res.error.code ?? "")) {
+    res = await select("id, name, pack_size, price, stock, visible");
+  }
+  const { data: rawRows, error } = res;
   if (error) throw dbError(error);
-  const items = [];
-  for (const [id, qty] of wanted) {
+  const rows = rawRows as unknown as {
+    id: string;
+    name: string;
+    pack_size: string | null;
+    pack_sizes?: string[] | null;
+    channel?: string | null;
+    price: number | null;
+    stock: number;
+    visible: boolean;
+  }[] | null;
+
+  for (const [id, qty] of totals) {
     const p = rows?.find((r) => r.id === id);
     if (!p || !p.visible) throw new HttpError(409, "An item in your cart is no longer available. Please remove it and try again.");
+    if (p.channel === "export") throw new HttpError(409, `${p.name} is part of our export range and is quoted by enquiry. Remove it from the cart to continue.`);
     if (p.price == null) throw new HttpError(409, `${p.name} doesn't have a price yet. Remove it from the cart to continue.`);
     if (p.stock < qty) throw new HttpError(409, p.stock > 0 ? `Only ${p.stock} × ${p.name} left in stock.` : `${p.name} is out of stock.`);
-    items.push({ product_id: p.id, name: p.name, pack_size: p.pack_size ?? "", qty, price: p.price });
   }
+
+  const items = Array.from(wanted.values()).map((line) => {
+    const p = rows!.find((r) => r.id === line.productId)!;
+    const sizes = cleanPackSizes(p.pack_sizes, p.pack_size ?? "");
+    if (line.packSize && sizes.length && !sizes.includes(line.packSize))
+      throw new HttpError(409, `The ${line.packSize} pack of ${p.name} is no longer available. Remove it from the cart and choose again.`);
+    return {
+      product_id: p.id,
+      name: p.name,
+      pack_size: line.packSize || sizes[0] || "",
+      qty: line.qty,
+      price: p.price as number,
+    };
+  });
   const subtotal = items.reduce((s, i) => s + i.price * i.qty, 0);
   const shipping = 0;
   const amount = subtotal + shipping;

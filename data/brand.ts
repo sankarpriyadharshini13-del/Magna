@@ -56,103 +56,78 @@ export const team = [
   },
 ] as const;
 
-export interface ServingIdea {
-  dish: string;
-  /** Product this idea is built around (matched against the live catalogue). */
-  productSlug: string;
-  productName: string;
-  summary: string;
-  steps: string[];
-  tip: string;
+export type FaqGroup = "products" | "kitchen" | "orders" | "business";
+
+export interface Faq {
+  q: string;
+  a: string;
+  /** Which filter the question sits under in the home page FAQ. */
+  group: FaqGroup;
+  /** Optional next step shown under the answer (shop, policy page, enquiry form…). */
+  link?: { href: string; label: string };
 }
 
-/** Serving suggestions with South Indian dishes. Product links resolve against the database. */
-export const servingIdeas: ServingIdea[] = [
+/**
+ * Customer questions, answered from what the rest of the site already states: the product copy,
+ * the Shipping Policy, the Terms, the checkout (free India delivery, Razorpay payments) and the
+ * review flow. No health, nutrition, certification or dietary claims — see the note at the top.
+ */
+export const faqs: Faq[] = [
   {
-    dish: "Idli with podi & sesame oil",
-    productSlug: "idli-podi",
-    productName: "Idli Podi",
-    summary: "A wholesome South Indian meal made with simple ingredients and traditional recipes.",
-    steps: [
-      "Spoon one or two teaspoons of idli podi onto your plate.",
-      "Make a small well and pour in sesame (gingelly) oil or a little ghee.",
-      "Mix into a paste and dip hot idlis straight in.",
-    ],
-    tip: "Best with sesame oil or ghee",
+    q: "What does Magna Eco Bites make?",
+    group: "products",
+    a: "Stone-ground South Indian pantry staples from our own kitchen in Kolathur, Chennai: Idli Podi, Moringa Idli Podi and minimally processed country sugar, plus whatever else is in the range at the moment. The shop always shows what is in stock, with live prices and pack sizes.",
+    link: { href: "/shop", label: "Browse the shop" },
   },
   {
-    dish: "Dosa with moringa podi",
-    productSlug: "moringa-idli-podi",
-    productName: "Moringa Idli Podi",
-    summary: "Crisp dosa with our moringa-leaf podi blend — for breakfast or an evening tiffin.",
-    steps: [
-      "Spread the dosa batter thin on a hot tawa.",
-      "Sprinkle moringa idli podi over it and drizzle a few drops of oil.",
-      "Fold and serve hot, with chutney on the side.",
-    ],
-    tip: "Also great mixed into hot rice",
+    q: "Are your podis vegetarian?",
+    group: "products",
+    a: "Yes — our podis are ground from lentils, spices and moringa leaf only, and our country sugar is made from cane. Nothing animal-derived goes into them. The full ingredient list for every pack is on its product page under “Know your pack”.",
+    link: { href: "/shop", label: "Check a product page" },
   },
   {
-    dish: "Payasam & sweets",
-    productSlug: "country-sugar",
-    productName: "Country Sugar",
-    summary: "Minimally processed country sugar brings a rich, rustic sweetness to traditional desserts.",
-    steps: [
-      "Use it in payasam, kesari or halwa as you would regular sugar.",
-      "Stir it into tea or coffee for an everyday rustic note.",
-      "Store in an airtight jar to keep it free-flowing.",
-    ],
-    tip: "Ideal for desserts, tea and coffee",
-  },
-];
-
-export const faqs = [
-  {
-    q: "Is this 100% vegetarian?",
-    a: "Yes, all our products are 100% vegetarian. We use only lentils, spices, moringa leaf and country sugar — no non-veg ingredients at all.",
+    q: "How should I store the podi and country sugar?",
+    group: "kitchen",
+    a: "Keep the pack sealed until you open it, then store it in an airtight jar in a cool, dry place, away from direct sunlight and the stove. Always use a dry spoon — moisture is what spoils podi fastest. There are no preservatives, so a dry jar does most of the work.",
   },
   {
-    q: "Does it contain any preservatives or added colours?",
-    a: "No preservatives, no artificial colours, no additives. We grind and pack our podis fresh in small batches, just like homemade.",
+    q: "How do I serve idli podi?",
+    group: "kitchen",
+    a: "Mix a teaspoon or two with sesame oil or ghee to make a thick paste and serve it with idli or dosa; it is just as good sprinkled over hot rice. Start small and add more as you go — the podi is a condiment, so the amount is entirely up to your table.",
   },
   {
-    q: "How long will the product stay fresh?",
-    a: "When stored in an airtight container in a cool, dry place, our podis stay fresh for 3–4 months. Country sugar can last 6–8 months if kept dry.",
+    q: "How do I place an order and pay?",
+    group: "orders",
+    a: "Add what you need to the cart, sign in with your email, confirm the delivery address and pay online. Cards, UPI and net banking are handled securely by Razorpay, and a confirmation email goes out as soon as the order is placed. Website orders are paid online — we do not offer cash on delivery.",
+    link: { href: "/shop", label: "Start shopping" },
   },
   {
-    q: "Is the country sugar real or just coloured white sugar?",
-    a: "This is authentic country sugar (naatu sakkarai) — minimally processed from sugarcane, not coloured white sugar. It has a natural golden colour and rich flavour.",
+    q: "What does delivery cost?",
+    group: "orders",
+    a: "Nothing on website orders inside India — the checkout adds no delivery charge. Wholesale and export shipments are different: freight is quoted by weight and destination before dispatch, so there are no surprises later.",
   },
   {
-    q: "Is the podi too spicy? Can kids eat it?",
-    a: "Our idli podi has a balanced spice level — not too hot, not too mild. Many families give it to kids. If you prefer less spicy, mix with more oil or ghee.",
+    q: "When will my order arrive, and how do I track it?",
+    group: "orders",
+    a: "Orders are packed within 1–3 business days, and we do not pack on Sundays or national holidays. After dispatch, allow 2–3 business days within Tamil Nadu, 3–5 for Kerala and Karnataka, and 3–9 for the rest of India. Tracking details arrive by email or SMS, and the latest status is always on your My orders page.",
+    link: { href: "/shipping", label: "Read the shipping policy" },
   },
   {
-    q: "How much podi should I use per serving?",
-    a: "Usually 1–2 teaspoons per idli or dosa is enough. Mix with sesame oil or ghee to make a paste. Adjust based on your taste.",
+    q: "A pack arrived damaged or wrong — what now?",
+    group: "orders",
+    a: "Send us a photo of the pack and the outer box within 48 hours of delivery and we will replace the item or refund it. Because these are food products, we can only take back packs that are damaged, incorrect or unopened — so please check the parcel when it arrives.",
+    link: { href: "/terms", label: "Read the returns terms" },
   },
   {
-    q: "Do you deliver to my area?",
-    a: "We deliver across India. Delivery time depends on your location — usually 3–7 business days after order. Enter your pincode at checkout to confirm.",
+    q: "Do you supply cafés, restaurants, stores or distributors?",
+    group: "business",
+    a: "Yes. We supply restaurants, cafés, retail shelves, caterers and distributors with wholesale quantities and pricing — from a small test batch up to regular bulk orders, with pan-India logistics. Tell us what your kitchen or shelf needs and we will quote from there.",
+    link: { href: "/business", label: "Business & wholesale" },
   },
   {
-    q: "Can I order by phone or WhatsApp?",
-    a: "You can order directly on our website. For bulk orders or special requests, WhatsApp us at your convenience — we're happy to help.",
-  },
-  {
-    q: "What if I receive a damaged or wrong product?",
-    a: "Please send us a photo of the damaged or wrong item within 48 hours of delivery. We'll replace it or refund you — no questions asked.",
-  },
-  {
-    q: "Is moringa podi good for health?",
-    a: "Moringa leaf is naturally rich in nutrients. Our moringa idli podi blends moringa with traditional spices for flavour — but we don't make health claims. Consult your doctor for dietary advice.",
-  },
-  {
-    q: "Can I use this for dosa and rice too?",
-    a: "Absolutely! Our podis work with idli, dosa, upma and even mixed with hot rice. Just add oil or ghee and enjoy.",
-  },
-  {
-    q: "Do you offer discounts for bulk orders?",
-    a: "Yes, we offer special pricing for restaurants, cafés, wedding functions and retail stores. Contact us with your requirements.",
+    q: "Do you ship outside India?",
+    group: "business",
+    a: "Yes — our export range travels by sea and air to the US, Europe, the Middle East and the Far East. Freight is quoted per shipment by weight and destination, and any import duty or local tax is paid by the recipient on arrival.",
+    link: { href: "/export", label: "Explore exports" },
   },
 ];

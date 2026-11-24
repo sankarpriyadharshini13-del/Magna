@@ -1,20 +1,21 @@
 import "server-only";
-import { guidePackFor } from "@/data/dietary";
-import { products as fallbackProducts, getProduct as fallbackProduct } from "@/data/products";
-import { packEdited } from "@/lib/pack";
-import type { Product, ProductPack } from "@/types";
+import { cleanPackSizes } from "@/lib/pack";
+import type { Product, ProductChannel, ProductPack } from "@/types";
 import { anonClient, supabaseConfigured } from "./supabase";
 
 const BASE_COLUMNS = ["id", "name", "price", "stock", "pack_size", "tag", "description", "long_description", "images", "created_at"];
 /** Columns that arrive with later migrations. Missing ones are dropped until the SQL is run. */
 const OPTIONAL_COLUMNS = [
   "original_price",
+  "pack_sizes",
+  "channel",
   "pack_enabled",
   "pack_ingredients",
   "pack_benefits",
   "pack_who_can_eat",
   "pack_who_should_be_careful",
   "pack_customized",
+  "sort_order",
 ];
 const missingColumn = (e: { code?: string } | null) => e?.code === "42703" || e?.code === "PGRST204";
 
@@ -37,27 +38,27 @@ async function selectRows(query: (cols: string) => PromiseLike<QueryResult>): Pr
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-/** Admin-saved copy once the block has been edited, otherwise the built-in guide (unless the section is off). */
+/**
+ * Admin-saved "Know your pack" copy. Nothing is bundled with the code: the block appears only with
+ * the text the admin saved in Admin → Products & Stock.
+ */
 function packOf(r: any): ProductPack | null {
-  const saved: ProductPack | null =
-    r.pack_enabled === undefined && r.pack_ingredients === undefined
-      ? null
-      : {
-          enabled: r.pack_enabled ?? true,
-          ingredients: r.pack_ingredients ?? "",
-          benefits: r.pack_benefits ?? "",
-          whoCanEat: r.pack_who_can_eat ?? "",
-          whoShouldBeCareful: r.pack_who_should_be_careful ?? "",
-          customized: r.pack_customized === true,
-        };
-  if (saved && packEdited(saved)) return saved;
-  const fallback = guidePackFor(r.id);
-  if (!fallback) return saved;
-  return { ...fallback, enabled: saved?.enabled ?? true };
+  // Every pack column arrives with its own migration; if none of them is present there is no block.
+  if (r.pack_enabled === undefined && r.pack_ingredients === undefined && r.pack_benefits === undefined) return null;
+  return {
+    enabled: r.pack_enabled ?? true,
+    ingredients: r.pack_ingredients ?? "",
+    benefits: r.pack_benefits ?? "",
+    whoCanEat: r.pack_who_can_eat ?? "",
+    whoShouldBeCareful: r.pack_who_should_be_careful ?? "",
+    customized: r.pack_customized === true,
+  };
 }
 
 function toProduct(r: any): Product {
   const image: string | null = r.images?.[0] ?? null;
+  const packSizes = cleanPackSizes(r.pack_sizes, r.pack_size ?? "");
+  const channel: ProductChannel = r.channel === "export" ? "export" : "ecommerce";
   return {
     id: r.id,
     slug: r.id,
@@ -65,7 +66,9 @@ function toProduct(r: any): Product {
     tag: r.tag || undefined,
     description: r.description || "",
     longDescription: r.long_description || r.description || "",
-    packSize: r.pack_size || null,
+    packSize: packSizes[0] ?? null,
+    packSizes,
+    channel,
     priceInr: r.price ?? null,
     originalPriceInr: r.price != null && r.original_price != null && r.original_price > r.price ? r.original_price : null,
     image,
@@ -78,31 +81,44 @@ function toProduct(r: any): Product {
 }
 
 /**
- * Products shown on the storefront: only rows with visible = true (enforced by row-level security as
- * well). Falls back to the bundled catalogue only when the database can't be queried at all.
+ * Products shown on the storefront: only the rows the admin has made visible (`visible = true`, also
+ * enforced by row-level security). There is no bundled catalogue — Admin → Products & Stock is the only
+ * place a product (and its details) is created — so an unconfigured or unreachable database simply
+ * yields an empty catalogue instead of stale hardcoded products.
  */
 export async function getPublicProducts(): Promise<Product[]> {
-  if (!supabaseConfigured) return fallbackProducts;
+  if (!supabaseConfigured) {
+    console.warn("[products] Supabase is not configured — add products in Admin → Products & Stock.");
+    return [];
+  }
   try {
     const data = (await selectRows((cols) =>
       anonClient().from("products").select(cols).eq("visible", true).order("created_at", { ascending: true }).order("name", { ascending: true }),
     )) as any[] | null;
-    return (data ?? []).map(toProduct);
+    const rows = data ?? [];
+    // Products the admin has positioned (sort_order ≥ 1) lead the catalogue; the rest keep their
+    // created/name order behind them until the admin moves them in Admin → Products & Stock.
+    const positioned = rows.filter((r) => (r.sort_order ?? 0) > 0).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+    const unpositioned = rows.filter((r) => (r.sort_order ?? 0) <= 0);
+    return [...positioned, ...unpositioned].map(toProduct);
   } catch (e) {
-    console.error("[products] falling back to the bundled catalogue:", (e as { message?: string })?.message);
-    return fallbackProducts;
+    console.error("[products] catalogue unavailable:", (e as { message?: string })?.message);
+    return [];
   }
 }
 
 export async function getPublicProduct(slug: string): Promise<Product | null> {
-  if (!supabaseConfigured) return fallbackProduct(slug) ?? null;
+  if (!supabaseConfigured) {
+    console.warn("[products] Supabase is not configured — add products in Admin → Products & Stock.");
+    return null;
+  }
   try {
     const data = (await selectRows((cols) =>
       anonClient().from("products").select(cols).eq("id", slug).eq("visible", true).maybeSingle(),
     )) as any | null;
     return data ? toProduct(data) : null;
   } catch (e) {
-    console.error("[products] falling back to the bundled catalogue:", (e as { message?: string })?.message);
-    return fallbackProduct(slug) ?? null;
+    console.error("[products] product unavailable:", (e as { message?: string })?.message);
+    return null;
   }
 }

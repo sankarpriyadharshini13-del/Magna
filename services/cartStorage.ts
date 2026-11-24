@@ -7,9 +7,15 @@ export function loadCart(): CartItem[] {
     const raw = window.localStorage.getItem(KEY);
     const parsed = raw ? JSON.parse(raw) : [];
     return Array.isArray(parsed)
-      ? parsed.filter(
-          (i) => typeof i?.productId === "string" && Number.isInteger(i?.quantity) && i.quantity > 0,
-        )
+      ? parsed
+          .filter(
+            (i) => typeof i?.productId === "string" && Number.isInteger(i?.quantity) && i.quantity > 0,
+          )
+          .map((i) => ({
+            productId: i.productId,
+            quantity: i.quantity,
+            packSize: typeof i.packSize === "string" ? i.packSize.slice(0, 40) : "",
+          }))
       : [];
   } catch {
     return [];

@@ -6,7 +6,7 @@ import { downloadCsv, fmtDate, fmtDateTime, isTestPayment, maskEmail, maskPhone 
 import { customerSub, orderTone, orderTotal, orderUnits, paymentLabel } from "@/lib/admin/logic";
 import { printInvoices } from "@/lib/admin/print";
 import { useAdminData } from "@/lib/admin/store";
-import type { Order } from "@/lib/admin/types";
+import type { Order, OrderChannel } from "@/lib/admin/types";
 import { formatInr } from "@/lib/format";
 import OrderFormModal from "../OrderFormModal";
 import { Badge, ConfirmModal, Topbar, useQueryParam } from "../ui";
@@ -15,6 +15,12 @@ const PAGE = 9;
 
 type Filter = "All" | "New" | "Packed" | "Delivered" | "Cancelled";
 const FILTERS: Filter[] = ["All", "New", "Packed", "Delivered", "Cancelled"];
+
+const CHANNELS: { id: OrderChannel; label: string }[] = [
+  { id: "ecommerce", label: "Ecommerce" },
+  { id: "distributors", label: "Distributors" },
+  { id: "export", label: "Export" },
+];
 
 /** Courier the shop ships with. Bulk orders can carry their own tracking link, which wins. */
 const TRACK_DELIVERY_URL = "https://theprofessionalcouriertracking.com/";
@@ -45,6 +51,7 @@ export default function OrdersScreen() {
   const orderParam = useQueryParam("order");
 
   const [filter, setFilter] = useState<Filter>("All");
+  const [channel, setChannel] = useState<"all" | OrderChannel>("all");
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<number[]>([]);
@@ -81,10 +88,17 @@ export default function OrdersScreen() {
     return c;
   }, [data.orders]);
 
+  const channelCounts = useMemo(() => {
+    const c = { ecommerce: 0, distributors: 0, export: 0 } as Record<OrderChannel, number>;
+    for (const o of data.orders) c[o.channel] += 1;
+    return c;
+  }, [data.orders]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return data.orders.filter((o) => {
       if (!matchesFilter(o, filter)) return false;
+      if (channel !== "all" && o.channel !== channel) return false;
       if (!q) return true;
       const c = customers.get(o.customerId);
       return (
@@ -100,7 +114,7 @@ export default function OrdersScreen() {
         o.email.toLowerCase().includes(q)
       );
     });
-  }, [data.orders, filter, query, customers, label]);
+  }, [data.orders, filter, channel, query, customers, label]);
 
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE));
   const curPage = Math.min(page, pages);
@@ -153,6 +167,28 @@ export default function OrdersScreen() {
         <button type="button" className="adm-btn lg" onClick={exportCsv}>Export CSV</button>
         <button type="button" className="adm-btn pri lg" onClick={() => setForm("new")}>+ Add</button>
       </Topbar>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginBottom: 14 }}>
+        {CHANNELS.map((c) => {
+          const active = channel === c.id;
+          return (
+            <button
+              key={c.id}
+              type="button"
+              aria-pressed={active}
+              onClick={() => { setChannel(active ? "all" : c.id); setPage(1); }}
+              style={{
+                textAlign: "left", padding: "14px 16px", borderRadius: 14, cursor: "pointer",
+                border: `1.5px solid ${active ? "var(--forest, #3b5a3a)" : "rgba(59,90,58,.16)"}`,
+                background: active ? "rgba(59,90,58,.07)" : "var(--card, #fff)",
+              }}
+            >
+              <span style={{ display: "block", fontSize: 15, fontWeight: 700, color: "var(--ink)" }}>{c.label}</span>
+              <span style={{ display: "block", fontSize: 22, fontWeight: 700, color: active ? "var(--forest, #3b5a3a)" : "var(--ink)" }}>{channelCounts[c.id]}</span>
+            </button>
+          );
+        })}
+      </div>
 
       <div className="adm-chips" role="tablist" aria-label="Filter by status">
         {FILTERS.map((f) => (

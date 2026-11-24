@@ -37,13 +37,19 @@ export default function ReviewCard({ review: r }: { review: ReviewCardData }) {
   const products = r.products ? r.products.split(", ").filter(Boolean) : [];
 
   return (
-    <figure className="flex h-full flex-col rounded-[1.5rem] bg-white p-5 shadow-soft ring-1 ring-forest/[0.06] transition-shadow hover:shadow-lift sm:p-6">
-      <div className="flex items-center justify-between gap-3">
+    <figure className="relative flex h-full flex-col overflow-hidden rounded-[1.75rem] bg-white p-5 shadow-soft ring-1 ring-forest/[0.06] transition-all duration-300 hover:shadow-lift hover:ring-leaf/20 sm:p-6">
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute -top-4 right-3 select-none font-display text-[5rem] leading-none text-honey/15"
+      >
+        “
+      </span>
+      <div className="relative flex items-center justify-between gap-3">
         <ReviewStars value={r.rating} />
         <time dateTime={r.createdAt} className="text-xs text-ink/45">{monthYear(r.createdAt)}</time>
       </div>
 
-      <blockquote className="mt-4 flex-1">
+      <blockquote className="relative mt-4 flex-1">
         {r.message ? (
           <>
             <p id={textId} className={`whitespace-pre-line text-[15px] leading-relaxed text-ink/75 [overflow-wrap:anywhere] ${long && !open ? "line-clamp-5" : ""}`}>
@@ -67,7 +73,7 @@ export default function ReviewCard({ review: r }: { review: ReviewCardData }) {
       </blockquote>
 
       <figcaption className="mt-5 flex items-center gap-3 border-t border-forest/[0.07] pt-4">
-        <span aria-hidden="true" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-forest font-display text-base text-cream">
+        <span aria-hidden="true" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-forest font-display text-base text-cream ring-2 ring-honey/25">
           {r.name.charAt(0).toUpperCase()}
         </span>
         <span className="min-w-0 flex-1">
@@ -81,10 +87,10 @@ export default function ReviewCard({ review: r }: { review: ReviewCardData }) {
       {products.length > 0 && (
         <p className="mt-3 flex flex-wrap gap-1.5" aria-label="Products ordered">
           {products.slice(0, 2).map((p) => (
-            <span key={p} className="max-w-full truncate rounded-full bg-sand/70 px-2.5 py-1 text-[11px] font-semibold text-forest/80">{p}</span>
+            <span key={p} className="max-w-full truncate rounded-full bg-sand/60 px-2.5 py-1 text-[11px] font-semibold text-forest/70">{p}</span>
           ))}
           {products.length > 2 && (
-            <span className="rounded-full bg-sand/70 px-2.5 py-1 text-[11px] font-semibold text-forest/60" title={products.slice(2).join(", ")}>+{products.length - 2} more</span>
+            <span className="rounded-full bg-sand/60 px-2.5 py-1 text-[11px] font-semibold text-forest/55" title={products.slice(2).join(", ")}>+{products.length - 2} more</span>
           )}
         </p>
       )}

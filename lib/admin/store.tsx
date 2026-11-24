@@ -94,6 +94,8 @@ function announceStock(
   for (const p of products) {
     const prev = before.get(p.id);
     if (prev === undefined || p.stock >= prev) continue;
+    // Export catalogue items are enquiry-only, so their stock never prompts a restock toast.
+    if (p.channel === "export") continue;
     sold.push(`${p.name} ${prev} → ${p.stock}`);
     if (!p.visible) continue;
     if (p.stock <= 0) out.push(p.name);

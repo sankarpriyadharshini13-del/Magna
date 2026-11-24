@@ -10,7 +10,7 @@ const buyers = [
   {
     Icon: StoreIcon,
     title: "Restaurants & Cafés",
-    body: "Idli Podi and Moringa Idli Podi for idli, dosa and hot rice, plus Country Sugar for payasam, tea and coffee. The same taste in every batch.",
+    body: "Our full range — from everyday podis to cold-pressed oils and kitchen staples — supplied in the pack sizes your kitchen or shelf needs, with the same taste in every batch.",
   },
   {
     Icon: FactoryIcon,
@@ -43,7 +43,7 @@ export default function BusinessPage() {
               align="center"
               eyebrow="For Business"
               title={<>Quality ingredients for <span className="italic text-clay">your business</span></>}
-              lead="We supply Idli Podi, Moringa Idli Podi and Country Sugar in wholesale quantities to restaurants, cafés, stores and caterers — made in our own kitchen in Chennai."
+              lead="We supply our full range in wholesale quantities to restaurants, cafés, stores and caterers — made in our own kitchen in Chennai. See the live catalogue for what's available right now."
               action={{ href: "/shop", label: "See retail prices" }}
             />
           </Reveal>

@@ -5,8 +5,7 @@ import nextDynamic from "next/dynamic";
 import SiteShell from "@/components/layout/SiteShell";
 import ProductCard, { stockState } from "@/components/product/ProductCard";
 import { ArrowIcon, CheckIcon, CloseIcon, PinIcon, StoneIcon } from "@/components/ui/Icons";
-import { guidePackFor } from "@/data/dietary";
-import { packPoints } from "@/lib/pack";
+import { packPoints, packSizesOf } from "@/lib/pack";
 import { recommend } from "@/lib/recommend";
 import { getPublicProduct, getPublicProducts } from "@/lib/server/publicProducts";
 import Price, { percentOff } from "@/components/ui/Price";
@@ -30,12 +29,16 @@ export default async function ProductPage({ params }: { params: { slug: string }
   const [product, catalogue] = await Promise.all([getPublicProduct(params.slug), getPublicProducts()]);
   if (!product) notFound();
   const related = recommend(product, catalogue, 3);
-  const stock = stockState(product);
+  const isExport = product.channel === "export";
+  // Export items are quoted by enquiry: their stock is not a shop quantity, so no stock badge or cart panel.
+  const stock = isExport ? null : stockState(product);
   const out = stock?.tone === "out";
   const off = percentOff(product.priceInr, product.originalPriceInr);
-  // Saved admin copy wins. Products that haven't been edited keep the built-in guide; the switch can hide it.
+  const packSizes = packSizesOf(product);
+  const sizeLabel = packSizes.filter(Boolean).join(" · ");
+  // The "Know your pack" block shows only the copy the admin saved in Products & Stock.
   const storedPack = product.pack;
-  const pack = storedPack && !storedPack.enabled ? null : storedPack ?? guidePackFor(product.id);
+  const pack = storedPack && !storedPack.enabled ? null : storedPack;
   const whoCanEat = pack ? packPoints(pack.whoCanEat) : [];
   const careful = pack ? packPoints(pack.whoShouldBeCareful) : [];
 
@@ -44,7 +47,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 md:py-14 lg:px-8">
         <nav aria-label="Breadcrumb" className="text-xs text-ink/55 sm:text-sm">
           <Link href="/" className="focus-ring rounded hover:text-clay">Home</Link> <span aria-hidden="true">/</span>{" "}
-          <Link href="/shop" className="focus-ring rounded hover:text-clay">Shop</Link> <span aria-hidden="true">/</span>{" "}
+          <Link href={isExport ? "/export" : "/shop"} className="focus-ring rounded hover:text-clay">{isExport ? "Export" : "Shop"}</Link> <span aria-hidden="true">/</span>{" "}
           <span aria-current="page" className="text-forest">{product.name}</span>
         </nav>
 
@@ -61,17 +64,34 @@ export default async function ProductPage({ params }: { params: { slug: string }
               )}
             </div>
             <h1 className="mt-3 font-display text-3xl leading-tight text-forest sm:text-4xl md:text-5xl">{product.name}</h1>
-            <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-ink/50 sm:text-xs">{product.packSize ?? "Pack size to be confirmed"}</p>
+            <p className="mt-3 text-sm font-semibold uppercase tracking-[0.14em] text-black sm:text-base">
+              {sizeLabel ? `${isExport ? "Available pack sizes" : "Pack size"}: ${sizeLabel}` : "Pack size to be confirmed"}
+            </p>
             <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2">
-              <Price amount={product.priceInr} original={product.originalPriceInr} className="!text-3xl sm:!text-4xl" originalClassName="text-lg sm:text-xl" />
-              {off && product.priceInr != null && product.originalPriceInr != null && (
+              {isExport && product.priceInr == null ? (
+                <span className="font-display text-2xl italic text-ink/55 sm:text-3xl">Price on request</span>
+              ) : (
+                <Price amount={product.priceInr} original={product.originalPriceInr} className="!text-3xl sm:!text-4xl" originalClassName="text-lg sm:text-xl" />
+              )}
+              {!isExport && off && product.priceInr != null && product.originalPriceInr != null && (
                 <span className="rounded-full bg-leaf/15 px-3 py-1 text-xs font-bold text-leaf">
                   {off}% off · You save {formatInr(product.originalPriceInr - product.priceInr)}
                 </span>
               )}
             </div>
             <p className="mt-5 text-base leading-relaxed text-ink/70 sm:text-lg">{product.longDescription}</p>
-            <div className="mt-7"><AddToCartPanel productId={product.id} name={product.name} disabled={out} /></div>
+            {isExport ? (
+              <div className="mt-7 rounded-2xl border border-forest/10 bg-sand/40 p-5">
+                <p className="text-sm leading-relaxed text-ink/70">
+                  Export products are quoted by enquiry. Tell us the pack size, quantity and destination country and we&apos;ll reply with pricing, minimum order quantity and shipping options.
+                </p>
+                <Link href="/export#enquire" className="btn-primary mt-4 w-full sm:w-auto">
+                  Request an export quote <ArrowIcon width={16} height={16} />
+                </Link>
+              </div>
+            ) : (
+              <div className="mt-7"><AddToCartPanel product={product} disabled={out} /></div>
+            )}
 
             <ul className="mt-8 grid gap-3 border-t border-forest/10 pt-6 sm:grid-cols-2">
               <li className="flex items-center gap-3 text-sm text-ink/70"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-leaf/10 text-leaf"><PinIcon width={18} height={18} /></span>Sourced &amp; packed in Chennai</li>
@@ -149,8 +169,8 @@ export default async function ProductPage({ params }: { params: { slug: string }
                 <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-clay sm:text-xs">Recommended products</p>
                 <h2 id="related-title" className="mt-2 font-display text-3xl text-forest sm:text-4xl">You may <span className="italic text-clay">also like</span></h2>
               </div>
-              <Link href="/shop" className="focus-ring group inline-flex items-center gap-2 self-start rounded-full border border-forest/15 px-5 py-2.5 text-sm font-semibold text-forest transition-colors hover:border-forest hover:bg-forest hover:text-cream sm:self-auto">
-                View all products <ArrowIcon width={16} height={16} />
+              <Link href={isExport ? "/export" : "/shop"} className="focus-ring group inline-flex items-center gap-2 self-start rounded-full border border-forest/15 px-5 py-2.5 text-sm font-semibold text-forest transition-colors hover:border-forest hover:bg-forest hover:text-cream sm:self-auto">
+                {isExport ? "View export range" : "View all products"} <ArrowIcon width={16} height={16} />
               </Link>
             </div>
             <ul className="mt-8 grid gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">

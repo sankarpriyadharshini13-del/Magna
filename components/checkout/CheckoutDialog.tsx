@@ -170,7 +170,7 @@ export default function CheckoutDialog() {
     } catch {
       /* ignore */
     }
-    const created = await authed("/api/checkout/order", { ...d, items: lines.map((l) => ({ productId: l.product.id, quantity: l.quantity })) });
+    const created = await authed("/api/checkout/order", { ...d, items: lines.map((l) => ({ productId: l.product.id, quantity: l.quantity, packSize: l.packSize })) });
     if (!created.ok) {
       setStage("form");
       if (created.json?.code === "payments_not_configured") setUnavailable(true);
@@ -267,7 +267,7 @@ export default function CheckoutDialog() {
             </div>
           </>
         ) : unavailable ? (
-          <button type="button" className="btn-secondary mt-4 w-full" onClick={() => startCheckout(lines.map((l) => ({ productId: l.product.id, quantity: l.quantity })), user, getById)}>
+          <button type="button" className="btn-secondary mt-4 w-full" onClick={() => startCheckout(lines.map((l) => ({ productId: l.product.id, quantity: l.quantity, packSize: l.packSize })), user, getById)}>
             Order by email instead
           </button>
         ) : (
@@ -355,8 +355,8 @@ export default function CheckoutDialog() {
           <section aria-label="Order summary" className="rounded-2xl bg-sand/50 p-4">
             <ul className="space-y-2 text-sm">
               {lines.map((l) => (
-                <li key={l.product.id} className="flex justify-between gap-3">
-                  <span className="text-ink/75">{l.product.name}{l.product.packSize ? ` ${l.product.packSize}` : ""} × {l.quantity}</span>
+                <li key={`${l.product.id}::${l.packSize}`} className="flex justify-between gap-3">
+                  <span className="text-ink/75">{l.product.name}{l.packSize ? ` ${l.packSize}` : ""} × {l.quantity}</span>
                   <span className="font-semibold text-forest">{l.lineTotal != null ? formatInr(l.lineTotal) : "Price TBC"}</span>
                 </li>
               ))}

@@ -137,7 +137,11 @@ export default function OrderFormModal({
   };
   const chooseProduct = (key: number, id: string) => {
     const p = products.get(id);
-    update(key, { productId: id || null, name: p?.name ?? "", packSize: p?.packSize ?? "", price: p?.price != null ? String(p.price) : "" });
+    // The same product can appear twice in different pack sizes; start on the first size this order doesn't already have.
+    const used = new Set(lines.filter((l) => l.key !== key && l.productId === id).map((l) => l.packSize));
+    const sizes = sizesFor(p);
+    const packSize = sizes.find((s) => !used.has(s)) ?? sizes[0] ?? "";
+    update(key, { productId: id || null, name: p?.name ?? "", packSize, price: p?.price != null ? String(p.price) : "" });
   };
   const switchKind = (k: "normal" | "bulk") => {
     if (k === kind) return;
@@ -226,14 +230,24 @@ export default function OrderFormModal({
       onChange={(e) => { set(e.target.value); clearErr(id.replace("mo-", "")); }}
     />
   );
-  const productOptions = (current: string | null) =>
-    data.products
-      .filter((p) => p.id === current || !lines.some((l) => l.productId === p.id))
-      .map((p: AdminProduct) => (
-        <option key={p.id} value={p.id}>
+  const productOptions = (key: number) =>
+    data.products.map((p: AdminProduct) => {
+      const listed = sizesFor(p);
+      const sizes = listed.length ? listed : [""];
+      // A product with every pack size already on another line can't be added a second time.
+      const allUsed = sizes.every((s) => lines.some((l) => l.key !== key && l.productId === p.id && l.packSize === s));
+      return (
+        <option key={p.id} value={p.id} disabled={allUsed}>
           {p.name}{!p.visible ? " (hidden from shop)" : ""}{available(p.id) <= 0 ? " (out of stock)" : ""}
         </option>
-      ));
+      );
+    });
+  /** Every pack size a product is sold in; older products fall back to their single saved size. */
+  const sizesFor = (p?: AdminProduct) =>
+    p ? (p.packSizes?.length ? p.packSizes : [p.packSize].filter(Boolean)) : [];
+  /** A size can only sit on one line per product, so a second line has to use a different pack. */
+  const packUsed = (key: number, productId: string | null, size: string) =>
+    !!productId && lines.some((l) => l.key !== key && l.productId === productId && l.packSize === size);
   /** Small editable amount shown inside the order summary (shipping / freight / discount). */
   const amount = (id: string, value: string, set: (v: string) => void, labelText: string, err?: string) => {
     const shown = value === "" ? "" : Number(value).toLocaleString("en-IN");
@@ -346,6 +360,7 @@ export default function OrderFormModal({
                 const short = shortOf(l);
                 const price = priceOf(l);
                 const removed = (l.productId && !p) || (!l.productId && l.name);
+                const sizes = sizesFor(p);
                 return (
                   <tr key={l.key}>
                     <td className="mo-prod">
@@ -359,11 +374,25 @@ export default function OrderFormModal({
                           onChange={(e) => chooseProduct(l.key, e.target.value)}
                         >
                           <option value="">Choose a product…</option>
-                          {productOptions(l.productId)}
+                          {productOptions(l.key)}
                         </select>
                       )}
                     </td>
-                    <td className="mo-pack">{l.packSize || "—"}</td>
+                    <td className="mo-pack">
+                      {sizes.length > 1 ? (
+                        <select
+                          className="mo-pack-sel"
+                          aria-label={`Pack size of product ${idx + 1}`}
+                          value={l.packSize}
+                          onChange={(e) => update(l.key, { packSize: e.target.value })}
+                        >
+                          {l.packSize && !sizes.includes(l.packSize) && <option value={l.packSize}>{l.packSize}</option>}
+                          {sizes.map((s) => <option key={s} value={s} disabled={packUsed(l.key, l.productId, s)}>{s}</option>)}
+                        </select>
+                      ) : (
+                        l.packSize || sizes[0] || "—"
+                      )}
+                    </td>
                     <td>
                       <div className="mo-qty" role="group" aria-label={`Quantity of product ${idx + 1}`}>
                         <button type="button" aria-label="Decrease" disabled={l.qty <= 1} onClick={() => update(l.key, { qty: Math.max(1, l.qty - 1) })}>−</button>
@@ -405,7 +434,7 @@ export default function OrderFormModal({
             </tbody>
           </table>
           <div className="mo-add">
-            <button type="button" className="mo-link" onClick={() => setLines((ls) => [...ls, blankLine()])} disabled={lines.length >= 50 || lines.length >= data.products.length}>
+            <button type="button" className="mo-link" onClick={() => setLines((ls) => [...ls, blankLine()])} disabled={lines.length >= 50}>
               + Add another product
             </button>
             {bulk && <span>Total units: {units}</span>}

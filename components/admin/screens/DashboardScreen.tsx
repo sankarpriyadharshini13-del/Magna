@@ -8,12 +8,12 @@ import { printInvoices } from "@/lib/admin/print";
 import { useAdminData } from "@/lib/admin/store";
 import type { Order } from "@/lib/admin/types";
 import { formatInr } from "@/lib/format";
-import { Badge, Topbar } from "../ui";
+import { Badge, Modal, Topbar } from "../ui";
 
 type Range = "today" | "week" | "month" | "custom";
 const RANGES: { id: Range; label: string; days: number; prev: string }[] = [
-  { id: "today", label: "Today", days: 1, prev: "yesterday" },
-  { id: "week", label: "This week", days: 7, prev: "last week" },
+  { id: "today", label: "Day", days: 1, prev: "yesterday" },
+  { id: "week", label: "Week", days: 7, prev: "last week" },
   { id: "month", label: "Month", days: 30, prev: "last month" },
   { id: "custom", label: "Custom", days: 0, prev: "" },
 ];
@@ -52,9 +52,12 @@ export default function DashboardScreen() {
   const { data, now, label, mutate } = useAdminData();
   const [range, setRange] = useState<Range>("week");
   const [query, setQuery] = useState("");
+  const [customMode, setCustomMode] = useState<"single" | "range">("range");
+  const [customDate, setCustomDate] = useState<string>("");
   const [customStartDate, setCustomStartDate] = useState<string>("");
   const [customEndDate, setCustomEndDate] = useState<string>("");
-  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showCustom, setShowCustom] = useState(false);
+  const todayStr = new Date().toISOString().split("T")[0];
   const R = RANGES.find((r) => r.id === range)!;
 
   const stats = useMemo(() => {
@@ -66,15 +69,25 @@ export default function DashboardScreen() {
     let to: number;
     let span: number;
     
-    if (range === "custom" && customStartDate && customEndDate) {
-      from = startOfDay(new Date(customStartDate)).getTime();
-      to = startOfDay(new Date(customEndDate)).getTime() + DAY;
-      const dayDiff = Math.round((to - from) / DAY);
-      span = Math.max(1, Math.min(dayDiff, 365));
+    if (range === "custom") {
+      if (customMode === "single" && customDate) {
+        from = startOfDay(new Date(customDate)).getTime();
+        to = from + DAY;
+        span = 1;
+      } else if (customMode === "range" && customStartDate && customEndDate) {
+        from = startOfDay(new Date(customStartDate)).getTime();
+        to = startOfDay(new Date(customEndDate)).getTime() + DAY;
+        const dayDiff = Math.round((to - from) / DAY);
+        span = Math.max(1, Math.min(dayDiff, 365));
+      } else {
+        from = today0;
+        to = now.getTime() + 1;
+        span = 1;
+      }
     } else {
       from = today0 - (R.days - 1) * DAY;
       to = now.getTime() + 1;
-      span = range === "month" ? 30 : 7;
+      span = range === "month" ? 30 : range === "week" ? 7 : 1;
     }
     
     const inWin = (o: Order, a: number, b: number) => {
@@ -116,19 +129,27 @@ export default function DashboardScreen() {
       thisSeries,
       prevSeries,
       span,
+      from,
+      to,
       top,
       repeatPct: buyers ? Math.round((repeat / buyers) * 100) : 0,
       topCity,
+      deliveryCharge: cur.reduce((s, o) => s + (o.deliveryCharge ?? 0), 0),
       status: ["Delivered", "Packed", "New", "Cancelled"].map((n) => ({ n, v: curAll.filter((o) => o.status === n).length, c: STATUS_COLORS[n] })),
     };
-  }, [data.orders, data.customers, now, R.days, range, customStartDate, customEndDate]);
+  }, [data.orders, data.customers, now, R.days, range, customMode, customDate, customStartDate, customEndDate]);
 
-  const live = data.products.filter((p) => p.visible);
+  // Export catalogue items are enquiry-only, so they never appear in shop stock panels.
+  const live = data.products.filter((p) => p.visible && p.channel !== "export");
   const low = live.filter((p) => p.stock <= LOW_STOCK);
   const customers = useMemo(() => new Map(data.customers.map((c) => [c.id, c])), [data.customers]);
-  const recent = data.orders.slice(0, 7);
+  const recent = data.orders
+    .filter((o) => {
+      const t = new Date(o.placedAt).getTime();
+      return t >= stats.from && t < stats.to;
+    })
+    .slice(0, 7);
   const entries = (list: Order[]) => list.map((o) => ({ order: o, customer: customers.get(o.customerId)! }));
-  const totalDeliveryCharge = data.orders.reduce((sum, o) => sum + (o.deliveryCharge ?? 0), 0);
 
   // Chart geometry.
   const max = Math.max(1, ...stats.thisSeries, ...stats.prevSeries);
@@ -137,8 +158,9 @@ export default function DashboardScreen() {
   const line = (vs: number[]) => vs.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(" ");
   
   let tickDates: Date[];
-  if (range === "custom" && customStartDate) {
-    const startDate = startOfDay(new Date(customStartDate));
+  if (range === "custom") {
+    const baseDate = customMode === "single" ? customDate : customStartDate;
+    const startDate = startOfDay(new Date(baseDate || customEndDate || todayStr));
     tickDates = Array.from({ length: stats.span }, (_, i) => new Date(startDate.getTime() + i * DAY));
   } else {
     tickDates = Array.from({ length: stats.span }, (_, i) => new Date(startOfDay(now).getTime() - (stats.span - 1 - i) * DAY));
@@ -153,8 +175,10 @@ export default function DashboardScreen() {
   const owner = data.settings.store.owner || data.me.name || "there";
   
   const getSubtitle = () => {
-    if (range === "custom" && customStartDate && customEndDate) {
-      return `Here's how ${data.settings.store.name} is doing from ${fmtDate(customStartDate)} to ${fmtDate(customEndDate)}`;
+    if (range === "custom") {
+      if (customMode === "single" && customDate) return `Here's how ${data.settings.store.name} is doing on ${fmtDate(customDate)}`;
+      if (customStartDate && customEndDate) return `Here's how ${data.settings.store.name} is doing from ${fmtDate(customStartDate)} to ${fmtDate(customEndDate)}`;
+      return `Here's how ${data.settings.store.name} is doing for your custom range`;
     }
     return `Here's how ${data.settings.store.name} is doing ${range === "today" ? "today" : range === "week" ? "this week" : "this month"}`;
   };
@@ -173,50 +197,54 @@ export default function DashboardScreen() {
         <div className="adm-seg" role="group" aria-label="Range">
           {RANGES.map((r) => (
             <button key={r.id} type="button" className={range === r.id ? "on" : ""} aria-pressed={range === r.id} onClick={() => {
-              setRange(r.id);
-              if (r.id !== "custom") setShowDatePicker(false);
+              if (r.id === "custom") {
+                setRange("custom");
+                setShowCustom(true);
+              } else {
+                setRange(r.id);
+                setShowCustom(false);
+              }
             }}>{r.label}</button>
           ))}
         </div>
       </Topbar>
       
-      {range === "custom" && (
-        <div className="adm-date-picker">
-          <div className="adm-date-picker-inner">
-            <div className="adm-date-field">
-              <label className="adm-fl">From</label>
-              <input
-                type="date"
-                className="adm-in"
-                value={customStartDate}
-                onChange={(e) => setCustomStartDate(e.target.value)}
-                max={customEndDate || new Date().toISOString().split('T')[0]}
-              />
-            </div>
-            <div className="adm-date-field">
-              <label className="adm-fl">To</label>
-              <input
-                type="date"
-                className="adm-in"
-                value={customEndDate}
-                onChange={(e) => setCustomEndDate(e.target.value)}
-                min={customStartDate}
-                max={new Date().toISOString().split('T')[0]}
-              />
-            </div>
-            <button
-              type="button"
-              className="adm-btn"
-              onClick={() => {
-                setCustomStartDate("");
-                setCustomEndDate("");
-              }}
-              disabled={!customStartDate && !customEndDate}
-            >
-              Clear
-            </button>
+      {showCustom && (
+        <Modal
+          title="Custom range"
+          onClose={() => setShowCustom(false)}
+          footer={
+            <>
+              <button type="button" className="adm-btn" onClick={() => { setCustomDate(""); setCustomStartDate(""); setCustomEndDate(""); }}>Clear</button>
+              <button type="button" className="adm-btn pri" onClick={() => setShowCustom(false)}>Apply</button>
+            </>
+          }
+        >
+          <div className="adm-seg" role="group" aria-label="Custom date type" style={{ marginBottom: 14 }}>
+            <button type="button" className={customMode === "single" ? "on" : ""} aria-pressed={customMode === "single"} onClick={() => setCustomMode("single")}>Specific date</button>
+            <button type="button" className={customMode === "range" ? "on" : ""} aria-pressed={customMode === "range"} onClick={() => setCustomMode("range")}>From – To</button>
           </div>
-        </div>
+          {customMode === "single" ? (
+            <div className="adm-date-field">
+              <label className="adm-fl">Date</label>
+              <input type="date" className="adm-in" value={customDate} max={todayStr} onChange={(e) => setCustomDate(e.target.value)} />
+            </div>
+          ) : (
+            <div className="adm-date-picker-inner">
+              <div className="adm-date-field">
+                <label className="adm-fl">From</label>
+                <input type="date" className="adm-in" value={customStartDate} max={customEndDate || todayStr} onChange={(e) => setCustomStartDate(e.target.value)} />
+              </div>
+              <div className="adm-date-field">
+                <label className="adm-fl">To</label>
+                <input type="date" className="adm-in" value={customEndDate} min={customStartDate} max={todayStr} onChange={(e) => setCustomEndDate(e.target.value)} />
+              </div>
+            </div>
+          )}
+          <p className="adm-muted" style={{ marginTop: 10 }}>
+            {customMode === "single" ? "Shows that one day." : "Shows every day from the first date to the last, inclusive."}
+          </p>
+        </Modal>
       )}
 
       <div className="adm-kpis d-kpis">
@@ -228,8 +256,8 @@ export default function DashboardScreen() {
           <div className={`d ${low.length ? "warn" : ""}`}>{low.length ? low.slice(0, 2).map((p) => `${p.name}${p.packSize ? ` ${p.packSize}` : ""}`).join(" · ") : "All products well stocked"}</div>
         </div>
         <div className="adm-kpi">
-          <div className="l">Delivery Charge</div><div className="v">{formatInr(totalDeliveryCharge)}</div>
-          <div className="d">Total across all orders</div>
+          <div className="l">Delivery Charge</div><div className="v">{formatInr(stats.deliveryCharge)}</div>
+          <div className="d">{range === "custom" ? "Selected period" : range === "today" ? "Today" : range === "week" ? "This week" : "This month"}</div>
         </div>
       </div>
 
@@ -296,7 +324,7 @@ export default function DashboardScreen() {
 
       <div className="adm-grid d-row3">
         <section className="adm-card">
-          <div className="adm-card-h"><h2>Recent orders</h2><span>Paid via Razorpay</span></div>
+          <div className="adm-card-h"><h2>Recent orders</h2><span>{range === "custom" ? "selected period" : range === "today" ? "today" : range === "week" ? "this week" : "this month"}</span></div>
           <div className="adm-scroll">
             <table className="adm-table">
               <thead>
@@ -322,7 +350,7 @@ export default function DashboardScreen() {
                     </tr>
                   );
                 })}
-                {!recent.length && <tr><td colSpan={7}><div className="adm-empty">No orders yet. They&apos;ll appear here as soon as customers place them.</div></td></tr>}
+                {!recent.length && <tr><td colSpan={7}><div className="adm-empty">No orders in this period yet.</div></td></tr>}
               </tbody>
             </table>
           </div>

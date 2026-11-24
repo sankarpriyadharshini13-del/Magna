@@ -1,6 +1,6 @@
 import { formatInr } from "@/lib/format";
 import { addWorkingDays, startOfDay } from "./format";
-import type { AdminData, AdminProduct, Customer, Order, OrderStatus, PaymentStatus } from "./types";
+import type { AdminData, AdminProduct, Customer, Order, OrderChannel, OrderStatus, PaymentStatus } from "./types";
 
 export const LOW_STOCK = 10;
 export const FEE_RATE = 0.02;
@@ -21,11 +21,19 @@ export function orderTone(s: OrderStatus): Tone {
 }
 
 export function productStatus(p: AdminProduct): { label: string; tone: Tone } {
-  if (!p.visible) return { label: "Draft", tone: "blue" };
+  // Export catalogue items are enquiry-only: their stock is never sold or shown on the storefront.
+  if (p.channel === "export") return { label: "Active · export", tone: "green" };
   if (p.stock <= 0) return { label: "Out of stock", tone: "red" };
   if (p.stock <= LOW_STOCK) return { label: "Active · low stock", tone: "yellow" };
   return { label: "Active", tone: "green" };
 }
+
+/** Stable display order for a catalogue: positioned products (sortOrder 1..n) first, then the rest in their list order. */
+export const productOrder = (a: AdminProduct, b: AdminProduct) => {
+  const sa = a.sortOrder > 0 ? a.sortOrder : Number.MAX_SAFE_INTEGER;
+  const sb = b.sortOrder > 0 ? b.sortOrder : Number.MAX_SAFE_INTEGER;
+  return sa - sb;
+};
 
 export interface PaymentView {
   label: string;

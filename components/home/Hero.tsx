@@ -7,7 +7,7 @@ async function loadProducts(): Promise<Product[]> {
   try {
     const products = await getPublicProducts();
     // Filter products that have images
-    return products.filter(p => Boolean(p.image) || (p.images && p.images.length > 0));
+    return products.filter(p => p.channel !== "export" && (Boolean(p.image) || (p.images && p.images.length > 0)));
   } catch (error) {
     console.error("Failed to load products:", error);
     return [];
@@ -84,7 +84,7 @@ export default async function Hero() {
           </h1>
 
           <p className="mt-6 max-w-[31rem] text-[0.95rem] leading-[1.7] text-ink/60 sm:mt-8 sm:text-[1.06rem] sm:leading-[1.75]">
-            Magna Eco Bites brings you traditional idli podi, country sugar and moringa blends — made from naturally sourced ingredients, with no shortcuts.
+            Magna Eco Bites brings you traditional podis, cold-pressed oils and kitchen staples — made from naturally sourced ingredients, with no shortcuts.
           </p>
 
           <div className="mt-7 flex items-center gap-3 sm:mt-9">
@@ -104,7 +104,7 @@ export default async function Hero() {
             <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-[28%] bg-gradient-to-t from-forest-deep/70 to-transparent" />
             <figcaption className="absolute bottom-[4.5%] left-[6.5%] right-4 text-cream">
               <p className="font-display text-[1.4rem] leading-tight sm:text-[1.65rem] lg:text-[1.9rem]">Made with care <span aria-hidden="true">•</span> Quality ingredients</p>
-              <p className="mt-1 text-[0.85rem] text-cream/70 sm:mt-1.5 sm:text-[0.95rem]">Moringa Idli Podi — our newest blend</p>
+              <p className="mt-1 text-[0.85rem] text-cream/70 sm:mt-1.5 sm:text-[0.95rem]">Traditional podis — ground in small batches</p>
             </figcaption>
           </figure>
         )}

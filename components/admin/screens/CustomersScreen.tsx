@@ -5,15 +5,23 @@ import { useMemo, useState } from "react";
 import { downloadCsv, fmtDate, fmtDateTime, fmtMonthYear, initials, maskEmail, maskPhone } from "@/lib/admin/format";
 import { customerCity, customerStats, orderTone, orderTotal } from "@/lib/admin/logic";
 import { useAdminData } from "@/lib/admin/store";
+import type { OrderChannel } from "@/lib/admin/types";
 import { formatInr } from "@/lib/format";
 import { Badge, PromptModal, Topbar } from "../ui";
 
 const tagTone = { VIP: "yellow", Repeat: "green", New: "blue" } as const;
 
+const CHANNELS: { id: OrderChannel; label: string }[] = [
+  { id: "ecommerce", label: "Ecommerce" },
+  { id: "distributors", label: "Distributors" },
+  { id: "export", label: "Export" },
+];
+
 export default function CustomersScreen() {
   const router = useRouter();
   const { data, mutate, now, label } = useAdminData();
   const [query, setQuery] = useState("");
+  const [channel, setChannel] = useState<"all" | OrderChannel>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [noteOpen, setNoteOpen] = useState(false);
 
@@ -21,10 +29,37 @@ export default function CustomersScreen() {
   // Registered customers only: the owner, invited admins and invitees are excluded.
   const shoppers = useMemo(() => data.customers.filter((c) => !c.team), [data.customers]);
 
+  /** Which channels each customer has ordered or enquired through. */
+  const channelsByCustomer = useMemo(() => {
+    const m = new Map<string, Set<OrderChannel>>();
+    for (const o of data.orders) {
+      const set = m.get(o.customerId) ?? new Set<OrderChannel>();
+      set.add(o.channel);
+      m.set(o.customerId, set);
+    }
+    return m;
+  }, [data.orders]);
+
+  /** Customers scoped to the selected channel (or everyone when no box is active). */
+  const scoped = useMemo(
+    () => (channel === "all" ? shoppers : shoppers.filter((c) => channelsByCustomer.get(c.id)?.has(channel))),
+    [shoppers, channelsByCustomer, channel],
+  );
+
+  const channelCounts = useMemo(() => {
+    const c = { ecommerce: 0, distributors: 0, export: 0 } as Record<OrderChannel, number>;
+    for (const s of channelsByCustomer.values()) {
+      if (s.has("ecommerce")) c.ecommerce += 1;
+      if (s.has("distributors")) c.distributors += 1;
+      if (s.has("export")) c.export += 1;
+    }
+    return c;
+  }, [channelsByCustomer]);
+
   const sorted = useMemo(
     () =>
-      [...shoppers].sort((a, b) => (stats.get(b.id)?.last ?? "").localeCompare(stats.get(a.id)?.last ?? "")),
-    [shoppers, stats],
+      [...scoped].sort((a, b) => (stats.get(b.id)?.last ?? "").localeCompare(stats.get(a.id)?.last ?? "")),
+    [scoped, stats],
   );
 
   const list = useMemo(() => {
@@ -40,7 +75,8 @@ export default function CustomersScreen() {
     );
   }, [sorted, query]);
 
-  const active = shoppers.find((c) => c.id === selectedId) ?? list[0] ?? null;
+  // Details stay hidden until a customer is clicked; the × in the panel clears the selection again.
+  const active = scoped.find((c) => c.id === selectedId) ?? null;
   const st = active ? stats.get(active.id) : undefined;
   const history = active ? data.orders.filter((o) => o.customerId === active.id) : [];
 
@@ -51,16 +87,16 @@ export default function CustomersScreen() {
   }, [history]);
 
   /* summary cards */
-  const total = shoppers.length;
-  const repeat = shoppers.filter((c) => (stats.get(c.id)?.orders ?? 0) >= 2).length;
-  const totalSpent = shoppers.reduce((s, c) => s + (stats.get(c.id)?.spent ?? 0), 0);
-  const totalOrders = shoppers.reduce((s, c) => s + (stats.get(c.id)?.orders ?? 0), 0);
-  const newThisMonth = shoppers.filter((c) => {
+  const total = scoped.length;
+  const repeat = scoped.filter((c) => (stats.get(c.id)?.orders ?? 0) >= 2).length;
+  const totalSpent = scoped.reduce((s, c) => s + (stats.get(c.id)?.spent ?? 0), 0);
+  const totalOrders = scoped.reduce((s, c) => s + (stats.get(c.id)?.orders ?? 0), 0);
+  const newThisMonth = scoped.filter((c) => {
     const d = new Date(c.since);
     return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
   }).length;
   const cityCount = new Map<string, number>();
-  for (const c of shoppers) if (c.city) cityCount.set(c.city, (cityCount.get(c.city) ?? 0) + 1);
+  for (const c of scoped) if (c.city) cityCount.set(c.city, (cityCount.get(c.city) ?? 0) + 1);
   const topCity = [...cityCount.entries()].sort((a, b) => b[1] - a[1])[0];
 
   const exportCsv = () =>
@@ -78,6 +114,28 @@ export default function CustomersScreen() {
         <input className="adm-search" placeholder="Search name, phone, city..." aria-label="Search customers" value={query} onChange={(e) => setQuery(e.target.value)} />
         <button type="button" className="adm-btn lg" onClick={exportCsv}>Export CSV</button>
       </Topbar>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginBottom: 14 }}>
+        {CHANNELS.map((c) => {
+          const active = channel === c.id;
+          return (
+            <button
+              key={c.id}
+              type="button"
+              aria-pressed={active}
+              onClick={() => setChannel(active ? "all" : c.id)}
+              style={{
+                textAlign: "left", padding: "14px 16px", borderRadius: 14, cursor: "pointer",
+                border: `1.5px solid ${active ? "var(--forest, #3b5a3a)" : "rgba(59,90,58,.16)"}`,
+                background: active ? "rgba(59,90,58,.07)" : "var(--card, #fff)",
+              }}
+            >
+              <span style={{ display: "block", fontSize: 15, fontWeight: 700, color: "var(--ink)" }}>{c.label}</span>
+              <span style={{ display: "block", fontSize: 22, fontWeight: 700, color: active ? "var(--forest, #3b5a3a)" : "var(--ink)" }}>{channelCounts[c.id]}</span>
+            </button>
+          );
+        })}
+      </div>
 
       <div className="adm-kpis p-kpis">
         <div className="adm-kpi">
@@ -132,7 +190,7 @@ export default function CustomersScreen() {
                   <h2>{active.name}</h2>
                   <div className="adm-muted">{customerCity(active) ? `${customerCity(active)} · ` : ""}customer since {fmtMonthYear(active.since)}</div>
                 </div>
-                <span style={{ marginLeft: "auto" }}><Badge tone={tagTone[st.tag]}>{st.tag}</Badge></span>
+                <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}><Badge tone={tagTone[st.tag]}>{st.tag}</Badge><button type="button" className="adm-x" aria-label="Close customer details" title="Close" onClick={() => setSelectedId(null)}>×</button></span>
               </div>
               <div className="adm-row2 adm-fg">
                 <div><div className="adm-fl">Phone</div><input className="adm-in" readOnly aria-label="Phone" value={maskPhone(active.phone)} /></div>

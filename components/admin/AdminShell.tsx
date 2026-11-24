@@ -105,7 +105,8 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 
   const badge = attentionCount(data.orders);
   // Products on the shop that are running low or have sold out (shown on the Products & Stock link).
-  const stockAlerts = data.products.filter((p) => p.visible && p.stock <= LOW_STOCK);
+  // Export catalogue items are enquiry-only, so their stock never raises a shop alert.
+  const stockAlerts = data.products.filter((p) => p.visible && p.channel !== "export" && p.stock <= LOW_STOCK);
   const soldOut = stockAlerts.filter((p) => p.stock <= 0).length;
   const storeName = data.settings.store.name || "Magna Eco Bites";
 

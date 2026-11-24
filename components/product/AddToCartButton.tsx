@@ -11,6 +11,7 @@ import { BagIcon, MinusIcon, PlusIcon, TrashIcon } from "@/components/ui/Icons";
 export default function AddToCartButton({
   productId,
   name,
+  packSize = "",
   className = "",
   stepperClassName = "",
   disabled = false,
@@ -18,6 +19,8 @@ export default function AddToCartButton({
 }: {
   productId: string;
   name: string;
+  /** Pack size this control adds to the cart (a product can be in the cart in more than one size). */
+  packSize?: string;
   className?: string;
   /** Layout classes for the stepper (width / flex); its height matches the button. */
   stepperClassName?: string;
@@ -26,8 +29,9 @@ export default function AddToCartButton({
   compact?: boolean;
 }) {
   const { lines, add, setQuantity, remove, maxFor, notifyLimit, hydrated } = useCart();
-  const qty = lines.find((l) => l.product.id === productId)?.quantity ?? 0;
+  const qty = lines.find((l) => l.product.id === productId && l.packSize === packSize)?.quantity ?? 0;
   const max = maxFor(productId);
+  const sizeLabel = packSize ? ` (${packSize})` : "";
 
   // Keep keyboard focus on the control the customer is using when it swaps between button and stepper.
   const focusNext = useRef<"stepper" | "button" | null>(null);
@@ -47,18 +51,18 @@ export default function AddToCartButton({
     return (
       <div
         role="group"
-        aria-label={`${name} quantity in cart`}
+        aria-label={`${name}${sizeLabel} quantity in cart`}
         className={`inline-flex ${size} items-center justify-between rounded-full bg-clay text-white ${compact ? "w-[7.5rem]" : "w-full sm:w-56"} ${stepperClassName}`}
       >
         <button
           type="button"
           className={btn}
-          aria-label={qty === 1 ? `Remove ${name} from cart` : `Decrease quantity of ${name}`}
+          aria-label={qty === 1 ? `Remove ${name}${sizeLabel} from cart` : `Decrease quantity of ${name}${sizeLabel}`}
           onClick={() => {
             if (qty === 1) {
               focusNext.current = "button";
-              remove(productId);
-            } else setQuantity(productId, qty - 1);
+              remove(productId, packSize);
+            } else setQuantity(productId, qty - 1, packSize);
           }}
         >
           {qty === 1 ? <TrashIcon width={compact ? 15 : 17} height={compact ? 15 : 17} /> : <MinusIcon />}
@@ -71,10 +75,10 @@ export default function AddToCartButton({
           ref={plusRef}
           type="button"
           className={btn}
-          aria-label={atMax ? `Increase quantity of ${name} (limit reached)` : `Increase quantity of ${name}`}
+          aria-label={atMax ? `Increase quantity of ${name}${sizeLabel} (limit reached)` : `Increase quantity of ${name}${sizeLabel}`}
           // Stays clickable at the limit so the customer is told why the quantity won't go up.
           aria-disabled={atMax || undefined}
-          onClick={() => (atMax ? notifyLimit(productId) : setQuantity(productId, qty + 1))}
+          onClick={() => (atMax ? notifyLimit(productId) : setQuantity(productId, qty + 1, packSize))}
         >
           <PlusIcon />
         </button>
@@ -89,10 +93,10 @@ export default function AddToCartButton({
       type="button"
       onClick={() => {
         focusNext.current = "stepper";
-        add(productId, 1);
+        add(productId, 1, packSize);
       }}
       disabled={disabled}
-      aria-label={disabled ? `${name} is out of stock` : `Add ${name} to cart`}
+      aria-label={disabled ? `${name}${sizeLabel} is out of stock` : `Add ${name}${sizeLabel} to cart`}
       className={`btn-primary ${className} disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0`}
     >
       <BagIcon width={compact ? 16 : 18} height={compact ? 16 : 18} /> {label}

@@ -162,7 +162,10 @@ export function invoiceHtml(o: Order, c: Customer, s: Settings) {
   const soldLines = [esc(s.store.address), s.store.gstin ? `GSTIN: ${esc(s.store.gstin)}` : "", s.store.udyam ? `Udyam: ${esc(s.store.udyam)}` : ""].filter(Boolean);
   const logo = s.invoice.logo ? `<img src="${esc(s.invoice.logo)}" alt="">` : LEAF_SVG;
 
-  // Lines: products, then shipping / freight as its own line (as on a courier invoice).
+  // Lines: products, then delivery. The delivery line never carries an amount — the invoice always
+  // reads "Delivery Free", whatever the admin entered in the Orders → Delivery Charge box. That charge
+  // still counts in the order total (and in Orders, payments and reports); it is only kept off the
+  // customer-facing document. Subtotal therefore covers everything charged before the discount.
   const rows = o.items
     .map(
       (i) => `<tr><td><b>${esc(i.name)}</b>${i.packSize ? `<span>${esc(i.packSize)}</span>` : ""}</td>
@@ -170,13 +173,12 @@ export function invoiceHtml(o: Order, c: Customer, s: Settings) {
     )
     .join("");
   const shipSub = [o.tracking.transporter, o.tracking.number].filter(Boolean).join(" · ");
-  const shipRow = o.shipping > 0
-    ? `<tr><td><b>${o.kind === "bulk" ? "Freight" : "Shipping &amp; delivery"}</b><span>${esc(shipSub || (o.kind === "bulk" ? "Paid to transporter" : "Courier"))}</span></td>
-<td>1</td><td>${inr2(o.shipping)}</td><td>${inr2(o.shipping)}</td></tr>`
-    : "";
+  const deliveryRow = `<tr><td><b>Delivery</b><span>${esc(shipSub || (o.kind === "bulk" ? "Transport" : "Courier"))}</span></td>
+<td>1</td><td>Free</td><td>Free</td></tr>`;
 
+  const chargedBeforeDiscount = orderSubtotal(o) + o.shipping + (o.deliveryCharge ?? 0);
   const sumRows = [
-    `<div class="iv-r"><span>Subtotal</span><span>${inr2(orderSubtotal(o) + o.shipping)}</span></div>`,
+    `<div class="iv-r"><span>Subtotal</span><span>${inr2(chargedBeforeDiscount)}</span></div>`,
     o.discount ? `<div class="iv-r"><span>Discount</span><span>−${inr2(o.discount)}</span></div>` : "",
   ].join("");
   const afterRows = [
@@ -217,7 +219,7 @@ export function invoiceHtml(o: Order, c: Customer, s: Settings) {
     <div class="iv-state">${payState} · ${STATUS_TEXT[o.status]}</div>
   </section>
   <table class="iv-items"><thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>Amount</th></tr></thead>
-  <tbody>${rows}${shipRow}</tbody></table>
+  <tbody>${rows}${deliveryRow}</tbody></table>
   <section class="iv-sum">
     ${sumRows}
     <div class="iv-total"><span>${balance === 0 && refunded === 0 ? "Total paid" : "Total"}</span><b>${inr2(total)}</b></div>

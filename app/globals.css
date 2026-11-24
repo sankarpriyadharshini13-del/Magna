@@ -39,87 +39,89 @@ html, body { overflow-x: clip; }
   .field { @apply w-full rounded-xl border border-leaf/20 bg-white/70 px-4 py-3 text-ink outline-none transition-all placeholder:text-ink/35 focus:border-forest focus:ring-4 focus:ring-leaf/15; }
 
   /* ---- Brand lockup ----
-     Scale system for the seal + MAGNA wordmark + supporting lines.
-     --brand-wm    = rendered ink width of MAGNA (966px in the source file).
-     --brand-stack = width of the two supporting lines. It is intentionally
-                     wider than MAGNA: the artwork's "Eco Bites" and tagline are
-                     only 26% / 10% of the MAGNA cap height, which turns them
-                     into unreadable 4-5px type at header size. Widening the
-                     lower lines lets both stay comfortably legible.
-     --brand-wm steps up per breakpoint (68 → 78 → 88 → 94 → 100 → 104) so the
-     lockup never crowds the icon row on small phones and still reads at 1x. */
+     Scale system for the seal + "MAGNA ECO BITES" wordmark + slogan.
+     --brand-fs is the wordmark's font-size; the seal (2.35em), the name
+     (~10.6em wide) and the slogan are all sized from it, so the whole lockup
+     is ~13.7em wide and keeps its proportions at every breakpoint.
+     --brand-fs is capped, and also follows the space the header has left over
+     once the icon row (and, from 1024px, the centred nav) is laid out, so the
+     lockup never collides with the icons, wraps, or crowds the nav:
+       · phones: 100vw − 208px of chrome (px-3 + 4 icon buttons + gaps)
+       · ≥640px: 100vw − 280px (px-6 + 4 icon buttons + gaps)
+       · ≥1024px: the nav sits in a 1fr_auto_1fr grid, so the logo column is
+                  (100vw − 556px) / 2 (the extra 2× factor is in the divisor).
+     Below 360px the name stacks onto two lines (MAGNA / ECO BITES) rather than
+     shrinking to an illegible size. */
+
   .brand-lockup {
-    --brand-wm: 68px;
-    --brand-stack: calc(var(--brand-wm) * 1.56);
+    --brand-fs: min(18px, calc((100vw - 208px) / 13.8));
     display: inline-flex;
     align-items: center;
-    gap: calc(var(--brand-wm) * 0.181);
+    gap: calc(var(--brand-fs) * 0.7);
     color: var(--color-forest-ink);
   }
   .brand-lockup--dark { color: var(--color-ivory); }
   .brand-lockup__emblem {
     flex: none;
-    width: calc(var(--brand-wm) * 0.466);
-    height: calc(var(--brand-wm) * 0.466);
+    width: calc(var(--brand-fs) * 2.35);
+    height: calc(var(--brand-fs) * 2.35);
   }
   .brand-lockup__stack {
+    flex: none;
     display: flex;
-    width: var(--brand-stack);
     flex-direction: column;
     align-items: center;
     white-space: nowrap;
   }
-  .brand-lockup__mark {
-    display: block;
-    width: var(--brand-wm);
-    height: auto;
-  }
-  .brand-lockup__eco {
+  /* MAGNA and ECO BITES share one baseline, so the brand reads on a single line. */
+  .brand-lockup__wordmark {
     display: flex;
-    width: 100%;
-    align-items: center;
-    margin-top: calc(var(--brand-wm) * 0.028);
-    font-family: var(--font-wordmark), "Cormorant Garamond", Georgia, serif;
-    font-size: calc(var(--brand-stack) * 0.094);
-    line-height: 1;
-    letter-spacing: 0.15em;
+    align-items: baseline;
+    gap: calc(var(--brand-fs) * 0.36);
   }
-  .brand-lockup__eco-rule { flex: 1 1 auto; height: 1px; background-color: currentColor; }
-  .brand-lockup__eco-text {
-    padding-left: calc(var(--brand-wm) * 0.028);
-    padding-right: calc(var(--brand-wm) * 0.012);
-    margin-right: -0.15em;
-  }
-  .brand-lockup__tag {
-    margin-top: calc(var(--brand-wm) * 0.032);
-    margin-right: -0.07em;
-    font-family: var(--font-wordmark), "Cormorant Garamond", Georgia, serif;
-    font-size: calc(var(--brand-stack) * 0.0585);
-    font-style: italic;
+  /* Both words are set in exactly the same face, size, weight and tracking — there is no
+     hierarchy between them, so "MAGNA ECO BITES" reads as one name, as in the artwork. */
+  .brand-lockup__mark,
+  .brand-lockup__name {
+    font-family: var(--font-display), Georgia, serif;
+    font-size: var(--brand-fs);
+    font-weight: 500;
     line-height: 1;
-    letter-spacing: 0.07em;
+    letter-spacing: 0.09em;
     text-transform: uppercase;
   }
-  .brand-lockup__eco-text { text-transform: uppercase; }
+  /* Cancel the tracking after the final "S" so the name stays optically centred. */
+  .brand-lockup__name { margin-right: -0.09em; }
+  /* The slogan is set in the body face — uppercase, wide letterspaced, semibold — so
+     it stays crisp and readable at header size, where the serif's hairlines vanish.
+     The two sentences stay separate elements so phones can break the line. */
+  .brand-lockup__tag {
+    margin-top: calc(var(--brand-fs) * 0.26);
+    font-family: var(--font-body), "Manrope", ui-sans-serif, system-ui, sans-serif;
+    font-size: max(8.5px, calc(var(--brand-fs) * 0.5));
+    font-weight: 600;
+    line-height: 1.35;
+    letter-spacing: 0.18em;
+    margin-right: -0.18em;
+    text-align: center;
+    text-transform: uppercase;
+  }
+  /* Narrow headers set the slogan on two lines rather than shrinking it away. */
+  .brand-lockup__tag-line { display: block; }
 
-  @media (min-width: 400px) {
-    .brand-lockup { --brand-wm: 78px; }
-  }
-  @media (min-width: 480px) {
-    .brand-lockup { --brand-wm: 88px; }
-  }
   @media (min-width: 640px) {
-    .brand-lockup { --brand-wm: 94px; }
-  }
-  @media (min-width: 768px) {
-    .brand-lockup { --brand-wm: 100px; }
+    .brand-lockup { --brand-fs: min(18px, calc((100vw - 280px) / 13.8)); }
+    .brand-lockup__tag-line { display: inline; }
   }
   @media (min-width: 1024px) {
-    /* The desktop nav appears here, so the lockup gives some width back. */
-    .brand-lockup { --brand-wm: 92px; }
+    .brand-lockup { --brand-fs: min(20px, calc((100vw - 556px) / 29)); }
   }
-  @media (min-width: 1280px) {
-    .brand-lockup { --brand-wm: 104px; }
+  /* Very narrow phones: stack the name so it stays legible. */
+  @media (max-width: 359px) {
+    .brand-lockup { --brand-fs: 12px; gap: 7px; }
+    .brand-lockup__emblem { width: 28px; height: 28px; }
+    .brand-lockup__wordmark { flex-direction: column; align-items: flex-start; gap: 1px; }
+    .brand-lockup__tag { font-size: 7.5px; letter-spacing: 0.12em; margin-right: -0.12em; }
   }
 
 }

@@ -18,6 +18,10 @@ export interface ProductPack {
   customized?: boolean;
 }
 
+/** Which catalogue a product belongs to. Ecommerce items feed the shop; export items feed /export. */
+export type ProductChannel = "ecommerce" | "export";
+export const PRODUCT_CHANNELS: ProductChannel[] = ["ecommerce", "export"];
+
 export interface Product {
   id: string;
   slug: string;
@@ -27,8 +31,12 @@ export interface Product {
   description: string;
   /** Longer copy for the product page. */
   longDescription: string;
-  /** Pack size label, e.g. "200 g". null until confirmed by Magna Eco Bites. */
+  /** Pack size label, e.g. "200 g". Kept as the first entry of `packSizes` for older pages. */
   packSize: string | null;
+  /** Every pack size the product is sold in, in display order. Falls back to `packSize`. */
+  packSizes?: string[];
+  /** Ecommerce (shop/distributors) or export catalogue. Missing = ecommerce for older data. */
+  channel?: ProductChannel;
   /** Price in whole INR. null until confirmed — never guess. */
   priceInr: number | null;
   /** Optional "was" price (MRP) in whole INR. Shown struck through when higher than `priceInr`. */
@@ -48,6 +56,8 @@ export interface Product {
 export interface CartItem {
   productId: string;
   quantity: number;
+  /** Chosen pack size. Optional so carts saved before multi-size packs keep working. */
+  packSize?: string;
 }
 
 export interface UserProfile {

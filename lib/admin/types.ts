@@ -1,4 +1,4 @@
-import type { ProductPack } from "@/types";
+import type { ProductChannel, ProductPack } from "@/types";
 
 export type OrderStatus = "New" | "Packed" | "Delivered" | "Cancelled";
 
@@ -9,6 +9,10 @@ export type PaymentMode = "online" | "paid" | "cod" | "pending" | "advance";
 
 export type PaymentStatus = "pending" | "captured" | "refunded" | "partial_refund";
 
+/** Which part of the website an order or enquiry came from. */
+export type OrderChannel = "ecommerce" | "distributors" | "export";
+export const ORDER_CHANNELS: OrderChannel[] = ["ecommerce", "distributors", "export"];
+
 export interface AdminProduct {
   id: string;
   name: string;
@@ -18,7 +22,14 @@ export interface AdminProduct {
   /** Optional "was" price (MRP), whole INR. Shown struck through on the shop when higher than `price`. */
   originalPrice: number | null;
   stock: number;
+  /** First pack size, kept for order lines and older copy. */
   packSize: string;
+  /** Every pack size the product is sold in, in display order. */
+  packSizes: string[];
+  /** Which admin catalogue (and storefront page) the product belongs to. */
+  channel: ProductChannel;
+  /** Position on the website inside its catalogue (1 = first). 0 = not positioned yet. */
+  sortOrder: number;
   tag: string;
   description: string;
   /** 12-digit code, auto-assigned. Empty for drafts that were never given one. */
@@ -76,6 +87,8 @@ export interface Order {
   kind: "normal" | "bulk";
   /** online = placed on the website; admin = added in Admin → Orders; enquiry = Business/Distributors/Export form. */
   source: "online" | "admin" | "enquiry";
+  /** Which part of the website it came from: the shop (Ecommerce), /distributors or /export. */
+  channel: OrderChannel;
   businessName: string;
   gstNumber: string;
   /** Note for packing. */

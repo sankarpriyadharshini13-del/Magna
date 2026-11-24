@@ -13,7 +13,7 @@ export function buildOrderMailto(items: CartItem[], user: UserProfile | null, lo
     const p = lookup(i.productId);
     if (!p) return "";
     const price = p.priceInr != null ? ` — ${formatInr(p.priceInr * i.quantity)}` : "";
-    const size = p.packSize ? ` (${p.packSize})` : "";
+    const size = i.packSize || p.packSize ? ` (${i.packSize || p.packSize})` : "";
     return `• ${p.name}${size} × ${i.quantity}${price}`;
   });
   const body = [

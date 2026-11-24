@@ -1,14 +1,15 @@
 import "server-only";
 import { defaultSettings, PRODUCT_COLORS } from "@/lib/admin/defaults";
 import { TRACKING_STATUSES } from "@/lib/admin/types";
-import { emptyPack } from "@/lib/pack";
-import type { ProductPack } from "@/types";
+import { cleanPackSizes, emptyPack } from "@/lib/pack";
+import type { ProductChannel, ProductPack } from "@/types";
 import type {
   AdminProduct,
   Customer,
   Invite,
   Member,
   Order,
+  OrderChannel,
   OrderStatus,
   PayMethod,
   PaymentStatus,
@@ -47,7 +48,10 @@ export function mapProduct(r: Row): AdminProduct {
     price: r.price ?? null,
     originalPrice: r.original_price ?? null,
     stock: r.stock ?? 0,
-    packSize: r.pack_size ?? "",
+    packSize: cleanPackSizes(r.pack_sizes, r.pack_size ?? "")[0] ?? "",
+    packSizes: cleanPackSizes(r.pack_sizes, r.pack_size ?? ""),
+    channel: r.channel === "export" ? "export" : "ecommerce",
+    sortOrder: r.sort_order ?? 0,
     tag: r.tag ?? "",
     description: r.description ?? "",
     barcode: r.barcode ?? "",
@@ -56,6 +60,18 @@ export function mapProduct(r: Row): AdminProduct {
     color: r.color ?? PRODUCT_COLORS[0],
     pack: saved ?? emptyPack(),
   };
+}
+
+/**
+ * Which part of the website an order came from. Rows saved before the channel column existed can be
+ * recognised by their enquiry line item ("Distributor application" / "Export enquiry").
+ */
+function orderChannel(r: Row): OrderChannel {
+  if (r.channel === "distributors" || r.channel === "export" || r.channel === "ecommerce") return r.channel;
+  const item = String(r.order_items?.[0]?.name ?? "");
+  if (/distributor/i.test(item)) return "distributors";
+  if (/export/i.test(item)) return "export";
+  return "ecommerce";
 }
 
 export function mapOrder(r: Row): Order {
@@ -85,6 +101,7 @@ export function mapOrder(r: Row): Order {
     cancelReason: r.cancel_reason ?? "",
     kind: r.kind === "bulk" ? "bulk" : "normal",
     source: r.source === "admin" ? "admin" : r.source === "enquiry" ? "enquiry" : "online",
+    channel: orderChannel(r),
     businessName: r.business_name ?? "",
     gstNumber: r.gst_number ?? "",
     note: r.note ?? "",
@@ -195,6 +212,8 @@ export interface ProductInput {
   originalPrice: number | null;
   stock: number;
   packSize: string;
+  packSizes: string[];
+  channel: ProductChannel;
   tag: string;
   description: string;
   visible: boolean;
@@ -222,11 +241,21 @@ export function parseProduct(body: Row): ProductInput {
   if (originalPrice != null && price == null) throw bad("Add a selling price along with the original price.");
   if (originalPrice != null && price != null && originalPrice < price) throw bad("Original price can't be lower than the selling price.");
   const stock = int(body.stock ?? 0, "Stock", 0, 1_000_000);
+  const rawSizes: unknown[] = Array.isArray(body.packSizes) ? body.packSizes : [body.packSize];
+  if (rawSizes.length > 8) throw bad("A product can have at most 8 pack sizes.");
+  if (rawSizes.some((s) => s !== undefined && s !== null && typeof s !== "string"))
+    throw bad("Pack sizes must be text labels, e.g. 200 g.");
+  if (rawSizes.some((s) => typeof s === "string" && s.trim().length > 40))
+    throw bad("Each pack size must be at most 40 characters.");
+  const packSizes = cleanPackSizes(rawSizes.filter((s): s is string => typeof s === "string"));
+  const channel: ProductChannel = body.channel === "export" ? "export" : "ecommerce";
+  if (body.channel !== undefined && body.channel !== "ecommerce" && body.channel !== "export")
+    throw bad("Choose either the Ecommerce or Export catalogue.");
   const images = body.images ?? [];
   if (!Array.isArray(images) || images.length > 5) throw bad("A product can have at most 5 photos.");
   if (!images.every(isAllowedImage)) throw bad("One of the photos isn't from this store's uploads.");
   if (typeof body.visible !== "boolean") throw bad("Visibility must be on or off.");
-  if (body.visible && price == null) throw bad("Add a price before making the product visible.");
+  if (body.visible && price == null && channel !== "export") throw bad("Add a price before making the product visible.");
   let id: string | undefined;
   if (body.id !== undefined && body.id !== null) {
     if (typeof body.id !== "string" || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(body.id) || body.id.length > 80) throw bad("Invalid product id.");
@@ -238,7 +267,9 @@ export function parseProduct(body: Row): ProductInput {
     price,
     originalPrice,
     stock,
-    packSize: str(body.packSize, "Pack size", 40),
+    packSize: packSizes[0] ?? "",
+    packSizes,
+    channel,
     tag: str(body.tag, "Tag", 30),
     description: str(body.description, "Description", 2000),
     visible: body.visible,

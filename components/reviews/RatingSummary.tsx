@@ -10,8 +10,8 @@ export interface RatingStats {
 }
 
 /**
- * Average + per-star bars for the reviews shown on the site. With `onSelect`, each bar becomes a filter
- * button (used on /reviews); without it the bars are plain.
+ * Average, stars and the per-star split of the reviews live on the site. With `onSelect` each row
+ * becomes a filter button (used on /reviews); without it the rows are plain.
  */
 export default function RatingSummary({
   stats,
@@ -25,28 +25,39 @@ export default function RatingSummary({
   className?: string;
 }) {
   const max = Math.max(1, ...stats.distribution);
+  const pctOf = (count: number) => (stats.total ? Math.round((count / stats.total) * 100) : 0);
+
   return (
     <div className={className}>
-      <div className="flex items-end gap-3">
-        <span className="font-display text-5xl leading-none text-forest">{stats.average.toFixed(1)}</span>
-        <span className="pb-1">
-          <ReviewStars value={Math.round(stats.average)} size={18} />
-          <span className="mt-1 block text-xs text-ink/55">
-            from {stats.total} review{stats.total === 1 ? "" : "s"} on our site
-          </span>
-        </span>
+      <div className="flex items-center gap-4">
+        <div className="shrink-0 text-center">
+          <p className="font-display text-5xl leading-none text-forest">{stats.average.toFixed(1)}</p>
+          <ReviewStars value={Math.round(stats.average)} size={16} className="mt-2 justify-center" />
+        </div>
+        <div className="min-w-0 border-l border-forest/10 pl-4">
+          <p className="text-sm font-semibold text-forest">
+            {stats.total} review{stats.total === 1 ? "" : "s"}
+          </p>
+          <p className="mt-1 text-xs leading-relaxed text-ink/55">from verified purchases</p>
+        </div>
       </div>
-      <ul className="mt-5 space-y-1" aria-label="Reviews by star rating">
+
+      <ul className="mt-5 space-y-1.5" aria-label="Reviews by star rating">
         {stats.distribution.map((count, i) => {
           const stars = 5 - i;
           const on = active === stars;
           const row = (
             <>
               <span className="w-8 shrink-0 text-left text-xs font-semibold text-forest">{stars} ★</span>
-              <span className="h-2 flex-1 overflow-hidden rounded-full bg-forest/[0.08]">
-                <span className="block h-full rounded-full bg-honey" style={{ width: `${(count / max) * 100}%` }} />
+              <span className="h-2.5 flex-1 overflow-hidden rounded-full bg-forest/[0.08]">
+                <span
+                  className={`block h-full rounded-full transition-all duration-300 ${on ? "bg-forest" : "bg-honey"}`}
+                  style={{ width: `${(count / max) * 100}%` }}
+                />
               </span>
-              <span className="w-7 shrink-0 text-right text-xs tabular-nums text-ink/55">{count}</span>
+              <span className="w-[3.75rem] shrink-0 text-right text-[11px] tabular-nums text-ink/50">
+                {count} · {pctOf(count)}%
+              </span>
             </>
           );
           return (
@@ -58,12 +69,16 @@ export default function RatingSummary({
                   aria-label={`${stars} star reviews: ${count}`}
                   disabled={!count && !on}
                   onClick={() => onSelect(on ? null : stars)}
-                  className={`focus-ring flex w-full items-center gap-3 rounded-lg px-2 py-1.5 transition-colors disabled:cursor-default disabled:opacity-45 ${on ? "bg-honey/20" : "hover:bg-sand/70"}`}
+                  className={`focus-ring flex w-full items-center gap-2.5 rounded-xl px-2 py-1.5 transition-colors disabled:cursor-default disabled:opacity-40 ${
+                    on ? "bg-honey/15 ring-1 ring-honey/40" : "hover:bg-sand/60"
+                  }`}
                 >
                   {row}
                 </button>
               ) : (
-                <div className="flex items-center gap-3 px-2 py-1" aria-label={`${stars} star reviews: ${count}`}>{row}</div>
+                <div className="flex items-center gap-2.5 px-2 py-1" aria-label={`${stars} star reviews: ${count}`}>
+                  {row}
+                </div>
               )}
             </li>
           );

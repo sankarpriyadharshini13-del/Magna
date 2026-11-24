@@ -3,24 +3,40 @@
 import { useRef, useState } from "react";
 import { fmtDateTime, fmtTime, groupBarcode, initials } from "@/lib/admin/format";
 import { compressImage } from "@/lib/admin/image";
-import { LOW_STOCK, nextBarcode, productStatus } from "@/lib/admin/logic";
+import { LOW_STOCK, nextBarcode, productOrder, productStatus } from "@/lib/admin/logic";
 import { PRODUCT_COLORS } from "@/lib/admin/defaults";
 import { useAdminData } from "@/lib/admin/store";
 import type { AdminProduct } from "@/lib/admin/types";
-import { guidePackFor } from "@/data/dietary";
-import { packEdited } from "@/lib/pack";
+import { cleanPackSizes } from "@/lib/pack";
 import { formatInr } from "@/lib/format";
+import type { ProductChannel } from "@/types";
 import { Badge, BarcodeSvg, ConfirmModal, Modal, PromptModal, Toggle, Topbar } from "../ui";
 import ProductPreviewCard from "./ProductPreviewCard";
 
 const MAX_PHOTOS = 5;
+const MAX_PACK_SIZES = 8;
+
+const CHANNELS: { id: ProductChannel; title: string; blurb: string }[] = [
+  {
+    id: "ecommerce",
+    title: "Ecommerce & Distributors",
+    blurb: "Shop, retail packs and distributor enquiries — priced and stocked online.",
+  },
+  {
+    id: "export",
+    title: "Export",
+    blurb: "Bulk export catalogue shown on /export — enquiry only, no online checkout.",
+  },
+];
 
 interface Draft {
   name: string;
   originalPrice: string;
   price: string;
   stock: string;
-  packSize: string;
+  channel: ProductChannel;
+  /** Every pack size the product is sold in; the first one is the default on the shop. */
+  packSizes: string[];
   tag: string;
   description: string;
   /** "Know your pack" block — optional, shown on the product page when switched on. */
@@ -34,26 +50,24 @@ interface Draft {
 }
 
 const toDraft = (p: AdminProduct | null): Draft => {
-  // Until the block is saved once, start from the built-in guide so the form matches the website.
-  // After that, show exactly what was saved — a box the admin cleared stays cleared.
+  // The form shows exactly what is saved for the product — nothing is pre-filled from bundled copy.
   const saved = p?.pack;
-  const guide = p && !packEdited(saved) ? guidePackFor(p.id) : null;
-  const text = (value: string | undefined, fallback: string | undefined) =>
-    value && value.trim() !== "" ? value : fallback ?? "";
+  const sizes = p ? (p.packSizes.length ? p.packSizes : [p.packSize].filter(Boolean)) : [];
   return {
     name: p?.name ?? "",
     originalPrice: p?.originalPrice != null ? String(p.originalPrice) : "",
     price: p?.price != null ? String(p.price) : "",
     stock: p ? String(p.stock) : "0",
-    packSize: p?.packSize ?? "",
+    channel: p?.channel ?? "ecommerce",
+    packSizes: sizes.length ? sizes : [""],
     tag: p?.tag ?? "",
     description: p?.description ?? "",
     // New products start with the block off; existing ones keep whatever was saved.
     packEnabled: saved?.enabled ?? false,
-    packIngredients: text(saved?.ingredients, guide?.ingredients),
-    packBenefits: text(saved?.benefits, guide?.benefits),
-    packWhoCanEat: text(saved?.whoCanEat, guide?.whoCanEat),
-    packWhoShouldBeCareful: text(saved?.whoShouldBeCareful, guide?.whoShouldBeCareful),
+    packIngredients: saved?.ingredients ?? "",
+    packBenefits: saved?.benefits ?? "",
+    packWhoCanEat: saved?.whoCanEat ?? "",
+    packWhoShouldBeCareful: saved?.whoShouldBeCareful ?? "",
     visible: p?.visible ?? false,
     images: p?.images ?? [],
   };
@@ -65,30 +79,40 @@ export default function ProductsScreen() {
   const [uploading, setUploading] = useState(false);
   /** null = no panel; "new" = Add new product; otherwise the product being edited. */
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  /** Which catalogue landing box is open. */
+  const [channel, setChannel] = useState<ProductChannel>("ecommerce");
   const isNew = selectedId === "new";
   const product = data.products.find((p) => p.id === selectedId) ?? null;
 
   const [draft, setDraft] = useState<Draft>(() => toDraft(product));
   const [errors, setErrors] = useState<Partial<Record<keyof Draft, string>>>({});
+  const [position, setPosition] = useState("");
   const [modal, setModal] = useState<null | "remove" | "preview" | { stockFor: string }>(null);
   const [over, setOver] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const panelRef = useRef<HTMLElement>(null);
 
-  /** Opens an empty form, brings it into view and puts the cursor in the name field. */
   /** Opens the Edit product panel for a product and brings it into view. */
   const openEdit = (id: string) => {
+    const editing = data.products.find((p) => p.id === id) ?? null;
     setSelectedId(id);
-    setDraft(toDraft(data.products.find((p) => p.id === id) ?? null));
+    setDraft(toDraft(editing));
+    if (editing) {
+      setChannel(editing.channel);
+      const pos = data.products.filter((p) => p.channel === editing.channel).sort(productOrder).findIndex((p) => p.id === id) + 1;
+      setPosition(String(pos));
+    }
     setErrors({});
     requestAnimationFrame(() => panelRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }));
   };
   const closePanel = () => setSelectedId(null);
 
-  const startNew = () => {
+  const startNew = (target: ProductChannel = channel) => {
     setSelectedId("new");
-    setDraft(toDraft(null));
+    setDraft({ ...toDraft(null), channel: target });
+    setChannel(target);
     setErrors({});
+    setPosition("");
     requestAnimationFrame(() => {
       panelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       document.getElementById("pf-name")?.focus();
@@ -100,10 +124,14 @@ export default function ProductsScreen() {
 
   const live = data.products.filter((p) => p.visible);
   const drafts = data.products.length - live.length;
-  const low = live.filter((p) => p.stock > 0 && p.stock <= LOW_STOCK);
-  const out = live.filter((p) => p.stock <= 0);
-  const units = live.reduce((s, p) => s + p.stock, 0);
-  const alerts = data.products.filter((p) => p.visible && p.stock <= LOW_STOCK);
+  // Export catalogue items are enquiry-only: they never carry stock alerts or stock KPIs.
+  const shop = live.filter((p) => p.channel !== "export");
+  const low = shop.filter((p) => p.stock > 0 && p.stock <= LOW_STOCK);
+  const out = shop.filter((p) => p.stock <= 0);
+  const units = shop.reduce((s, p) => s + p.stock, 0);
+  const alerts = shop.filter((p) => p.stock <= LOW_STOCK);
+  const listed = data.products.filter((p) => p.channel === channel).sort(productOrder);
+  const activeChannel = CHANNELS.find((c) => c.id === channel) ?? CHANNELS[0];
 
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => {
     setDraft((d) => ({ ...d, [k]: v }));
@@ -138,6 +166,8 @@ export default function ProductsScreen() {
     originalPrice: p.originalPrice,
     stock: p.stock,
     packSize: p.packSize,
+    packSizes: p.packSizes,
+    channel: p.channel,
     tag: p.tag,
     description: p.description,
     pack: p.pack,
@@ -156,7 +186,7 @@ export default function ProductsScreen() {
     if (draft.price.trim() !== "") {
       price = Number(draft.price);
       if (!Number.isInteger(price) || price < 0) errs.price = "Use a whole number of rupees.";
-    } else if (draft.visible) errs.price = "Add a selling price to make this product visible.";
+    } else if (draft.visible && draft.channel !== "export") errs.price = "Add a selling price to make this product visible.";
     let originalPrice: number | null = null;
     if (draft.originalPrice.trim() !== "") {
       originalPrice = Number(draft.originalPrice);
@@ -166,6 +196,8 @@ export default function ProductsScreen() {
     }
     const stock = draft.stock.trim() === "" ? 0 : Number(draft.stock);
     if (!Number.isInteger(stock) || stock < 0) errs.stock = "Use a whole number, 0 or more.";
+    if (draft.packSizes.some((s) => s.trim().length > 40)) errs.packSizes = "Each pack size must be 40 characters or fewer.";
+    const packSizes = cleanPackSizes(draft.packSizes);
     setErrors(errs);
     if (Object.keys(errs).length) return toast("Please fix the highlighted fields.", "error");
 
@@ -179,7 +211,9 @@ export default function ProductsScreen() {
         price,
         originalPrice,
         stock,
-        packSize: draft.packSize.trim(),
+        packSize: packSizes[0] ?? "",
+        packSizes,
+        channel: draft.channel,
         tag: draft.tag.trim(),
         description: draft.description.trim(),
         pack: {
@@ -204,7 +238,28 @@ export default function ProductsScreen() {
       },
     );
     setBusy(false);
-    if (res.ok && isNew && res.data) setSelectedId(res.data.product.id);
+    if (res.ok && isNew && res.data) {
+      const saved = res.data.product;
+      setSelectedId(saved.id);
+      // A new product is appended at the end of its catalogue (sort_order 0).
+      setPosition(String(data.products.filter((p) => p.channel === saved.channel).length + 1));
+    }
+
+    // Reposition the product when the admin typed a different display position.
+    if (res.ok && !isNew && product) {
+      const targetPos = parseInt(position, 10);
+      if (Number.isInteger(targetPos) && targetPos >= 1) {
+        const targetChannel = draft.channel;
+        const ordered = data.products.filter((p) => p.channel === targetChannel).sort(productOrder);
+        const currentPos = ordered.findIndex((p) => p.id === product.id) + 1;
+        if (currentPos !== targetPos) {
+          const others = ordered.filter((p) => p.id !== product.id);
+          const newIndex = Math.min(Math.max(targetPos - 1, 0), others.length);
+          others.splice(newIndex, 0, product);
+          await mutate("/api/admin/products/reorder", "POST", { channel: targetChannel, ids: others.map((p) => p.id) }, "Product position updated.");
+        }
+      }
+    }
   };
 
   /** Live "was / now" preview while typing both prices. */
@@ -220,8 +275,10 @@ export default function ProductsScreen() {
   const status = product ? (product.visible ? { label: "Live on site", tone: "green" as const } : { label: "Hidden", tone: "gray" as const }) : { label: "New product", tone: "blue" as const };
   const stockTarget = typeof modal === "object" && modal ? data.products.find((p) => p.id === modal.stockFor) : null;
 
+  const sizesLabel = (p: AdminProduct) => p.packSizes.filter(Boolean).join(" · ") || p.packSize || "No pack size";
+
   const subtitle = (p: AdminProduct) =>
-    !p.visible ? "Draft · hidden from site" : [p.packSize, p.tag].filter(Boolean).join(" · ") || "—";
+    !p.visible ? "Draft · hidden from site" : [sizesLabel(p), p.tag].filter(Boolean).join(" · ") || "—";
 
   const tileStyle = (p: AdminProduct): React.CSSProperties =>
     p.images[0] ? { backgroundImage: `url(${p.images[0]})` } : { background: p.color };
@@ -231,29 +288,71 @@ export default function ProductsScreen() {
   return (
     <>
       <Topbar title="Products & Stock" subtitle="Add, edit or hide products — changes are saved instantly">
-        <button type="button" className="adm-btn pri lg" onClick={startNew}>+ Add new product</button>
+        <button type="button" className="adm-btn pri lg" onClick={() => startNew()}>+ Add new product</button>
       </Topbar>
 
       <div className="adm-kpis p-kpis">
         <div className="adm-kpi"><div className="l">Products</div><div className="v">{data.products.length}</div><div className="d">{live.length} live · {drafts} draft</div></div>
-        <div className="adm-kpi"><div className="l">Total units in stock</div><div className="v">{units}</div><div className="d">across {live.length} live items</div></div>
+        <div className="adm-kpi"><div className="l">Total units in stock</div><div className="v">{units}</div><div className="d">across {shop.length} shop items</div></div>
         <div className="adm-kpi"><div className="l">Low stock</div><div className="v">{low.length}</div><div className={`d ${low.length ? "warn" : ""}`}>{low.length ? "Reorder soon" : "All good"}</div></div>
         <div className="adm-kpi"><div className="l">Out of stock</div><div className="v">{out.length}</div><div className={`d ${out.length ? "bad" : ""}`}>{out.length ? "Restock now" : "All good"}</div></div>
       </div>
 
       <div className={`p-wrap ${selectedId ? "open" : "closed"}`}>
         <div className="p-col">
+          <section className="adm-card" aria-label="Product catalogues">
+            <div className="adm-card-h">
+              <h2>Catalogues</h2>
+              <span>choose a product list</span>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
+              {CHANNELS.map((c) => {
+                const active = c.id === channel;
+                const count = data.products.filter((p) => p.channel === c.id).length;
+                const liveCount = data.products.filter((p) => p.channel === c.id && p.visible).length;
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => setChannel(c.id)}
+                    aria-pressed={active}
+                    style={{
+                      textAlign: "left",
+                      padding: "16px 18px",
+                      borderRadius: 14,
+                      border: `1.5px solid ${active ? "var(--forest, #3b5a3a)" : "rgba(59,90,58,.16)"}`,
+                      background: active ? "rgba(59,90,58,.07)" : "var(--card, #fff)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <span style={{ display: "block", fontSize: 15, fontWeight: 700, color: "var(--ink)" }}>{c.title}</span>
+                    <span style={{ display: "block", marginTop: 2, fontSize: 24, fontWeight: 700, color: active ? "var(--forest, #3b5a3a)" : "var(--ink)" }}>{count}</span>
+                    <span style={{ display: "block", fontSize: 12, color: "var(--muted)", lineHeight: 1.45 }}>
+                      {c.blurb}
+                      <br />{liveCount} live on the website
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
           <section className="adm-card">
+            <div className="adm-card-h">
+              <h2>{activeChannel.title}</h2>
+              <span>{listed.length} product{listed.length === 1 ? "" : "s"}</span>
+            </div>
             <div className="adm-scroll">
               <table className="adm-table">
                 <thead>
-                  <tr><th>Product</th><th className="p-sku">SKU</th><th>Price</th><th>Stock</th><th>Status</th><th>Visible</th><th /></tr>
+                  <tr><th style={{ width: 52 }}>Order</th><th>Product</th><th className="p-sku">SKU</th><th>Price</th><th>Stock</th><th>Status</th><th>Visible</th><th /></tr>
                 </thead>
                 <tbody>
-                  {data.products.map((p) => {
+                  {listed.map((p, index) => {
                     const st = productStatus(p);
                     return (
                       <tr key={p.id} className={`click${selectedId === p.id ? " sel" : ""}`} style={{ height: 56 }} onClick={() => openEdit(p.id)}>
+                        <td className="p-order">{index + 1}</td>
                         <td>
                           <div className="p-cell">
                             <div className="p-tile" style={tileStyle(p)}>{p.images[0] ? "" : p.name === "Coming Soon" ? "?" : initials(p.name)}</div>
@@ -268,26 +367,32 @@ export default function ProductsScreen() {
                           )}
                         </td>
                         <td>
-                          {p.stock} units
-                          <div className={`adm-meter${p.stock <= LOW_STOCK ? " low" : ""}`}><i style={{ width: `${Math.min(100, p.stock)}%` }} /></div>
+                          {p.channel === "export" ? (
+                            <span style={{ fontSize: 12, color: "var(--muted)" }}>Enquiry only</span>
+                          ) : (
+                            <>
+                              {p.stock} units
+                              <div className={`adm-meter${p.stock <= LOW_STOCK ? " low" : ""}`}><i style={{ width: `${Math.min(100, p.stock)}%` }} /></div>
+                            </>
+                          )}
                         </td>
                         <td><Badge tone={st.tone}>{st.label}</Badge></td>
                         <td onClick={(e) => e.stopPropagation()}>
                           <Toggle checked={p.visible} label={`Show ${p.name} on website`} onChange={(v) => toggleVisible(p, v)} />
                         </td>
-                        <td onClick={(e) => e.stopPropagation()}>
+                        <td onClick={(e) => e.stopPropagation()} style={{ whiteSpace: "nowrap" }}>
                           <button className="adm-btn sm" onClick={() => openEdit(p.id)}>Edit</button>
                         </td>
                       </tr>
                     );
                   })}
-                  {!data.products.length && <tr><td colSpan={7}><div className="adm-empty">No products yet. Click “+ Add new product”.</div></td></tr>}
+                  {!listed.length && <tr><td colSpan={8}><div className="adm-empty">No {activeChannel.title} products yet. Click “+ Add new product”.</div></td></tr>}
                 </tbody>
               </table>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginTop: 12 }}>
-              <span className="adm-muted">Need to sell something new?</span>
-              <button type="button" className="adm-btn pri sm" onClick={startNew}>+ Add new product</button>
+              <span className="adm-muted">Add a product to {activeChannel.title}.</span>
+              <button type="button" className="adm-btn pri sm" onClick={() => startNew()}>+ Add new product</button>
             </div>
           </section>
 
@@ -301,7 +406,7 @@ export default function ProductsScreen() {
             <p className="adm-muted" style={{ margin: "-4px 0 8px" }}>Stock drops automatically with every purchase. You&apos;re emailed when a product reaches {LOW_STOCK} units or fewer.</p>
             {alerts.length ? [...alerts].sort((a, b) => a.stock - b.stock).map((p) => (
               <div className="p-alert" key={p.id}>
-                <span><b style={{ color: "var(--ink)" }}>{p.name} {p.packSize}</b> — {p.stock <= 0 ? <span className="out">out of stock</span> : `${p.stock} left`}</span>
+                <span><b style={{ color: "var(--ink)" }}>{p.name} {sizesLabel(p)}</b> — {p.stock <= 0 ? <span className="out">out of stock</span> : `${p.stock} left`}</span>
                 <button className="adm-btn pri sm" onClick={() => setModal({ stockFor: p.id })}>Update stock</button>
               </div>
             )) : <div className="adm-empty" style={{ padding: "10px 0" }}>Everything is well stocked.</div>}
@@ -368,6 +473,23 @@ export default function ProductsScreen() {
             <input id="pf-name" className={`adm-in${errors.name ? " err" : ""}`} value={draft.name} onChange={(e) => set("name", e.target.value)} />
             {errors.name && <p className="adm-err">{errors.name}</p>}
           </div>
+          {!isNew && (
+            <div className="adm-fg">
+              <label className="adm-fl" htmlFor="pf-position">Display position</label>
+              <input
+                id="pf-position"
+                className="adm-in"
+                inputMode="numeric"
+                min={1}
+                max={listed.length}
+                value={position}
+                onChange={(e) => setPosition(e.target.value.replace(/\D/g, ""))}
+              />
+              <p className="adm-muted" style={{ margin: "6px 0 0", fontSize: 12 }}>
+                The order this product appears in on the website. Changing it moves the other products down or up automatically.
+              </p>
+            </div>
+          )}
           <div className="adm-row2 adm-fg" style={{ marginBottom: 6 }}>
             <div>
               <label className="adm-fl" htmlFor="pf-mrp">Original price (₹)</label>
@@ -394,9 +516,57 @@ export default function ProductsScreen() {
               {errors.stock && <p className="adm-err">{errors.stock}</p>}
             </div>
             <div>
-              <label className="adm-fl" htmlFor="pf-pack">Pack size</label>
-              <input id="pf-pack" className="adm-in" value={draft.packSize} placeholder="e.g. 200 g" onChange={(e) => set("packSize", e.target.value)} />
+              <label className="adm-fl" htmlFor="pf-channel">Catalogue</label>
+              <select
+                id="pf-channel"
+                className="adm-in"
+                value={draft.channel}
+                onChange={(e) => set("channel", e.target.value as ProductChannel)}
+              >
+                {CHANNELS.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
+              </select>
             </div>
+          </div>
+          <div className="adm-fg">
+            <span className="adm-fl" id="pf-packs-label">Pack sizes</span>
+            <div role="group" aria-labelledby="pf-packs-label" style={{ display: "grid", gap: 8 }}>
+              {draft.packSizes.map((size, i) => (
+                <div key={i} style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <input
+                    className={`adm-in${errors.packSizes ? " err" : ""}`}
+                    value={size}
+                    maxLength={40}
+                    placeholder={i === 0 ? "e.g. 200 g (default)" : "e.g. 500 g"}
+                    aria-label={`Pack size ${i + 1}${i === 0 ? " (default)" : ""}`}
+                    onChange={(e) => set("packSizes", draft.packSizes.map((s, j) => (j === i ? e.target.value : s)))}
+                  />
+                  {draft.packSizes.length > 1 && (
+                    <button
+                      type="button"
+                      className="adm-btn sm"
+                      aria-label={`Remove pack size ${i + 1}`}
+                      title="Remove this pack size"
+                      onClick={() => set("packSizes", draft.packSizes.filter((_, j) => j !== i))}
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+            <button
+              type="button"
+              className="adm-btn sm"
+              style={{ marginTop: 8, alignSelf: "flex-start" }}
+              onClick={() => set("packSizes", [...draft.packSizes, ""])}
+              disabled={draft.packSizes.length >= MAX_PACK_SIZES}
+            >
+              + Add pack size
+            </button>
+            <p className="adm-muted" style={{ margin: "6px 0 0", fontSize: 12 }}>
+              The first size is preselected on the shop; customers can choose any size from the dropdown. Up to {MAX_PACK_SIZES}.
+            </p>
+            {errors.packSizes && <p className="adm-err">{errors.packSizes}</p>}
           </div>
           <div className="adm-fg">
             <label className="adm-fl" htmlFor="pf-tag">Tag</label>
@@ -520,7 +690,7 @@ export default function ProductsScreen() {
           <ProductPreviewCard
             name={draft.name}
             tag={draft.tag}
-            packSize={draft.packSize}
+            packSize={draft.packSizes.map((s) => s.trim()).filter(Boolean).join(" · ")}
             description={draft.description}
             price={draft.price}
             originalPrice={draft.originalPrice}

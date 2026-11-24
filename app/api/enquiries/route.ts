@@ -30,11 +30,16 @@ export const POST = handle(async (req) => {
 
   // Enquiries are public — signing in is optional. When a session is sent, remember who sent it so
   // the enquiry is attached to their customer record and shows up in My orders, like a normal order.
+  // Distributor and export enquiries, however, need a signed-in account.
+  const channel = body.type === "export" ? "export" : body.type === "distributor" ? "distributors" : "ecommerce";
   let userId: string | null = null;
   const token = bearer(req);
   if (token && supabaseConfigured) {
     const { data } = await anonClient().auth.getUser(token);
     userId = data.user?.id ?? null;
+  }
+  if ((body.type === "distributor" || body.type === "export") && !userId) {
+    throw new HttpError(401, "Please sign in to submit this enquiry.");
   }
 
   const company = str(body.company, "Company name", 120, { required: true });
@@ -106,29 +111,37 @@ export const POST = handle(async (req) => {
     customerId = data.id as string;
   }
 
-  const { data: order, error: oErr } = await sb
-    .from("orders")
-    .insert({
-      customer_id: customerId,
-      status: "New",
-      source: "enquiry",
-      kind: "bulk",
-      address: "",
-      email,
-      ship_name: name,
-      ship_phone: phone,
-      ship_city: location,
-      business_name: company,
-      note,
-      shipping: 0,
-      payment_mode: "pending",
-      method: "Other",
-      payment_status: "pending",
-    })
-    .select("number")
-    .single();
-  if (oErr) throw dbError(oErr);
-  const number = Number(order.number);
+  const insertOrder = (withChannel: boolean) =>
+    sb
+      .from("orders")
+      .insert({
+        customer_id: customerId,
+        status: "New",
+        source: "enquiry",
+        kind: "bulk",
+        ...(withChannel ? { channel } : {}),
+        address: "",
+        email,
+        ship_name: name,
+        ship_phone: phone,
+        ship_city: location,
+        business_name: company,
+        note,
+        shipping: 0,
+        payment_mode: "pending",
+        method: "Other",
+        payment_status: "pending",
+      })
+      .select("number")
+      .single();
+
+  // The channel column arrives with its own migration; without it the enquiry still saves fine.
+  let orderRes = await insertOrder(true);
+  if (orderRes.error && ["42703", "PGRST204"].includes(orderRes.error.code ?? "")) {
+    orderRes = await insertOrder(false);
+  }
+  if (orderRes.error) throw dbError(orderRes.error);
+  const number = Number(orderRes.data.number);
 
   const { error: iErr } = await sb.from("order_items").insert({ order_number: number, product_id: null, name: t.item, pack_size: "", qty: 1, price: 0 });
   if (iErr) throw dbError(iErr);

@@ -4,6 +4,7 @@ import ProductImage from "./ProductImage";
 import AddToCartButton from "./AddToCartButton";
 import Price, { percentOff } from "@/components/ui/Price";
 import { ArrowIcon } from "@/components/ui/Icons";
+import { defaultPackSize, packSizesOf } from "@/lib/pack";
 
 const LOW_STOCK = 10;
 
@@ -15,10 +16,13 @@ export function stockState(p: Product): { label: string; tone: "out" | "low" } |
 }
 
 export default function ProductCard({ product, priority = false }: { product: Product; priority?: boolean }) {
-  const stock = stockState(product);
+  const isExport = product.channel === "export";
+  // Export catalogue cards are enquiry-only: stock counts and the cart button belong to the shop.
+  const stock = isExport ? null : stockState(product);
   const out = stock?.tone === "out";
   const href = `/products/${product.slug}`;
   const off = percentOff(product.priceInr, product.originalPriceInr);
+  const sizes = packSizesOf(product).filter(Boolean);
   return (
     <article className="group relative flex h-full flex-col rounded-[1.5rem] bg-white p-2.5 shadow-soft ring-1 ring-forest/[0.06] transition-all duration-300 hover:-translate-y-1 hover:shadow-lift focus-within:shadow-lift">
       <Link href={href} className="focus-ring relative block aspect-square overflow-hidden rounded-[1.1rem] bg-sand" aria-label={`View ${product.name}`}>
@@ -44,7 +48,7 @@ export default function ProductCard({ product, priority = false }: { product: Pr
 
       <div className="flex flex-1 flex-col px-2.5 pb-2 pt-4">
         <p className="text-sm font-extrabold uppercase tracking-[0.18em] text-ink/45">
-          {product.packSize ?? "Pack size to be confirmed"}
+          {sizes.length > 0 ? sizes.join(" · ") : "Pack size to be confirmed"}
         </p>
         <h3 className="mt-1 font-display text-xl leading-tight text-forest">
           <Link href={href} className="focus-ring rounded transition-colors hover:text-clay">{product.name}</Link>
@@ -58,16 +62,30 @@ export default function ProductCard({ product, priority = false }: { product: Pr
         </Link>
         <div className="mt-4 flex items-center justify-between gap-3 border-t border-forest/[0.07] pt-4">
           <div className="min-w-0">
-            <Price amount={product.priceInr} original={product.originalPriceInr} className={product.priceInr == null ? "!text-xs" : off ? "!text-[1.35rem]" : "!text-2xl"} originalClassName="text-xs" />
+            {isExport && product.priceInr == null ? (
+              <span className="text-sm italic text-ink/55">Price on request</span>
+            ) : (
+              <Price amount={product.priceInr} original={product.originalPriceInr} className={product.priceInr == null ? "!text-xs" : off ? "!text-[1.35rem]" : "!text-2xl"} originalClassName="text-xs" />
+            )}
           </div>
-          <AddToCartButton
-            productId={product.id}
-            name={product.name}
-            disabled={out}
-            compact
-            className="!min-h-10 shrink-0 !px-4 !text-sm !shadow-none hover:!translate-y-0"
-            stepperClassName="shrink-0"
-          />
+          {isExport ? (
+            <Link
+              href="/export#enquire"
+              className="focus-ring inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full bg-clay px-4 text-sm font-semibold text-white transition-colors hover:bg-[#c9531a]"
+            >
+              Enquire<span className="sr-only"> about {product.name}</span>
+            </Link>
+          ) : (
+            <AddToCartButton
+              productId={product.id}
+              name={product.name}
+              packSize={defaultPackSize(product)}
+              disabled={out}
+              compact
+              className="!min-h-10 shrink-0 !px-4 !text-sm !shadow-none hover:!translate-y-0"
+              stepperClassName="shrink-0"
+            />
+          )}
         </div>
       </div>
     </article>

@@ -11,17 +11,20 @@ export default function FeaturedProducts() {
   const { products } = useProducts();
   const [tag, setTag] = useState<string>("All");
 
+  // Home only sells the ecommerce catalogue; export items live on /export and are enquiry-only.
+  const catalogue = useMemo(() => products.filter((p) => p.channel !== "export"), [products]);
+
   // Filter chips come from the tags set in Admin → Products, so they change with the catalogue.
   // Tags are matched case-insensitively ("Bestseller" and "BestSeller" are one chip).
   const key = (t?: string) => (t ?? "").trim().toLowerCase();
   const tags = useMemo(() => {
     const seen = new Map<string, string>();
-    for (const p of products) if (key(p.tag) && !seen.has(key(p.tag))) seen.set(key(p.tag), p.tag!.trim());
+    for (const p of catalogue) if (key(p.tag) && !seen.has(key(p.tag))) seen.set(key(p.tag), p.tag!.trim());
     return Array.from(seen.values());
-  }, [products]);
+  }, [catalogue]);
   const active = tags.some((t) => key(t) === key(tag)) ? tag : "All";
   const matches = (p: (typeof products)[number], t: string) => t === "All" || key(p.tag) === key(t);
-  const items = products.filter((p) => matches(p, active));
+  const items = catalogue.filter((p) => matches(p, active));
 
   return (
     <section id="featured" aria-labelledby="featured-title" className="relative overflow-hidden bg-cream py-16 md:py-24">
@@ -45,7 +48,7 @@ export default function FeaturedProducts() {
                 <div role="tablist" aria-label="Filter products" className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0 lg:justify-end">
                   {["All", ...tags].map((t) => {
                     const on = t === active;
-                    const count = products.filter((p) => matches(p, t)).length;
+                    const count = catalogue.filter((p) => matches(p, t)).length;
                     return (
                       <button
                         key={t}

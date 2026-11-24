@@ -2,17 +2,15 @@ import Image from "next/image";
 import Link from "next/link";
 
 /**
- * Horizontal brand lockup, matching the reference artwork exactly:
- * the engraved circular emblem on the left and a centred wordmark stack on the
- * right — "MAGNA" (the artwork's leaf-cut letterforms), "— ECO BITES —" and
- * "Connecting your soul with nature"
+ * Horizontal brand lockup, matching the master artwork: the engraved circular
+ * emblem on the left, "MAGNA ECO BITES" set in the display serif (Fraunces) on a
+ * single line — MAGNA in the lighter cut, ECO BITES in the heavier one — and the
+ * slogan "Pure Nature. Powerful You." in spaced caps beneath it.
  *
- * MAGNA and the emblem are cropped from the master logo (green for light
- * surfaces, cream for dark ones) so the leaf details and engraving survive, and
- * the two supporting lines are set in Cormorant Garamond. All sizes are derived
- * from `--brand-wm` (rendered ink width of MAGNA) and `--brand-stack` (width of
- * the two lower lines) in `app/globals.css`, so every part keeps its proportion
- * at every breakpoint.
+ * Setting the name as text (rather than image crops) keeps it crisp at every
+ * zoom level and lets it scale fluidly with the header. Every size is derived
+ * from `--brand-fs` in `app/globals.css`, so the emblem, name and slogan keep
+ * their proportions at every breakpoint.
  */
 export default function Logo({ onDark = false, priority = false }: { onDark?: boolean; priority?: boolean }) {
   return (
@@ -27,27 +25,20 @@ export default function Logo({ onDark = false, priority = false }: { onDark?: bo
         width={320}
         height={320}
         priority={priority}
-        sizes="56px"
+        sizes="48px"
         className="brand-lockup__emblem"
       />
 
-      {/* Wordmark stack — every line is centred under the one above it. */}
+      {/* Wordmark stack — the name on one line, the tagline centred beneath it. */}
       <span className="brand-lockup__stack">
-        <Image
-          src={onDark ? "/images/magna-wordmark-cream.png" : "/images/magna-wordmark-green.png"}
-          alt=""
-          width={480}
-          height={78}
-          priority={priority}
-          sizes="110px"
-          className="brand-lockup__mark"
-        />
-        <span className="brand-lockup__eco">
-          <span aria-hidden="true" className="brand-lockup__eco-rule" />
-          <span className="brand-lockup__eco-text">Eco Bites</span>
-          <span aria-hidden="true" className="brand-lockup__eco-rule" />
+        <span className="brand-lockup__wordmark">
+          <span className="brand-lockup__mark">Magna</span>
+          <span className="brand-lockup__name">Eco Bites</span>
         </span>
-        <span className="brand-lockup__tag">Connecting your soul with nature</span>
+        <span className="brand-lockup__tag">
+          <span className="brand-lockup__tag-line">{"Pure Nature. "}</span>
+          <span className="brand-lockup__tag-line">Powerful You.</span>
+        </span>
       </span>
     </Link>
   );

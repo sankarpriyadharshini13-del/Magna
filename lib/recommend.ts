@@ -12,7 +12,7 @@ const words = (s: string) =>
 export function recommend(current: Product, all: Product[], limit = 3): Product[] {
   const mine = words(current.name);
   return all
-    .filter((p) => p.id !== current.id)
+    .filter((p) => p.id !== current.id && (p.channel ?? "ecommerce") === (current.channel ?? "ecommerce"))
     .map((p, index) => {
       let score = 0;
       for (const w of words(p.name)) if (mine.has(w)) score += 3;

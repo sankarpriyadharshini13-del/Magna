@@ -5,6 +5,7 @@ import { useRef, useState, type FormEvent } from "react";
 import { ArrowIcon, ChevronIcon, CloseIcon, PlusIcon } from "@/components/ui/Icons";
 import { useAuth } from "@/context/AuthContext";
 import { useProducts } from "@/context/ProductsContext";
+import { useUI } from "@/context/UIContext";
 import { getSupabase } from "@/lib/supabase";
 
 export type EnquiryType = "business" | "distributor" | "export";
@@ -184,6 +185,7 @@ function ProductPicker() {
  */
 export default function EnquiryForm({ type }: { type: EnquiryType }) {
   const { user } = useAuth();
+  const { open: openPanel } = useUI();
   const [state, setState] = useState<"idle" | "sending" | "done">("idle");
   const [error, setError] = useState("");
 
@@ -202,7 +204,8 @@ export default function EnquiryForm({ type }: { type: EnquiryType }) {
     setError("");
     try {
       // When the visitor is signed in, send their session so the enquiry is linked to their
-      // account and shows up in My orders. Guests can still send enquiries without signing in.
+      // account and shows up in My orders. Business enquiries stay open to guests; distributor
+      // and export enquiries require a signed-in account (enforced by the server too).
       const token = (await getSupabase()?.auth.getSession())?.data.session?.access_token;
       const res = await fetch("/api/enquiries", {
         method: "POST",
@@ -231,6 +234,21 @@ export default function EnquiryForm({ type }: { type: EnquiryType }) {
       setState("idle");
     }
   };
+
+  // Distributor and export enquiries are for signed-in partners only (the server enforces this too).
+  if (type !== "business" && !user) {
+    return (
+      <div className="rounded-xl border border-forest/10 bg-white p-6 text-center">
+        <p className="font-display text-lg font-semibold text-forest">Sign in to continue</p>
+        <p className="mt-2 text-sm leading-relaxed text-ink/70">
+          {type === "distributor" ? "Distributor applications are open to signed-in partners." : "Export enquiries are open to signed-in buyers."}
+        </p>
+        <button type="button" onClick={() => openPanel("account")} className="btn-primary mt-4">
+          Sign in / Create account
+        </button>
+      </div>
+    );
+  }
 
   if (state === "done") {
     return (
