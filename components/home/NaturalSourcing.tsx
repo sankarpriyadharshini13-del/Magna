@@ -1,32 +1,33 @@
 import Image from "next/image";
 import Link from "next/link";
-import { sourcingPrinciples } from "@/data/brand";
-import { ArrowIcon, BasketIcon, PinIcon, SproutIcon } from "@/components/ui/Icons";
+import { sourcingPhoto, sourcingPrinciples } from "@/data/brand";
+import { ArrowIcon, CheckIcon, SproutIcon, StoneIcon } from "@/components/ui/Icons";
 import Reveal from "./Reveal";
 import SectionHeading from "./SectionHeading";
 
-const icons = { cultivation: SproutIcon, sourcing: PinIcon, choices: BasketIcon };
+const icons = { sourcing: SproutIcon, checking: CheckIcon, grinding: StoneIcon };
 
 export default function NaturalSourcing({ learnMore = true }: { learnMore?: boolean }) {
   return (
     <section id="sourcing" aria-labelledby="sourcing-title" className="relative overflow-hidden bg-cream py-16 md:py-24">
       <div className="mx-auto grid max-w-7xl items-center gap-10 px-4 sm:px-6 lg:grid-cols-2 lg:gap-16 lg:px-8">
         <Reveal className="order-2 lg:order-1">
-          <div className="relative">
-            <div className="relative aspect-[4/5] overflow-hidden rounded-[2rem] bg-sand shadow-lift sm:aspect-[5/4] lg:aspect-[4/5]">
+          <figure className="relative mx-auto w-full max-w-[27rem]">
+            <div className="overflow-hidden rounded-[2rem] bg-sand shadow-lift ring-1 ring-forest/[0.08]">
               <Image
-                src="/images/hero-moringa-card.jpg"
-                alt="Magna Eco Bites podi in a wooden bowl"
-                fill
-                sizes="(min-width:1024px) 45vw, 92vw"
-                className="object-cover"
+                src={sourcingPhoto.src}
+                alt={sourcingPhoto.alt}
+                width={sourcingPhoto.width}
+                height={sourcingPhoto.height}
+                sizes="(min-width:1024px) 432px, (min-width:640px) 70vw, 88vw"
+                className="h-auto w-full"
               />
             </div>
-            <div className="absolute -bottom-5 left-5 right-5 rounded-2xl bg-forest p-5 text-cream shadow-lift sm:left-auto sm:right-6 sm:w-72">
-              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-honey">From Chennai</p>
-              <p className="mt-1.5 font-display text-lg leading-snug">Prepared and packed with care in our own kitchen.</p>
-            </div>
-          </div>
+            <figcaption className="absolute -bottom-6 left-4 right-4 rounded-2xl bg-forest p-5 text-cream shadow-lift sm:left-auto sm:right-5 sm:w-72">
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-honey">{sourcingPhoto.place}</p>
+              <p className="mt-1.5 font-display text-lg leading-snug">{sourcingPhoto.caption}</p>
+            </figcaption>
+          </figure>
         </Reveal>
 
         <div className="order-1 lg:order-2">
@@ -34,8 +35,8 @@ export default function NaturalSourcing({ learnMore = true }: { learnMore?: bool
             <SectionHeading
               id="sourcing-title"
               eyebrow="Thoughtfully sourced"
-              title="Good food begins with good ingredients"
-              lead="We believe that good food starts with the quality of its ingredients. That's why we carefully select our ingredients and pay attention to every step of preparation and packaging."
+              title={<>Few ingredients, <span className="italic text-clay">chosen with care</span></>}
+              lead="Podi is a simple thing — lentils, dried chillies, a little moringa leaf. It only tastes right when nothing in that short list has been sitting around, so we buy small, check by hand and grind fresh."
             />
           </Reveal>
           <ol className="mt-8 space-y-4">
@@ -48,8 +49,13 @@ export default function NaturalSourcing({ learnMore = true }: { learnMore?: bool
                       <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-leaf/10 text-leaf">
                         <Icon width={22} height={22} />
                       </span>
-                      <div>
-                        <h3 className="font-display text-lg text-forest sm:text-xl">{p.title}</h3>
+                      <div className="min-w-0">
+                        <div className="flex items-baseline justify-between gap-3">
+                          <h3 className="font-display text-lg text-forest sm:text-xl">{p.title}</h3>
+                          <span aria-hidden="true" className="shrink-0 font-display text-xs font-semibold tracking-[0.28em] text-forest/25">
+                            0{i + 1}
+                          </span>
+                        </div>
                         <p className="mt-1 text-sm leading-relaxed text-ink/65 sm:text-[15px]">{p.body}</p>
                       </div>
                     </div>
@@ -60,8 +66,8 @@ export default function NaturalSourcing({ learnMore = true }: { learnMore?: bool
           </ol>
           {learnMore && (
             <Reveal delay={300}>
-              <Link href="/about#story" className="focus-ring group mt-8 inline-flex items-center gap-2 rounded-full bg-forest px-6 py-3 text-sm font-semibold text-cream shadow-soft transition-all hover:-translate-y-0.5 hover:bg-forest-deep">
-                Learn more about us
+              <Link href="/about#sourcing" className="focus-ring group mt-8 inline-flex items-center gap-2 rounded-full bg-forest px-6 py-3 text-sm font-semibold text-cream shadow-soft transition-all hover:-translate-y-0.5 hover:bg-forest-deep">
+                See how we work
                 <ArrowIcon width={16} height={16} className="transition-transform group-hover:translate-x-0.5" />
               </Link>
             </Reveal>

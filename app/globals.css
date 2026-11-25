@@ -46,7 +46,7 @@ html, body { overflow-x: clip; }
      --brand-fs is capped, and also follows the space the header has left over
      once the icon row (and, from 1024px, the centred nav) is laid out, so the
      lockup never collides with the icons, wraps, or crowds the nav:
-       · phones: 100vw − 208px of chrome (px-3 + 4 icon buttons + gaps)
+       · phones: 100vw − 220px of chrome (px-3 + 4 icon buttons + the signed-in caret + gaps)
        · ≥640px: 100vw − 280px (px-6 + 4 icon buttons + gaps)
        · ≥1024px: the nav sits in a 1fr_auto_1fr grid, so the logo column is
                   (100vw − 556px) / 2 (the extra 2× factor is in the divisor).
@@ -54,7 +54,7 @@ html, body { overflow-x: clip; }
      shrinking to an illegible size. */
 
   .brand-lockup {
-    --brand-fs: min(18px, calc((100vw - 208px) / 13.8));
+    --brand-fs: min(18px, calc((100vw - 220px) / 13.8));
     display: inline-flex;
     align-items: center;
     gap: calc(var(--brand-fs) * 0.7);

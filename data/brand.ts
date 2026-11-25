@@ -16,24 +16,45 @@ export const story = {
     "Two founders run the show: Mageshwaran oversees sourcing and quality, and Sathish runs the kitchen. Small batches, made fresh.",
 };
 
-/** Natural cultivation, ingredient sourcing and thoughtful food choices. */
+/**
+ * The sourcing story on the home page, read top to bottom as the life of one pack: bought small
+ * from people we know, checked by hand before it is ground, then ground and sealed the same week.
+ *
+ * Each step answers the natural next question a customer has ("where is it from?", "who checks
+ * it?", "how fresh is it?"), so the three cards build one story instead of repeating the same
+ * promise. Claims stay inside what the rest of the site already states — see the note at the top.
+ */
 export const sourcingPrinciples = [
   {
-    key: "cultivation",
-    title: "Carefully chosen ingredients",
-    body: "We source our ingredients from trusted suppliers, giving importance to quality, freshness, and the care taken in selecting each one.",
-  },
-  {
     key: "sourcing",
-    title: "Made close to home",
-    body: "Our products are prepared and packed in Chennai. We pay attention to every step, from selecting the ingredients to carefully packing each product.",
+    title: "Bought small, from people we know",
+    body: "Our lentils, dried chillies and moringa leaf come from a short list of growers and suppliers we have bought from year after year — lots small enough to judge by hand, not whatever a commodity market happens to be clearing that week.",
   },
   {
-    key: "choices",
-    title: "Goodness in every pack",
-    body: "We bring together familiar ingredients like lentils, spices, moringa leaves, and other wholesome ingredients to prepare food products that fit naturally into your everyday meals.",
+    key: "checking",
+    title: "Nothing is ground until it is checked",
+    body: "Co-founder Mageshwaran opens every consignment before it reaches the kitchen: the colour of the chillies, the smell of the lentils, whether a sack has taken damp. A lot that fails goes back — careful grinding cannot rescue a poor ingredient.",
+  },
+  {
+    key: "grinding",
+    title: "Ground the week it is packed",
+    body: "We stone-grind in our own kitchen in Kolathur in batches we can fill and seal within days, so a pack reaches you close to the day it was made. Nothing waits in a warehouse, and nothing is added to help it keep longer.",
   },
 ] as const;
+
+/**
+ * The photograph beside that story: the original Moringa Idli Podi product shot, kept as a static
+ * file rather than reusing the hero artwork, so the section shows the real pack instead of the same
+ * picture twice in a row. Dimensions are the file's own, so the image is never cropped or stretched.
+ */
+export const sourcingPhoto = {
+  src: "/images/products/moringa-idli-podi.jpg",
+  width: 358,
+  height: 515,
+  alt: "Kraft pack of Moringa Idli Podi standing behind a wooden bowl of the podi, with dried red chillies, curry leaves, moringa leaves and roasted lentils on a dark green surface",
+  place: "Kolathur, Chennai",
+  caption: "Ground, filled and sealed in our own kitchen, a batch at a time.",
+} as const;
 
 export const team = [
   {

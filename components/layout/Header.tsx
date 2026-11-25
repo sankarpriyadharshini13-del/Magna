@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import Logo from "@/components/ui/Logo";
-import { ArrowIcon, BagIcon, CloseIcon, LogOutIcon, MenuIcon, PackageIcon, SearchIcon, StoreIcon, UserIcon } from "@/components/ui/Icons";
+import { ArrowIcon, BagIcon, ChevronIcon, CloseIcon, LogOutIcon, MenuIcon, PackageIcon, SearchIcon, StoreIcon, UserIcon } from "@/components/ui/Icons";
 import { site } from "@/data/site";
 import { useCart } from "@/context/CartContext";
 import { useUI, type Panel } from "@/context/UIContext";
@@ -110,10 +110,15 @@ export default function Header() {
             <SearchIcon />
           </button>
           <div ref={accountRef} className="relative">
+            {/* Signed in, the trigger is one pill: the avatar plus a caret that turns to point up
+                while the dropdown is open. Signed out it stays the same width as the other icon
+                buttons and opens the sign-in dialog. */}
             <button
               ref={accountBtnRef}
               type="button"
-              className="icon-btn relative"
+              className={`focus-ring relative flex h-10 items-center rounded-full text-forest transition-colors hover:bg-sand sm:h-11 ${
+                user ? "gap-1 pl-2 pr-1.5" : "w-10 justify-center sm:w-11"
+              }`}
               aria-label={user ? `Account menu: ${user.name}` : "Sign in or create account"}
               aria-expanded={user ? accountOpen : undefined}
               aria-controls={user ? "account-menu" : undefined}
@@ -123,8 +128,17 @@ export default function Header() {
                 setAccountOpen((o) => !o);
               }}
             >
-              <UserIcon />
-              {user && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-clay" aria-hidden="true" />}
+              <span className="relative grid place-items-center">
+                <UserIcon />
+                {user && <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-clay" aria-hidden="true" />}
+              </span>
+              {user && (
+                <ChevronIcon
+                  width={14}
+                  height={14}
+                  className={`text-forest/55 transition-transform duration-200 ${accountOpen ? "rotate-180" : ""}`}
+                />
+              )}
             </button>
             {user && accountOpen && (
               <div id="account-menu" className="absolute right-0 top-full z-20 mt-2 w-60 animate-fade-in rounded-2xl border border-leaf/10 bg-white p-1.5 text-left shadow-lift">
@@ -138,9 +152,12 @@ export default function Header() {
                     <StoreIcon width={18} height={18} /> Admin panel
                   </Link>
                 )}
-                <Link href="/orders" onClick={() => setAccountOpen(false)} className={menuItemClass}>
-                  <PackageIcon width={18} height={18} /> My orders
-                </Link>
+                {/* My orders is for customers; admins manage every order in the admin panel. */}
+                {!isAdmin && (
+                  <Link href="/orders" onClick={() => setAccountOpen(false)} className={menuItemClass}>
+                    <PackageIcon width={18} height={18} /> My orders
+                  </Link>
+                )}
                 <Link href="/account" onClick={() => setAccountOpen(false)} className={menuItemClass}>
                   <UserIcon width={18} height={18} /> Manage account
                 </Link>
