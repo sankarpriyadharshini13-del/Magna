@@ -351,6 +351,11 @@
 
 /* ---------------- customers ---------------- */
 .c-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 398px; gap: 14px; align-items: start; }
+/* Nothing is selected: no details card, so the list takes the whole width (no empty panel). */
+.c-wrap.closed { grid-template-columns: minmax(0, 1fr); }
+/* Details open: the city also sits in the card's header, so drop the column to keep the table from
+   scrolling sideways. */
+.c-wrap.open .c-city { display: none; }
 .c-av { width: 28px; height: 28px; border-radius: 7px; background: var(--forest); color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 12px; flex: none; }
 .c-av.lg { width: 48px; height: 48px; border-radius: 10px; font-size: 20px; background: var(--clay); font-family: var(--font-serif); }
 .c-head { display: flex; gap: 12px; align-items: center; margin-bottom: 14px; }

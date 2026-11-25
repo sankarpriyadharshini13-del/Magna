@@ -75,7 +75,10 @@ export default function CustomersScreen() {
     );
   }, [sorted, query]);
 
-  // Details stay hidden until a customer is clicked; the × in the panel clears the selection again.
+  // Details stay hidden until a customer is ticked or clicked; the same checkbox (or the × in the
+  // panel) clears the selection again, and the details card is not rendered at all while nothing is
+  // selected — so there is no empty box taking up half the page.
+  const toggleSelected = (id: string) => setSelectedId((cur) => (cur === id ? null : id));
   const active = scoped.find((c) => c.id === selectedId) ?? null;
   const st = active ? stats.get(active.id) : undefined;
   const history = active ? data.orders.filter((o) => o.customerId === active.id) : [];
@@ -156,18 +159,32 @@ export default function CustomersScreen() {
         </div>
       </div>
 
-      <div className="c-wrap">
+      <div className={`c-wrap ${active ? "open" : "closed"}`}>
         <section className="adm-card" style={{ minHeight: 628 }}>
           <div className="adm-scroll" style={{ maxHeight: 640 }}>
             <table className="adm-table">
-              <thead><tr><th>Customer</th><th>City</th><th>Orders</th><th>Total spent</th><th>Last order</th><th>Tag</th></tr></thead>
+              <thead>
+                <tr>
+                  <th style={{ width: 30 }} aria-label="Select customer" />
+                  <th>Customer</th><th className="c-city">City</th><th>Orders</th><th>Total spent</th><th>Last order</th><th>Tag</th>
+                </tr>
+              </thead>
               <tbody>
                 {list.map((c) => {
                   const s = stats.get(c.id)!;
                   return (
                     <tr key={c.id} className={`click${active?.id === c.id ? " sel" : ""}`} style={{ height: 49 }} onClick={() => setSelectedId(c.id)}>
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          className="adm-cb"
+                          aria-label={`${active?.id === c.id ? "Hide" : "Show"} details for ${c.name}`}
+                          checked={active?.id === c.id}
+                          onChange={() => toggleSelected(c.id)}
+                        />
+                      </td>
                       <td><div className="p-cell"><div className="c-av">{initials(c.name)}</div><b style={{ fontWeight: 600 }}>{c.name}</b></div></td>
-                      <td style={{ color: "#4a4f46" }}>{customerCity(c) || "—"}</td>
+                      <td className="c-city" style={{ color: "#4a4f46" }}>{customerCity(c) || "—"}</td>
                       <td>{s.orders}</td>
                       <td className="b">{formatInr(s.spent)}</td>
                       <td style={{ color: "var(--muted)" }}>{s.last ? fmtDate(s.last) : "—"}</td>
@@ -175,59 +192,57 @@ export default function CustomersScreen() {
                     </tr>
                   );
                 })}
-                {!list.length && <tr><td colSpan={6}><div className="adm-empty">No customers match “{query}”.</div></td></tr>}
+                {!list.length && <tr><td colSpan={7}><div className="adm-empty">No customers match “{query}”.</div></td></tr>}
               </tbody>
             </table>
           </div>
         </section>
 
-        <aside className="adm-card" aria-label="Customer details" style={{ minHeight: 628, display: "flex", flexDirection: "column" }}>
-          {active && st ? (
-            <>
-              <div className="c-head">
-                <div className="c-av lg">{initials(active.name)}</div>
-                <div style={{ minWidth: 0 }}>
-                  <h2>{active.name}</h2>
-                  <div className="adm-muted">{customerCity(active) ? `${customerCity(active)} · ` : ""}customer since {fmtMonthYear(active.since)}</div>
-                </div>
-                <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}><Badge tone={tagTone[st.tag]}>{st.tag}</Badge><button type="button" className="adm-x" aria-label="Close customer details" title="Close" onClick={() => setSelectedId(null)}>×</button></span>
+        {active && st && (
+          <aside className="adm-card" aria-label="Customer details" style={{ minHeight: 628, display: "flex", flexDirection: "column" }}>
+            <div className="c-head">
+              <div className="c-av lg">{initials(active.name)}</div>
+              <div style={{ minWidth: 0 }}>
+                <h2>{active.name}</h2>
+                <div className="adm-muted">{customerCity(active) ? `${customerCity(active)} · ` : ""}customer since {fmtMonthYear(active.since)}</div>
               </div>
-              <div className="adm-row2 adm-fg">
-                <div><div className="adm-fl">Phone</div><input className="adm-in" readOnly aria-label="Phone" value={maskPhone(active.phone)} /></div>
-                <div><div className="adm-fl">Email</div><input className="adm-in" readOnly aria-label="Email" value={maskEmail(active.email)} /></div>
-              </div>
-              <div className="adm-row2 adm-fg">
-                <div className="c-stat"><div className="l">Lifetime value</div><div className="v">{formatInr(st.spent)}</div></div>
-                <div className="c-stat"><div className="l">Favourite</div><div className="v" style={{ fontSize: 16, lineHeight: "28px" }}>{favourite}</div></div>
-              </div>
+              <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}><Badge tone={tagTone[st.tag]}>{st.tag}</Badge><button type="button" className="adm-x" aria-label="Close customer details" title="Close" onClick={() => setSelectedId(null)}>×</button></span>
+            </div>
+            <div className="adm-row2 adm-fg">
+              <div><div className="adm-fl">Phone</div><input className="adm-in" readOnly aria-label="Phone" value={maskPhone(active.phone)} /></div>
+              <div><div className="adm-fl">Email</div><input className="adm-in" readOnly aria-label="Email" value={maskEmail(active.email)} /></div>
+            </div>
+            <div className="adm-row2 adm-fg">
+              <div className="c-stat"><div className="l">Lifetime value</div><div className="v">{formatInr(st.spent)}</div></div>
+              <div className="c-stat"><div className="l">Favourite</div><div className="v" style={{ fontSize: 16, lineHeight: "28px" }}>{favourite}</div></div>
+            </div>
 
-              <div className="adm-card-h" style={{ marginBottom: 4 }}><h2>Order history</h2><span>{history.length} order{history.length === 1 ? "" : "s"}</span></div>
-              <div className="c-hist">
-                {history.map((o) => (
-                  <div className="c-hist-r" key={o.number} onClick={() => router.push(`/admin/orders?order=${o.number}`)} role="link" tabIndex={0} onKeyDown={(e) => e.key === "Enter" && router.push(`/admin/orders?order=${o.number}`)}>
-                    <span><b>#{label(o.number)}</b> · {fmtDate(o.placedAt)}</span>
-                    <span><b style={{ fontWeight: 600 }}>{formatInr(orderTotal(o))}</b> · <Badge tone={orderTone(o.status)}>{o.status}</Badge></span>
-                  </div>
+            <div className="adm-card-h" style={{ marginBottom: 4 }}><h2>Order history</h2><span>{history.length} order{history.length === 1 ? "" : "s"}</span></div>
+            <div className="c-hist">
+              {history.map((o) => (
+                <div className="c-hist-r" key={o.number} onClick={() => router.push(`/admin/orders?order=${o.number}`)} role="link" tabIndex={0} onKeyDown={(e) => e.key === "Enter" && router.push(`/admin/orders?order=${o.number}`)}>
+                  <span><b>#{label(o.number)}</b> · {fmtDate(o.placedAt)}</span>
+                  <span><b style={{ fontWeight: 600 }}>{formatInr(orderTotal(o))}</b> · <Badge tone={orderTone(o.status)}>{o.status}</Badge></span>
+                </div>
+              ))}
+              {!history.length && <div className="adm-empty" style={{ padding: "12px 0" }}>No orders yet.</div>}
+            </div>
+
+            {active.notes.length > 0 && (
+              <div style={{ marginTop: 10 }}>
+                <div className="adm-fl">Notes</div>
+                {active.notes.map((n) => (
+                  <div className="c-note" key={n.id}>{n.text}<small>{fmtDateTime(n.at)}</small></div>
                 ))}
-                {!history.length && <div className="adm-empty" style={{ padding: "12px 0" }}>No orders yet.</div>}
               </div>
+            )}
 
-              {active.notes.length > 0 && (
-                <div style={{ marginTop: 10 }}>
-                  <div className="adm-fl">Notes</div>
-                  {active.notes.map((n) => (
-                    <div className="c-note" key={n.id}>{n.text}<small>{fmtDateTime(n.at)}</small></div>
-                  ))}
-                </div>
-              )}
-
-              <div className="p-btns" style={{ marginTop: "auto", paddingTop: 16 }}>
-                <button className="adm-btn pri lg" onClick={() => router.push(`/admin/orders?q=${encodeURIComponent(active.name)}`)}>View all orders</button>
-                <button className="adm-btn lg" onClick={() => setNoteOpen(true)}>Add note</button>
-              </div>
-            </>
-          ) : <div className="adm-empty">Select a customer to see their details.</div>}
-        </aside>
+            <div className="p-btns" style={{ marginTop: "auto", paddingTop: 16 }}>
+              <button className="adm-btn pri lg" onClick={() => router.push(`/admin/orders?q=${encodeURIComponent(active.name)}`)}>View all orders</button>
+              <button className="adm-btn lg" onClick={() => setNoteOpen(true)}>Add note</button>
+            </div>
+          </aside>
+        )}
       </div>
 
       {noteOpen && active && (
