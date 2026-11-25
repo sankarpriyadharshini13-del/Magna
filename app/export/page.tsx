@@ -4,6 +4,7 @@ import SiteShell from "@/components/layout/SiteShell";
 import EnquiryForm from "@/components/enquiry/EnquiryForm";
 import Reveal from "@/components/home/Reveal";
 import SectionHeading from "@/components/home/SectionHeading";
+import { FssaiMark, MsmeMark } from "@/components/ui/CertificationMarks";
 import { CheckIcon, GlobeIcon, LeafIcon, PackageIcon, ShipIcon } from "@/components/ui/Icons";
 import { getPublicProducts } from "@/lib/server/publicProducts";
 
@@ -68,12 +69,31 @@ const logistics = [
   },
 ];
 
+/**
+ * The two registrations buyers check first. Kept separate from the per-consignment document list
+ * below because these are standing registrations, not paperwork raised for a single shipment.
+ */
+const registrations = [
+  {
+    wordmark: "FSSAI",
+    type: "Central Licence",
+    authority: "Food Safety and Standards Authority of India",
+    body: "The licence covers the kitchen where every pack is filled, and its details travel with each consignment's documents.",
+    Mark: FssaiMark,
+  },
+  {
+    wordmark: "MSME",
+    type: "Udyam Registered",
+    authority: "Ministry of Micro, Small & Medium Enterprises, Government of India",
+    body: "A registered Indian micro-enterprise, so importers can keep our Udyam credentials on file beside the invoice and packing list.",
+    Mark: MsmeMark,
+  },
+] as const;
+
 const certifications = [
   "Health Certificate: Officially issued food safety and hygiene certification validating suitability for international human consumption.",
   "IEC (Import Export Code): Directorate General of Foreign Trade (DGFT), Government of India.",
   "APEDA Registration: Agricultural and Processed Food Products Export Development Authority.",
-  "FSSAI Central License: Food Safety and Standards Authority of India.",
-  "MSME Udyam Certified: Ministry of Micro, Small & Medium Enterprises.",
   "Phytosanitary, Fumigation & Certificate of Origin (CoO): Issued per consignment as required by importing destination authorities.",
 ];
 
@@ -198,7 +218,32 @@ export default async function ExportPage() {
               lead="Global trade demands complete transparency and strict adherence to statutory standards. Magna Eco Bites operates with full regulatory compliance to ensure smooth customs clearance at destination ports worldwide."
             />
           </Reveal>
-          <ul className="mt-10 space-y-3">
+          <ul className="mx-auto mt-10 grid max-w-3xl gap-4 sm:grid-cols-2">
+            {registrations.map((r) => (
+              <li
+                key={r.wordmark}
+                className="flex flex-col rounded-[1.5rem] border border-forest/10 bg-white p-5 shadow-soft transition-shadow hover:shadow-lift"
+              >
+                <div className="flex items-start gap-4">
+                  <span className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-leaf/10 text-leaf">
+                    <r.Mark width={44} height={44} />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="font-display text-xl font-semibold leading-none tracking-[0.16em] text-forest">{r.wordmark}</p>
+                    <p className="mt-2 text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-clay">{r.type}</p>
+                    <p className="mt-1 text-xs leading-snug text-ink/60">{r.authority}</p>
+                  </div>
+                </div>
+                <div className="mt-auto pt-4">
+                  <p className="border-t border-forest/10 pt-3 text-sm leading-relaxed text-ink/70">{r.body}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-10 text-center text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-ink/45">
+            Also issued with each consignment
+          </p>
+          <ul className="mt-4 space-y-3">
             {certifications.map((c) => (
               <li key={c} className="flex items-start gap-3 rounded-2xl border border-forest/10 bg-white p-4 text-sm leading-relaxed text-ink/75">
                 <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-leaf text-cream">
