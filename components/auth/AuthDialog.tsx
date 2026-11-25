@@ -79,12 +79,18 @@ export default function AuthDialog() {
   return (
     <Dialog open={open} onClose={close} variant="center" title={title} initialFocus={() => firstField.current}>
       {user ? (
-        <div>
-          <p className="font-display text-2xl text-forest">Hello, {user.name.split(" ")[0]}.</p>
-          <p className="mt-1 break-all text-sm text-ink/65">{user.email}</p>
-          <div className="mt-6 grid gap-3">
+        <div className="space-y-4">
+          <div className="flex items-center gap-4 rounded-2xl border border-forest/10 bg-sand/40 p-4">
+            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-forest font-display text-lg font-bold text-cream shadow-sm">
+              {user.name[0]?.toUpperCase() || "M"}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="font-display text-lg font-bold text-forest">Hello, {user.name.split(" ")[0]}.</p>
+              <p className="truncate text-xs text-ink/65">{user.email}</p>
+            </div>
+          </div>
+          <div className="grid gap-2.5 pt-2">
             {isAdmin && <Link href="/admin" onClick={close} className="btn-primary w-full">Open admin panel</Link>}
-            {/* My orders is for customers; admins manage every order in the admin panel. */}
             {!isAdmin && <Link href="/orders" onClick={close} className="btn-primary w-full">My orders</Link>}
             <Link href="/account" onClick={close} className="btn-secondary w-full">Manage account</Link>
             <button type="button" className="btn-secondary w-full" onClick={async () => { await signOut(); close(); }}>Sign out</button>
@@ -105,7 +111,14 @@ export default function AuthDialog() {
               ))}
             </div>
           )}
-          {mode === "forgot" && <p className="mb-4 text-sm text-ink/65">Enter your email and we&apos;ll send you a link to set a new password.</p>}
+          {mode === "forgot" && (
+            <div className="mb-5 rounded-2xl border border-forest/10 bg-sand/40 p-4 text-center">
+              <p className="font-display text-base font-bold text-forest">Forgot your password?</p>
+              <p className="mt-1 text-xs leading-relaxed text-ink/70">
+                Enter your registered email address and we&apos;ll send you a secure link to set a new password.
+              </p>
+            </div>
+          )}
           <div className="space-y-4">
             {mode === "signup" && (
               <div>

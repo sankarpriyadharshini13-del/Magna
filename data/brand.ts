@@ -17,43 +17,41 @@ export const story = {
 };
 
 /**
- * The sourcing story on the home page, read top to bottom as the life of one pack: bought small
- * from people we know, checked by hand before it is ground, then ground and sealed the same week.
+ * The "Thoughtfully sourced" story on the home page: why ingredient quality matters, then the
+ * three promises behind every pack — carefully chosen ingredients, preparation and packing close
+ * to home, and the goodness that reaches everyday meals.
  *
- * Each step answers the natural next question a customer has ("where is it from?", "who checks
- * it?", "how fresh is it?"), so the three cards build one story instead of repeating the same
- * promise. Claims stay inside what the rest of the site already states — see the note at the top.
+ * Claims stay inside what the rest of the site already states — see the note at the top.
  */
 export const sourcingPrinciples = [
   {
-    key: "sourcing",
-    title: "Bought small, from people we know",
-    body: "Our lentils, dried chillies and moringa leaf come from a short list of growers and suppliers we have bought from year after year — lots small enough to judge by hand, not whatever a commodity market happens to be clearing that week.",
+    key: "chosen",
+    title: "Carefully chosen ingredients",
+    body: "We source our ingredients from trusted suppliers, giving importance to quality, freshness, and the care taken in selecting each one.",
   },
   {
-    key: "checking",
-    title: "Nothing is ground until it is checked",
-    body: "Co-founder Mageshwaran opens every consignment before it reaches the kitchen: the colour of the chillies, the smell of the lentils, whether a sack has taken damp. A lot that fails goes back — careful grinding cannot rescue a poor ingredient.",
+    key: "made",
+    title: "Made close to home",
+    body: "Our products are prepared and packed in Chennai. We pay attention to every step, from selecting the ingredients to carefully packing each product.",
   },
   {
-    key: "grinding",
-    title: "Ground the week it is packed",
-    body: "We stone-grind in our own kitchen in Kolathur in batches we can fill and seal within days, so a pack reaches you close to the day it was made. Nothing waits in a warehouse, and nothing is added to help it keep longer.",
+    key: "goodness",
+    title: "Goodness in every pack",
+    body: "We carefully select quality ingredients to create wholesome food products that bring goodness to your everyday meals. Each product is prepared with care, keeping quality and everyday needs in mind.",
   },
 ] as const;
 
 /**
- * The photograph beside that story: the original Moringa Idli Podi product shot, kept as a static
- * file rather than reusing the hero artwork, so the section shows the real pack instead of the same
- * picture twice in a row. Dimensions are the file's own, so the image is never cropped or stretched.
+ * The photograph beside that story: authentic South Indian raw ingredients — fresh moringa leaves,
+ * sun-dried red chillies, golden split lentils, and stone-ground podi in a traditional granite mortar and pestle.
  */
 export const sourcingPhoto = {
-  src: "/images/products/moringa-idli-podi.jpg",
-  width: 358,
-  height: 515,
-  alt: "Kraft pack of Moringa Idli Podi standing behind a wooden bowl of the podi, with dried red chillies, curry leaves, moringa leaves and roasted lentils on a dark green surface",
-  place: "Kolathur, Chennai",
-  caption: "Ground, filled and sealed in our own kitchen, a batch at a time.",
+  src: "/images/thoughtfully-sourced.jpg",
+  width: 896,
+  height: 1200,
+  alt: "Artisanal South Indian ingredients: fresh green moringa leaves, sun-dried red chillies, wholesome golden lentils, and traditional stone-ground podi",
+  place: "Chennai",
+  caption: "Thoughtfully prepared and carefully packed in Chennai, with attention to quality at every step.",
 } as const;
 
 export const team = [

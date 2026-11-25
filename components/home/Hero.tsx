@@ -70,11 +70,11 @@ export default async function Hero() {
 
       <div className="relative mx-auto grid w-full max-w-7xl items-center gap-12 px-4 pb-16 pt-6 sm:px-6 lg:grid-cols-[1fr_575px] lg:gap-11 lg:px-8 lg:py-10">
         <div className="lg:pr-4">
-          <p className="inline-flex items-center gap-2 rounded-full border border-clay/30 bg-white/30 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-clay sm:px-4 sm:py-2 sm:text-[11px]">
+          <p className="animate-hero-fade-up inline-flex items-center gap-2 rounded-full border border-clay/30 bg-white/30 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-clay sm:px-4 sm:py-2 sm:text-[11px] [animation-delay:100ms]">
             <span className="h-2 w-2 rounded-full bg-clay" aria-hidden="true" />
             Goodness in every ingredient
           </p>
-          <h1 id="hero-title" className="mt-6 font-display text-[2.25rem] font-medium leading-[1.1] tracking-[-0.015em] text-forest sm:mt-8 sm:text-[3rem] lg:text-[4.1rem] xl:text-[4.7rem]">
+          <h1 id="hero-title" className="animate-hero-fade-up mt-6 font-display text-[2.25rem] font-medium leading-[1.1] tracking-[-0.015em] text-forest sm:mt-8 sm:text-[3rem] lg:text-[4.1rem] xl:text-[4.7rem] [animation-delay:250ms]">
             Natural food, the way your{" "}
             <span className="relative inline-block pb-1 italic text-clay">
               grandmother
@@ -83,11 +83,11 @@ export default async function Hero() {
             made it.
           </h1>
 
-          <p className="mt-6 max-w-[31rem] text-[0.95rem] leading-[1.7] text-ink/60 sm:mt-8 sm:text-[1.06rem] sm:leading-[1.75]">
+          <p className="animate-hero-fade-up mt-6 max-w-[31rem] text-[0.95rem] leading-[1.7] text-ink/60 sm:mt-8 sm:text-[1.06rem] sm:leading-[1.75] [animation-delay:400ms]">
             Magna Eco Bites brings you traditional podis, cold-pressed oils and kitchen staples — made from naturally sourced ingredients, with no shortcuts.
           </p>
 
-          <div className="mt-7 flex items-center gap-3 sm:mt-9">
+          <div className="animate-hero-fade-up mt-7 flex items-center gap-3 sm:mt-9 [animation-delay:550ms]">
             <div className="flex -space-x-2.5" aria-hidden="true">
               <span className="grid h-10 w-10 place-items-center rounded-full bg-clay font-display text-base text-white/90 ring-2 ring-cream sm:h-11 sm:w-11 sm:text-lg">M</span>
               <span className="grid h-10 w-10 place-items-center rounded-full bg-forest font-display text-base text-white ring-2 ring-cream sm:h-11 sm:w-11 sm:text-lg">S</span>
@@ -96,18 +96,20 @@ export default async function Hero() {
           </div>
         </div>
 
-        {products.length > 0 ? (
-          <ProductCarousel products={products} />
-        ) : (
-          <figure className="relative mx-auto aspect-[575/720] w-full max-w-[575px] overflow-hidden rounded-[2rem] bg-forest-card shadow-lift lg:mx-0 lg:rounded-[2.75rem]">
-            <Image src="/images/hero-moringa-card.jpg" alt="Kraft pack of Magna Eco Bites Moringa Idli Podi beside a wooden bowl of the podi, moringa leaves and curry leaves" fill priority sizes="(min-width:1024px) 575px, 92vw" className="object-cover" />
-            <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-[28%] bg-gradient-to-t from-forest-deep/70 to-transparent" />
-            <figcaption className="absolute bottom-[4.5%] left-[6.5%] right-4 text-cream">
-              <p className="font-display text-[1.4rem] leading-tight sm:text-[1.65rem] lg:text-[1.9rem]">Made with care <span aria-hidden="true">•</span> Quality ingredients</p>
-              <p className="mt-1 text-[0.85rem] text-cream/70 sm:mt-1.5 sm:text-[0.95rem]">Traditional podis — ground in small batches</p>
-            </figcaption>
-          </figure>
-        )}
+        <div className="animate-hero-scale-in [animation-delay:350ms]">
+          {products.length > 0 ? (
+            <ProductCarousel products={products} />
+          ) : (
+            <figure className="relative mx-auto aspect-[575/720] w-full max-w-[575px] overflow-hidden rounded-[2rem] bg-forest-card shadow-lift lg:mx-0 lg:rounded-[2.75rem]">
+              <Image src="/images/hero-moringa-card.jpg" alt="Kraft pack of Magna Eco Bites Moringa Idli Podi beside a wooden bowl of the podi, moringa leaves and curry leaves" fill priority sizes="(min-width:1024px) 575px, 92vw" className="object-cover" />
+              <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-[28%] bg-gradient-to-t from-forest-deep/70 to-transparent" />
+              <figcaption className="absolute bottom-[4.5%] left-[6.5%] right-4 text-cream">
+                <p className="font-display text-[1.4rem] leading-tight sm:text-[1.65rem] lg:text-[1.9rem]">Made with care <span aria-hidden="true">•</span> Quality ingredients</p>
+                <p className="mt-1 text-[0.85rem] text-cream/70 sm:mt-1.5 sm:text-[0.95rem]">Traditional podis — ground in small batches</p>
+              </figcaption>
+            </figure>
+          )}
+        </div>
       </div>
     </section>
   );

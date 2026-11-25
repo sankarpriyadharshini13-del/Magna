@@ -55,7 +55,7 @@ function ExtraFields({ type }: { type: EnquiryType }) {
           <input id="enq-location" name="location" required type="text" placeholder="City / port of destination" className={field} />
         </div>
       </div>
-      <ProductPicker />
+      <ProductPicker type={type} />
       <div>
         <label htmlFor="enq-message" className={label}>Additional Requirements</label>
         <textarea id="enq-message" name="message" rows={3} placeholder="Any specific packaging, labelling, or other requirements" className={`${field} resize-none`} />
@@ -64,18 +64,40 @@ function ExtraFields({ type }: { type: EnquiryType }) {
   );
 }
 
+const FALLBACK_EXPORT_PRODUCTS = [
+  { id: "raw-moringa-powder", name: "Raw Moringa Powder", packSize: "100 g - 1 kg" },
+  { id: "groundnut-oil", name: "Groundnut Oil (Wood-Pressed)", packSize: "1 L - 15 L" },
+  { id: "coconut-oil", name: "Coconut Oil (Virgin Cold-Pressed)", packSize: "500 ml - 5 L" },
+  { id: "sesame-oil", name: "Sesame Oil (Cold-Pressed)", packSize: "500 ml - 5 L" },
+  { id: "sunflower-oil", name: "Sunflower Oil", packSize: "1 L - 15 L" },
+  { id: "olive-oil", name: "Olive Oil (Extra-Virgin)", packSize: "500 ml - 5 L" },
+  { id: "turmeric", name: "GI-Tagged Turmeric (Powder & Whole)", packSize: "100 g - 1 kg" },
+  { id: "makhana", name: "Makhana (Fox Nuts)", packSize: "100 g - 250 g" },
+  { id: "chilli", name: "Whole & Ground Chilli", packSize: "100 g - 1 kg" },
+  { id: "spices-podis", name: "Traditional Spices & Stone-Ground Podis", packSize: "Bulk / Trial" },
+  { id: "millets", name: "Millets & Ancient Grains (Ragi, Bajra, Foxtail)", packSize: "Bulk / Retail" },
+  { id: "natural-sweeteners", name: "Unrefined Country Sugar & Jaggery", packSize: "Bulk / Retail" },
+];
+
 /**
- * Product rows for the export enquiry: every row pairs a live-catalogue product with its own
- * estimated quantity. The "+" button (centred beside the row) repeats the pair, extra rows can
- * be removed with ×. Values post as `products` (names) and `quantity` ("500 kg (Idli Podi); …").
+ * Product rows for the export enquiry: every row pairs an export product with its own
+ * estimated quantity. Only export-specific catalogue items are listed for export enquiries.
  */
-function ProductPicker() {
+function ProductPicker({ type = "export" }: { type?: EnquiryType }) {
   const { products } = useProducts();
   const [rows, setRows] = useState<number[]>([0]);
   const nextKey = useRef(1);
 
+  const isExport = type === "export";
+  const dbExportProducts = products.filter((p) => p.channel === "export");
+  const availableProducts = isExport
+    ? dbExportProducts.length > 0
+      ? dbExportProducts
+      : FALLBACK_EXPORT_PRODUCTS
+    : products.filter((p) => p.channel !== "export");
+
   // Catalogue not loaded (or empty) — keep plain text fields so the enquiry still goes through.
-  if (products.length === 0) {
+  if (availableProducts.length === 0) {
     return (
       <div className="grid gap-5 sm:grid-cols-2">
         <div>
@@ -90,7 +112,7 @@ function ProductPicker() {
     );
   }
 
-  const full = rows.length >= products.length;
+  const full = rows.length >= availableProducts.length;
   const addRow = () => {
     if (full) return;
     const key = nextKey.current++;
@@ -125,8 +147,8 @@ function ProductPicker() {
                     aria-label={i === 0 ? undefined : `Product ${i + 1}`}
                     className={`${field} cursor-pointer appearance-none pr-10 invalid:text-ink/35 [&>option]:text-ink`}
                   >
-                    <option value="">Select a product</option>
-                    {products.map((p) => (
+                    <option value="">Select an export product</option>
+                    {availableProducts.map((p) => (
                       <option key={p.id} value={p.name}>
                         {p.name}
                         {p.packSize ? ` · ${p.packSize}` : ""}

@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import nextDynamic from "next/dynamic";
 import SiteShell from "@/components/layout/SiteShell";
 import EnquiryForm from "@/components/enquiry/EnquiryForm";
 import Reveal from "@/components/home/Reveal";
 import SectionHeading from "@/components/home/SectionHeading";
-import { CheckIcon, FactoryIcon, HeartIcon, LeafIcon, PackageIcon, StoreIcon, TruckIcon } from "@/components/ui/Icons";
+import { ArrowIcon, CheckIcon, FactoryIcon, GlobeIcon, HeartIcon, LeafIcon, MailIcon, PackageIcon, PinIcon, StoreIcon, TruckIcon } from "@/components/ui/Icons";
 import { getPublicProducts } from "@/lib/server/publicProducts";
 
 const ProductCard = nextDynamic(() => import("@/components/product/ProductCard"), {
@@ -93,50 +94,100 @@ const flexibleOrder = [
 
 export default async function DistributorsPage() {
   const range = (await getPublicProducts()).filter((p) => p.channel !== "export");
+
   return (
     <SiteShell>
-      {/* Hero */}
-      <section className="relative overflow-hidden bg-cream py-16 md:py-24">
-        <div aria-hidden="true" className="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full bg-honey/20 blur-3xl" />
-        <div aria-hidden="true" className="pointer-events-none absolute -left-24 -bottom-24 h-80 w-80 rounded-full bg-leaf/10 blur-3xl" />
+      {/* Hero: High-Impact Editorial Banner */}
+      <section className="relative overflow-hidden bg-cream py-16 sm:py-20 md:py-24">
+        <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-20 h-96 w-96 rounded-full bg-honey/20 blur-3xl" />
+        <div aria-hidden="true" className="pointer-events-none absolute -left-20 bottom-0 h-96 w-96 rounded-full bg-leaf/10 blur-3xl" />
+
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <Reveal>
-            <SectionHeading
-              align="center"
-              as="h1"
-              eyebrow="Partner With Magna Eco Bites"
-              title={<>Pan-India <span className="italic text-clay">distribution &amp; bulk supply</span></>}
-              lead="Bring Authentic, Stone-Ground & 100% Natural South Indian Pantry Staples to Your Region. At Magna Eco Bites, we are expanding our distribution network across India. Whether you are a regional distributor, retail store chain, organic & natural products retailer, or a HoReCa (Hotels, Restaurants, & Caterers) partner, we supply our complete range of stone-ground podis, cold-pressed oils, unrefined sweeteners, spices, millets, and health mixes anywhere in India. We manufacture in small batches in Chennai, ensuring your customers receive fresh, aromatic, and pure products every single time."
-            />
+            <div className="mx-auto max-w-4xl text-center">
+              <span className="inline-flex items-center gap-2 rounded-full border border-clay/30 bg-white/60 px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.2em] text-clay shadow-sm backdrop-blur">
+                <span className="h-2 w-2 rounded-full bg-clay" aria-hidden="true" />
+                Partner With Magna Eco Bites
+              </span>
+
+              <h1 className="mt-6 font-display text-3xl font-medium tracking-tight text-forest sm:text-5xl md:text-6xl lg:text-[4rem] lg:leading-[1.1]">
+                Pan-India <span className="italic text-clay">distribution &amp; bulk supply</span>
+              </h1>
+
+              <p className="mx-auto mt-6 max-w-3xl text-base leading-relaxed text-ink/75 sm:text-lg sm:leading-relaxed">
+                Bring Authentic, Stone-Ground & 100% Natural South Indian Pantry Staples to Your Region. At Magna Eco Bites, we are expanding our distribution network across India. Whether you are a regional distributor, retail store chain, organic & natural products retailer, or a HoReCa (Hotels, Restaurants, & Caterers) partner, we supply our complete range of stone-ground podis, cold-pressed oils, unrefined sweeteners, spices, millets, and health mixes anywhere in India. We manufacture in small batches in Chennai, ensuring your customers receive fresh, aromatic, and pure products every single time.
+              </p>
+
+              {/* Quick Actions & Trust Indicators */}
+              <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
+                <a
+                  href="#enquire"
+                  className="btn-primary"
+                >
+                  Become a Partner
+                  <ArrowIcon width={16} height={16} />
+                </a>
+                <a
+                  href="#catalogue"
+                  className="btn-secondary"
+                >
+                  Explore Stockable SKUs
+                </a>
+              </div>
+
+              {/* Trust badges strip */}
+              <div className="mt-12 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:gap-4">
+                {[
+                  { label: "100% Natural Purity", sub: "Zero preservatives" },
+                  { label: "Direct Freight", sub: "Pan-India delivery" },
+                  { label: "Wholesale Margins", sub: "Sustainable trade growth" },
+                  { label: "Fresh Batches", sub: "Milled in Chennai" },
+                ].map((pill) => (
+                  <div key={pill.label} className="rounded-2xl border border-forest/10 bg-white/60 p-3.5 text-center shadow-soft backdrop-blur-sm">
+                    <p className="font-display text-sm font-bold text-forest">{pill.label}</p>
+                    <p className="mt-0.5 text-xs text-ink/60">{pill.sub}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
           </Reveal>
         </div>
       </section>
 
       {/* Live product range */}
-      <section className="bg-cream pb-16 md:pb-24">
+      <section id="catalogue" className="scroll-mt-20 bg-cream pb-16 md:pb-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <Reveal>
-            <SectionHeading
-              eyebrow="Our live range"
-              title={<>Products you can <span className="italic text-clay">stock &amp; sell</span></>}
-              lead="Everything customers buy from our shop is available to our distributor partners — tell us the products, pack sizes and quantities you need, and we'll share wholesale pricing."
-            />
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <SectionHeading
+                eyebrow="Our live range"
+                title={<>Products you can <span className="italic text-clay">stock &amp; sell</span></>}
+                lead="Everything customers buy from our shop is available to our distributor partners — tell us the products, pack sizes and quantities you need, and we'll share wholesale pricing."
+              />
+              <span className="self-start rounded-full bg-forest/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-forest sm:self-end">
+                {range.length} Active SKUs
+              </span>
+            </div>
           </Reveal>
           {range.length === 0 ? (
             <p className="mt-8 rounded-[1.5rem] bg-sand/60 p-8 text-center text-ink/65">Our range is being updated — check back soon.</p>
           ) : (
-            <ul className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <ul className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {range.map((p, i) => (
-                <li key={p.id}><ProductCard product={p} priority={i < 3} /></li>
+                <li key={p.id}>
+                  <ProductCard product={p} priority={i < 4} />
+                </li>
               ))}
             </ul>
           )}
         </div>
       </section>
 
-      {/* Why partner */}
-      <section className="bg-sand/45 py-14 md:py-20">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      {/* Why partner: Luxury 2x2 Feature Grid */}
+      <section className="relative overflow-hidden bg-sand/40 py-16 sm:py-20 md:py-24">
+        <div aria-hidden="true" className="pointer-events-none absolute -right-20 top-20 h-72 w-72 rounded-full bg-leaf/10 blur-3xl" />
+        
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <Reveal>
             <SectionHeading
               align="center"
@@ -144,18 +195,22 @@ export default async function DistributorsPage() {
               title={<>Built for <span className="italic text-clay">long-term</span> trade partnerships</>}
             />
           </Reveal>
-          <div className="mt-12 grid gap-5 md:grid-cols-2">
+          
+          <div className="mt-12 grid gap-6 md:grid-cols-2 lg:gap-8">
             {whyPartner.map((w, i) => (
-              <Reveal key={w.title} delay={i * 70} className="h-full">
-                <article className="h-full rounded-[1.5rem] border border-forest/10 bg-white p-7 shadow-soft transition-shadow hover:shadow-lift">
-                  <span className="grid h-12 w-12 place-items-center rounded-xl bg-clay/10 text-clay">
-                    <w.Icon width={22} height={22} />
-                  </span>
-                  <h3 className="mt-4 font-display text-lg font-semibold text-forest">{w.title}</h3>
-                  <ul className="mt-3 space-y-2.5">
+              <Reveal key={w.title} delay={i * 80} className="h-full">
+                <article className="group flex h-full flex-col rounded-[2rem] border border-forest/10 bg-white p-7 shadow-soft transition-all duration-300 hover:-translate-y-1 hover:shadow-lift sm:p-8">
+                  <div className="flex items-center gap-4">
+                    <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-clay/10 text-clay shadow-sm transition-transform duration-300 group-hover:scale-105">
+                      <w.Icon width={26} height={26} />
+                    </span>
+                    <h3 className="font-display text-xl font-bold text-forest sm:text-2xl">{w.title}</h3>
+                  </div>
+
+                  <ul className="mt-6 flex-1 space-y-3.5 border-t border-forest/[0.08] pt-6">
                     {w.bullets.map((b) => (
-                      <li key={b} className="flex items-start gap-3 text-sm leading-relaxed text-ink/70">
-                        <span aria-hidden="true" className="mt-[0.6em] h-1.5 w-1.5 shrink-0 rounded-full bg-clay" />
+                      <li key={b} className="flex items-start gap-3 text-sm leading-relaxed text-ink/75 sm:text-[15px]">
+                        <span aria-hidden="true" className="mt-2 h-2 w-2 shrink-0 rounded-full bg-clay" />
                         <span>{b}</span>
                       </li>
                     ))}
@@ -167,8 +222,8 @@ export default async function DistributorsPage() {
         </div>
       </section>
 
-      {/* Solutions */}
-      <section className="bg-cream py-14 md:py-20">
+      {/* Solutions: Channel Specific Offerings */}
+      <section className="bg-cream py-16 sm:py-20 md:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <Reveal>
             <SectionHeading
@@ -177,20 +232,29 @@ export default async function DistributorsPage() {
               title={<>A partner for every <span className="italic text-clay">channel</span></>}
             />
           </Reveal>
-          <div className="mt-12 grid gap-5 lg:grid-cols-3">
+          <div className="mt-12 grid gap-6 lg:grid-cols-3">
             {solutions.map((s, i) => (
-              <Reveal key={s.title} delay={i * 80} className="h-full">
-                <article className="h-full rounded-[1.5rem] border border-forest/10 bg-white p-7 shadow-soft transition-shadow hover:shadow-lift">
-                  <span className="grid h-12 w-12 place-items-center rounded-xl bg-forest text-cream">
-                    <s.Icon width={22} height={22} />
-                  </span>
-                  <h3 className="mt-4 font-display text-lg font-semibold text-forest">{s.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-ink/65">{s.body}</p>
+              <Reveal key={s.title} delay={i * 90} className="h-full">
+                <article className="group flex h-full flex-col rounded-[2rem] border border-forest/10 bg-white p-7 shadow-soft transition-all duration-300 hover:-translate-y-1.5 hover:shadow-lift sm:p-8">
+                  <div className="flex items-center justify-between">
+                    <span className="grid h-14 w-14 place-items-center rounded-2xl bg-forest text-cream shadow-sm transition-transform duration-300 group-hover:scale-105">
+                      <s.Icon width={24} height={24} />
+                    </span>
+                    <span className="font-display text-xs font-bold tracking-[0.2em] text-forest/30">
+                      Channel 0{i + 1}
+                    </span>
+                  </div>
+                  
+                  <h3 className="mt-5 font-display text-xl font-bold text-forest sm:text-2xl">{s.title}</h3>
+                  <p className="mt-3 text-sm leading-relaxed text-ink/70 sm:text-[15px]">{s.body}</p>
+                  
                   {s.bullets.length > 0 && (
-                    <ul className="mt-3 space-y-2">
+                    <ul className="mt-6 flex-1 space-y-3 border-t border-forest/[0.08] pt-5">
                       {s.bullets.map((b) => (
-                        <li key={b} className="flex items-start gap-3 text-sm leading-relaxed text-ink/70">
-                          <span aria-hidden="true" className="mt-[0.6em] h-1.5 w-1.5 shrink-0 rounded-full bg-clay" />
+                        <li key={b} className="flex items-start gap-2.5 text-sm leading-relaxed text-ink/75">
+                          <span aria-hidden="true" className="mt-1.5 grid h-4 w-4 shrink-0 place-items-center rounded-full bg-leaf/10 text-leaf">
+                            <CheckIcon width={9} height={9} />
+                          </span>
                           <span>{b}</span>
                         </li>
                       ))}
@@ -203,9 +267,9 @@ export default async function DistributorsPage() {
         </div>
       </section>
 
-      {/* Product range */}
-      <section className="bg-sand/45 py-14 md:py-20">
-        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+      {/* Product range: Numbered Artisanal Cards */}
+      <section className="relative overflow-hidden bg-sand/40 py-16 sm:py-20 md:py-24">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <Reveal>
             <SectionHeading
               align="center"
@@ -213,12 +277,24 @@ export default async function DistributorsPage() {
               title={<>Our full range, <span className="italic text-clay">ready to stock</span></>}
             />
           </Reveal>
-          <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          
+          <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {productRange.map((p, i) => (
-              <Reveal key={p.title} delay={i * 60} className="h-full">
-                <div className="h-full rounded-[1.5rem] border border-forest/10 bg-white p-6 shadow-soft transition-shadow hover:shadow-lift">
-                  <h3 className="font-display text-lg font-semibold text-forest">{p.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-ink/65">{p.body}</p>
+              <Reveal key={p.title} delay={i * 70} className="h-full">
+                <div className="group flex h-full flex-col justify-between rounded-[1.75rem] border border-forest/10 bg-white p-6 shadow-soft transition-all duration-300 hover:-translate-y-1 hover:shadow-lift sm:p-7">
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <span className="rounded-full bg-forest/5 px-3 py-1 font-display text-xs font-bold text-forest">
+                        Category 0{i + 1}
+                      </span>
+                      <span className="h-2 w-2 rounded-full bg-honey" />
+                    </div>
+                    <h3 className="mt-4 font-display text-xl font-bold text-forest">{p.title}</h3>
+                    <p className="mt-2.5 text-sm leading-relaxed text-ink/70">{p.body}</p>
+                  </div>
+                  <div className="mt-5 border-t border-forest/[0.06] pt-3 text-xs font-semibold text-clay">
+                    Bulk & Custom Pack Sizes
+                  </div>
                 </div>
               </Reveal>
             ))}
@@ -226,9 +302,9 @@ export default async function DistributorsPage() {
         </div>
       </section>
 
-      {/* Flexible order quantities */}
-      <section className="bg-cream py-14 md:py-20">
-        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+      {/* Flexible order quantities: Reassuring Support Grid */}
+      <section className="bg-cream py-16 sm:py-20 md:py-24">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
           <Reveal>
             <SectionHeading
               align="center"
@@ -237,22 +313,31 @@ export default async function DistributorsPage() {
               lead="Whether you want to start with a sample test batch or place full truckload wholesale orders, we provide full support to help you introduce Magna Eco Bites to your market."
             />
           </Reveal>
-          <ul className="mt-10 space-y-3">
-            {flexibleOrder.map((f) => (
-              <li key={f} className="flex items-start gap-3 rounded-2xl border border-forest/10 bg-white p-4 text-sm leading-relaxed text-ink/75">
-                <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-leaf text-cream">
-                  <CheckIcon width={10} height={10} />
-                </span>
-                <span>{f}</span>
-              </li>
+
+          <div className="mt-12 grid gap-5 md:grid-cols-3">
+            {flexibleOrder.map((f, i) => (
+              <Reveal key={f} delay={i * 90} className="h-full">
+                <div className="flex h-full flex-col items-center rounded-[1.75rem] border border-forest/10 bg-white p-6 text-center shadow-soft sm:p-7">
+                  <span className="grid h-12 w-12 place-items-center rounded-2xl bg-leaf/10 text-leaf">
+                    <CheckIcon width={20} height={20} />
+                  </span>
+                  <p className="mt-4 text-sm font-semibold leading-relaxed text-forest sm:text-base">
+                    {f}
+                  </p>
+                </div>
+              </Reveal>
             ))}
-          </ul>
+          </div>
         </div>
       </section>
 
-      {/* Become a partner */}
-      <section id="enquire" className="scroll-mt-24 bg-forest py-14 text-cream md:py-20">
-        <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+      {/* Become a partner: High-End Dark Portal */}
+      <section id="enquire" className="scroll-mt-20 relative overflow-hidden bg-forest py-16 text-cream sm:py-20 md:py-24">
+        {/* Decorative background glow rings */}
+        <div aria-hidden="true" className="pointer-events-none absolute -right-32 -top-32 h-96 w-96 rounded-full bg-clay/15 blur-3xl" />
+        <div aria-hidden="true" className="pointer-events-none absolute -bottom-32 -left-32 h-96 w-96 rounded-full bg-leaf/25 blur-3xl" />
+
+        <div className="relative mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
           <Reveal>
             <SectionHeading
               tone="dark"
@@ -262,12 +347,25 @@ export default async function DistributorsPage() {
               lead="Join our growing network of trade partners bringing authentic, natural nourishment to homes across India. Send us your business details, location, and product requirements — our B2B sales team will get back to you with our wholesale catalog and price list within 24 hours."
             />
           </Reveal>
-          <ul className="mt-8 space-y-2 text-center text-sm text-cream/80">
-            <li>Email: bulk@magnaecobites.com / hello@magnaecobites.com</li>
-            <li>Official Website: www.magnaecobites.com</li>
-            <li>Head Office & Production Hub: Kolathur, Chennai, Tamil Nadu, India</li>
-          </ul>
-          <div className="mt-8 rounded-[2rem] bg-white p-6 text-ink shadow-lift md:p-8">
+
+          {/* Quick Contact Chips */}
+          <div className="mt-10 flex flex-wrap items-center justify-center gap-3 text-xs sm:text-sm">
+            <div className="inline-flex items-center gap-2 rounded-full border border-cream/15 bg-cream/[0.06] px-4 py-2 backdrop-blur-sm">
+              <MailIcon width={16} height={16} className="text-honey" />
+              <span>bulk@magnaecobites.com</span>
+            </div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-cream/15 bg-cream/[0.06] px-4 py-2 backdrop-blur-sm">
+              <GlobeIcon width={16} height={16} className="text-honey" />
+              <span>www.magnaecobites.com</span>
+            </div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-cream/15 bg-cream/[0.06] px-4 py-2 backdrop-blur-sm">
+              <PinIcon width={16} height={16} className="text-honey" />
+              <span>Kolathur, Chennai, Tamil Nadu, India</span>
+            </div>
+          </div>
+
+          {/* Form Card Container */}
+          <div className="mt-10 rounded-[2.25rem] bg-white p-7 text-ink shadow-lift sm:p-10 md:p-12">
             <EnquiryForm type="distributor" />
           </div>
         </div>
