@@ -5,7 +5,7 @@ import SiteShell from "@/components/layout/SiteShell";
 import EnquiryForm from "@/components/enquiry/EnquiryForm";
 import Reveal from "@/components/home/Reveal";
 import SectionHeading from "@/components/home/SectionHeading";
-import { ArrowIcon, CheckIcon, GlobeIcon, LeafIcon, MailIcon, PackageIcon, PinIcon, ShipIcon } from "@/components/ui/Icons";
+import { ArrowIcon, CheckIcon, GlobeIcon, LeafIcon, MailIcon, OilPressIcon, PackageIcon, PinIcon, ShipIcon } from "@/components/ui/Icons";
 import { getPublicProducts } from "@/lib/server/publicProducts";
 
 const ProductCard = nextDynamic(() => import("@/components/product/ProductCard"), {
@@ -29,7 +29,7 @@ const portfolio = [
     ],
   },
   {
-    Icon: ShipIcon,
+    Icon: OilPressIcon,
     title: "Pure Cold-Pressed & Culinary Oils",
     items: [
       "Groundnut Oil: Rich, nutty, traditionally extracted cooking oil ideal for culinary and retail markets.",

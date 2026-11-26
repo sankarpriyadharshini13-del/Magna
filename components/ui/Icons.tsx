@@ -49,6 +49,13 @@ export const LeafIcon = (p: P) => (
     <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12" />
   </svg>
 );
+export const OilPressIcon = (p: P) => (
+  <svg {...base} {...p}>
+    <path d="M12 3v3M8 6h8" />
+    <path d="M9 6v3l-5 3 1 5 7 4 7-4 1-5-5-3V6" />
+    <path d="m4 12 8 3 8-3M12 15v6" />
+  </svg>
+);
 export const PlusIcon = (p: P) => (<svg {...base} width={16} height={16} {...p}><path d="M12 5v14M5 12h14" /></svg>);
 export const MinusIcon = (p: P) => (<svg {...base} width={16} height={16} {...p}><path d="M5 12h14" /></svg>);
 export const TrashIcon = (p: P) => (

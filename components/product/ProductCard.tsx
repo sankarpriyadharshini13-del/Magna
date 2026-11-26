@@ -8,15 +8,7 @@ import AddToCartButton from "./AddToCartButton";
 import Price, { percentOff } from "@/components/ui/Price";
 import { ArrowIcon } from "@/components/ui/Icons";
 import { defaultPackSize, packSizesOf } from "@/lib/pack";
-
-const LOW_STOCK = 10;
-
-export function stockState(p: Product): { label: string; tone: "out" | "low" } | null {
-  if (p.stock == null) return null;
-  if (p.stock <= 0) return { label: "Out of stock", tone: "out" };
-  if (p.stock <= LOW_STOCK) return { label: `Only ${p.stock} left`, tone: "low" };
-  return null;
-}
+import { stockState } from "@/lib/stock";
 
 export default function ProductCard({ product, priority = false }: { product: Product; priority?: boolean }) {
   const isExport = product.channel === "export";
