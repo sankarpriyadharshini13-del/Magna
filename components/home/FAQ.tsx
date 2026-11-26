@@ -14,23 +14,26 @@ const META: Record<FaqGroup, { label: string; badge: string }> = {
   business: { label: "Wholesale & export", badge: "bg-clay/10 text-clay" },
 };
 
-/** Where the list splits into its two desktop columns, so both open with an answer showing. */
-const SPLIT = Math.ceil(faqs.length / 2);
-const INITIAL_OPEN = [faqs[0]?.q, faqs[SPLIT]?.q].filter((q): q is string => Boolean(q));
+/** Start with the first answer open, matching the featured FAQ layout. */
+const INITIAL_OPEN: string[] = [faqs[0]?.q].filter((question): question is string => Boolean(question));
+
+/** All questions remain in their original, numbered order. */
+const ALL_FAQS = faqs;
 
 /**
- * Home page FAQ: the questions customers actually ask, in a calm two-column grid of numbered
- * cards. Answers open independently, so a few can be compared without losing your place.
+ * Home page FAQ: the questions customers actually ask. The first answer opens by default in a
+ * wide centred card; the rest sit in a calm two-column grid of numbered cards. Opening another
+ * question moves it into the featured position.
  */
 export default function FAQ() {
   const [open, setOpen] = useState<string[]>(INITIAL_OPEN);
   const baseId = useId();
 
   const toggle = (question: string) =>
-    setOpen((prev) => (prev.includes(question) ? prev.filter((q) => q !== question) : [...prev, question]));
+    setOpen((prev) => (prev.includes(question) ? [] : [question]));
 
   /** One numbered question card. Declared inline so it can read `open` and `toggle`. */
-  const card = (f: Faq, index: number) => {
+  const card = (f: Faq, index: number, featured = false) => {
     const n = index + 1;
     const isOpen = open.includes(f.q);
     const questionId = `${baseId}-q${n}`;
@@ -40,8 +43,10 @@ export default function FAQ() {
     return (
       <li
         key={f.q}
-        className={`overflow-hidden rounded-2xl bg-white ring-1 transition-all duration-300 ${
-          isOpen ? "ring-leaf/35 shadow-soft" : "ring-forest/[0.07] hover:ring-leaf/25 hover:shadow-soft"
+        className={`overflow-hidden rounded-[20px] bg-white ring-1 transition-all duration-300 ${
+          isOpen
+            ? "ring-leaf/35 shadow-soft"
+            : "ring-forest/[0.07] hover:ring-leaf/25 hover:shadow-soft"
         }`}
       >
         <h3>
@@ -51,25 +56,33 @@ export default function FAQ() {
             aria-expanded={isOpen}
             aria-controls={panelId}
             onClick={() => toggle(f.q)}
-            className="focus-ring flex w-full items-start gap-3 p-4 text-left sm:gap-4 sm:p-5"
+            className={`focus-ring flex w-full items-start gap-3 text-left sm:gap-4 ${
+              featured ? "p-5 sm:p-7" : "p-4 sm:p-5"
+            }`}
           >
             <span
               aria-hidden="true"
-              className={`mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl text-[11px] font-bold tabular-nums transition-colors ${
+              className={`mt-0.5 grid h-12 w-12 shrink-0 place-items-center rounded-2xl text-sm font-bold tabular-nums transition-colors ${
                 isOpen ? "bg-forest text-cream" : meta.badge
               }`}
             >
               {String(n).padStart(2, "0")}
             </span>
             <span className="min-w-0 flex-1">
-              <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.16em] text-ink/45">
+              <span className="mb-1.5 block text-[11px] font-bold uppercase tracking-[0.18em] text-ink/45">
                 {meta.label}
               </span>
-              <span className="block font-display text-[15px] leading-snug text-forest sm:text-[17px]">{f.q}</span>
+              <span
+                className={`block font-display leading-snug text-forest ${
+                  featured ? "text-xl sm:text-2xl" : "text-[15px] sm:text-[17px]"
+                }`}
+              >
+                {f.q}
+              </span>
             </span>
             <span
               aria-hidden="true"
-              className={`mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full border transition-colors ${
+              className={`mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-full border transition-colors ${
                 isOpen ? "border-forest bg-forest text-cream" : "border-forest/15 text-forest"
               }`}
             >
@@ -87,9 +100,15 @@ export default function FAQ() {
           }`}
         >
           <div className="overflow-hidden">
-            <div className="px-4 pb-4 sm:px-5 sm:pb-5">
-              <div className="border-t border-forest/[0.08] pt-3 sm:pl-[4.5rem]">
-                <p className="text-sm leading-relaxed text-ink/70 sm:text-[15px]">{f.a}</p>
+            <div className={`px-4 pb-5 sm:pb-7 ${featured ? "sm:px-7" : "sm:px-5"}`}>
+              <div className={`border-t border-forest/[0.08] pt-5 ${featured ? "sm:ml-16 sm:pl-0" : "sm:ml-16"}`}>
+                <p
+                  className={`leading-relaxed text-ink/70 ${
+                    featured ? "max-w-4xl text-base sm:text-lg" : "max-w-3xl text-sm sm:text-[15px]"
+                  }`}
+                >
+                  {f.a}
+                </p>
                 {f.link && (
                   <Link
                     href={f.link.href}
@@ -112,10 +131,9 @@ export default function FAQ() {
     );
   };
 
-  /**
-   * One grid for both columns, filled column-first (1–5 left, 6–10 right). Because the rows are
-   * shared, a taller or opened card keeps the two columns level with each other.
-   */
+  const featured = ALL_FAQS.find((f) => open.includes(f.q));
+  const remaining = ALL_FAQS.filter((f) => f !== featured);
+
   return (
     <section id="faq" aria-labelledby="faq-title" className="relative overflow-hidden bg-cream py-16 md:py-24">
       <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-56 bg-gradient-to-b from-sand/70 to-transparent" />
@@ -133,12 +151,16 @@ export default function FAQ() {
           </h2>
         </Reveal>
 
-        <ul
-          className="mt-8 grid gap-3.5 md:mt-12 md:grid-flow-col md:grid-cols-2 md:gap-4"
-          style={{ gridTemplateRows: `repeat(${SPLIT}, auto)` }}
-        >
-          {faqs.map((f, i) => card(f, i))}
-        </ul>
+        <div className="mt-8 md:mt-12">
+          {featured && (
+            <ul className="mb-4">
+              {card(featured, ALL_FAQS.indexOf(featured), true)}
+            </ul>
+          )}
+          <ul className="grid gap-3.5 md:grid-cols-2 md:gap-4">
+            {remaining.map((f) => card(f, ALL_FAQS.indexOf(f)))}
+          </ul>
+        </div>
       </div>
     </section>
   );

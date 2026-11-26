@@ -64,10 +64,23 @@ export const POST = handle(async (req) => {
             extra("country", "Country", 80, true),
             `Location: ${location}`,
             extra("products", "Products interested", 200, true),
+            extra("packSizes", "Pack sizes", 200),
             extra("quantity", "Estimated quantity", 300, true),
             extra("message", "Additional requirements", 300),
           ];
   const note = [`${t.label} · ${company}`, ...lines].filter(Boolean).join("\n").slice(0, 500);
+
+  // Parse product details for order items
+  const productNames = (body.products as string)?.split(", ") ?? [];
+  const packSizes = (body.packSizes as string)?.split(", ") ?? [];
+  const quantities = (body.quantity as string)?.split("; ") ?? [];
+  const enquiryItems = productNames.map((name, i) => ({
+    product_id: null,
+    name: name.trim(),
+    pack_size: packSizes[i]?.trim() ?? "",
+    qty: 1,
+    price: 0,
+  }));
 
   const sb = serviceClient();
 
@@ -143,7 +156,10 @@ export const POST = handle(async (req) => {
   if (orderRes.error) throw dbError(orderRes.error);
   const number = Number(orderRes.data.number);
 
-  const { error: iErr } = await sb.from("order_items").insert({ order_number: number, product_id: null, name: t.item, pack_size: "", qty: 1, price: 0 });
+  // Insert order items for each product in the enquiry
+  const { error: iErr } = await sb.from("order_items").insert(
+    enquiryItems.map((item) => ({ order_number: number, ...item }))
+  );
   if (iErr) throw dbError(iErr);
   const { error: eErr } = await sb.from("order_events").insert({ order_number: number, label: "Enquiry received", note: "Website enquiry — no payment or stock involved" });
   if (eErr) throw dbError(eErr);

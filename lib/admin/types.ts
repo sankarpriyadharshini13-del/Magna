@@ -26,6 +26,8 @@ export interface AdminProduct {
   packSize: string;
   /** Every pack size the product is sold in, in display order. */
   packSizes: string[];
+  /** Stock quantity per pack size, e.g. {"200 g": 50, "500 g": 30}. Falls back to global stock if empty. */
+  packStock: Record<string, number>;
   /** Which admin catalogue (and storefront page) the product belongs to. */
   channel: ProductChannel;
   /** Position on the website inside its catalogue (1 = first). 0 = not positioned yet. */

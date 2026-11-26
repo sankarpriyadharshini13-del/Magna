@@ -50,6 +50,7 @@ export function mapProduct(r: Row): AdminProduct {
     stock: r.stock ?? 0,
     packSize: cleanPackSizes(r.pack_sizes, r.pack_size ?? "")[0] ?? "",
     packSizes: cleanPackSizes(r.pack_sizes, r.pack_size ?? ""),
+    packStock: (r.pack_stock as Record<string, number>) ?? {},
     channel: r.channel === "export" ? "export" : "ecommerce",
     sortOrder: r.sort_order ?? 0,
     tag: r.tag ?? "",
@@ -213,6 +214,7 @@ export interface ProductInput {
   stock: number;
   packSize: string;
   packSizes: string[];
+  packStock: Record<string, number>;
   channel: ProductChannel;
   tag: string;
   description: string;
@@ -248,6 +250,21 @@ export function parseProduct(body: Row): ProductInput {
   if (rawSizes.some((s) => typeof s === "string" && s.trim().length > 40))
     throw bad("Each pack size must be at most 40 characters.");
   const packSizes = cleanPackSizes(rawSizes.filter((s): s is string => typeof s === "string"));
+
+  // Parse packStock: a JSON object mapping pack size to quantity
+  let packStock: Record<string, number> = {};
+  if (body.packStock !== undefined && body.packStock !== null) {
+    if (typeof body.packStock !== "object" || body.packStock === null || Array.isArray(body.packStock)) {
+      throw bad("Pack stock must be an object mapping pack sizes to quantities.");
+    }
+    for (const [key, value] of Object.entries(body.packStock)) {
+      if (typeof key !== "string" || key.trim().length > 40) {
+        throw bad("Pack size keys must be text labels of at most 40 characters.");
+      }
+      const qty = int(value, `Stock for ${key}`, 0, 1_000_000);
+      packStock[key.trim()] = qty;
+    }
+  }
   const channel: ProductChannel = body.channel === "export" ? "export" : "ecommerce";
   if (body.channel !== undefined && body.channel !== "ecommerce" && body.channel !== "export")
     throw bad("Choose either the Ecommerce or Export catalogue.");
@@ -269,6 +286,7 @@ export function parseProduct(body: Row): ProductInput {
     stock,
     packSize: packSizes[0] ?? "",
     packSizes,
+    packStock,
     channel,
     tag: str(body.tag, "Tag", 30),
     description: str(body.description, "Description", 2000),

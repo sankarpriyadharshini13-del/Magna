@@ -7,6 +7,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useProducts } from "@/context/ProductsContext";
 import { useUI } from "@/context/UIContext";
 import { getSupabase } from "@/lib/supabase";
+import { packSizesOf } from "@/lib/pack";
 
 export type EnquiryType = "business" | "distributor" | "export";
 
@@ -81,7 +82,7 @@ const FALLBACK_EXPORT_PRODUCTS = [
 
 /**
  * Product rows for the export enquiry: every row pairs an export product with its own
- * estimated quantity. Only export-specific catalogue items are listed for export enquiries.
+ * pack size selection and estimated quantity. Only export-specific catalogue items are listed for export enquiries.
  */
 function ProductPicker({ type = "export" }: { type?: EnquiryType }) {
   const { products } = useProducts();
@@ -123,9 +124,10 @@ function ProductPicker({ type = "export" }: { type?: EnquiryType }) {
     <div>
       {/* Column headings line up with the fields from sm up; on phones the first row labels itself. */}
       <div className="mb-2 hidden gap-2 sm:flex sm:gap-3">
-        <div className="grid flex-1 gap-2 sm:grid-cols-2 sm:gap-3">
-          <label htmlFor="enq-products" className="block text-sm font-semibold text-forest">Products Interested</label>
-          <label htmlFor="enq-quantity" className="block text-sm font-semibold text-forest">Estimated Quantity</label>
+        <div className="grid flex-1 gap-2 sm:grid-cols-3 sm:gap-3">
+          <label htmlFor="enq-products" className="block text-sm font-semibold text-forest">Product</label>
+          <label htmlFor="enq-pack-size" className="block text-sm font-semibold text-forest">Pack Size</label>
+          <label htmlFor="enq-quantity" className="block text-sm font-semibold text-forest">Quantity</label>
         </div>
         <span aria-hidden="true" className="w-11 shrink-0" />
       </div>
@@ -133,10 +135,10 @@ function ProductPicker({ type = "export" }: { type?: EnquiryType }) {
       <div className="space-y-3 sm:space-y-2">
         {rows.map((key, i) => (
           <div key={key} className="flex items-end gap-2 sm:items-center sm:gap-3">
-            <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-2 sm:gap-3">
+            <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-3 sm:gap-3">
               <div className="min-w-0">
                 {i === 0 && (
-                  <label htmlFor="enq-products" className="mb-1.5 block text-sm font-semibold text-forest sm:hidden">Products Interested</label>
+                  <label htmlFor="enq-products" className="mb-1.5 block text-sm font-semibold text-forest sm:hidden">Product</label>
                 )}
                 <div className="relative min-w-0">
                   <select
@@ -147,11 +149,10 @@ function ProductPicker({ type = "export" }: { type?: EnquiryType }) {
                     aria-label={i === 0 ? undefined : `Product ${i + 1}`}
                     className={`${field} cursor-pointer appearance-none pr-10 invalid:text-ink/35 [&>option]:text-ink`}
                   >
-                    <option value="">Select an export product</option>
+                    <option value="">Select a product</option>
                     {availableProducts.map((p) => (
                       <option key={p.id} value={p.name}>
                         {p.name}
-                        {p.packSize ? ` · ${p.packSize}` : ""}
                       </option>
                     ))}
                   </select>
@@ -160,15 +161,41 @@ function ProductPicker({ type = "export" }: { type?: EnquiryType }) {
               </div>
               <div className="min-w-0">
                 {i === 0 && (
-                  <label htmlFor="enq-quantity" className="mb-1.5 block text-sm font-semibold text-forest sm:hidden">Estimated Quantity</label>
+                  <label htmlFor="enq-pack-size" className="mb-1.5 block text-sm font-semibold text-forest sm:hidden">Pack Size</label>
+                )}
+                <div className="relative min-w-0">
+                  <select
+                    id={i === 0 ? "enq-pack-size" : undefined}
+                    name="packSize"
+                    required
+                    defaultValue=""
+                    aria-label={i === 0 ? undefined : `Pack size for product ${i + 1}`}
+                    className={`${field} cursor-pointer appearance-none pr-10 invalid:text-ink/35 [&>option]:text-ink`}
+                  >
+                    <option value="">Select pack size</option>
+                    {availableProducts.map((p) => {
+                      const sizes = packSizesOf(p).filter(Boolean);
+                      return sizes.map((size) => (
+                        <option key={`${p.id}-${size}`} value={size}>
+                          {size}
+                        </option>
+                      ));
+                    })}
+                  </select>
+                  <ChevronIcon width={16} height={16} className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-ink/50" />
+                </div>
+              </div>
+              <div className="min-w-0">
+                {i === 0 && (
+                  <label htmlFor="enq-quantity" className="mb-1.5 block text-sm font-semibold text-forest sm:hidden">Quantity</label>
                 )}
                 <input
                   id={i === 0 ? "enq-quantity" : undefined}
                   name="quantity"
                   required
                   type="text"
-                  placeholder="e.g., 500 kg, 1000 units"
-                  aria-label={i === 0 ? undefined : `Estimated quantity for product ${i + 1}`}
+                  placeholder="e.g., 500"
+                  aria-label={i === 0 ? undefined : `Quantity for product ${i + 1}`}
                   className={field}
                 />
               </div>
@@ -214,10 +241,11 @@ export default function EnquiryForm({ type }: { type: EnquiryType }) {
   const submit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const d = new FormData(e.currentTarget);
-    // Every product row posts one product plus the quantity typed beside it, in DOM order.
+    // Every product row posts one product, pack size, and quantity, in DOM order.
     const names = d.getAll("products").map((v) => String(v).trim());
+    const packSizes = d.getAll("packSize").map((v) => String(v).trim());
     const quantities = d.getAll("quantity").map((v) => String(v).trim());
-    const picks = names.map((product, i) => ({ product, quantity: quantities[i] ?? "" })).filter((p) => p.product);
+    const picks = names.map((product, i) => ({ product, packSize: packSizes[i] ?? "", quantity: quantities[i] ?? "" })).filter((p) => p.product);
     if (type === "export" && picks.length === 0) {
       setError("Please select at least one product.");
       return;
@@ -244,7 +272,8 @@ export default function EnquiryForm({ type }: { type: EnquiryType }) {
           country: d.get("country"),
           location: d.get("location"),
           products: picks.length ? picks.map((p) => p.product).join(", ") : null,
-          quantity: picks.length ? picks.map((p) => `${p.quantity} (${p.product})`).join("; ") : null,
+          packSizes: picks.length ? picks.map((p) => p.packSize).join(", ") : null,
+          quantity: picks.length ? picks.map((p) => `${p.quantity} (${p.product} - ${p.packSize})`).join("; ") : null,
           message: d.get("message"),
         }),
       });

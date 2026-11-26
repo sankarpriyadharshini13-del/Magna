@@ -37,6 +37,8 @@ interface Draft {
   channel: ProductChannel;
   /** Every pack size the product is sold in; the first one is the default on the shop. */
   packSizes: string[];
+  /** Stock quantity per pack size, e.g. {"200 g": "50", "500 g": "30"}. */
+  packStock: Record<string, string>;
   tag: string;
   description: string;
   /** "Know your pack" block — optional, shown on the product page when switched on. */
@@ -53,6 +55,13 @@ const toDraft = (p: AdminProduct | null): Draft => {
   // The form shows exactly what is saved for the product — nothing is pre-filled from bundled copy.
   const saved = p?.pack;
   const sizes = p ? (p.packSizes.length ? p.packSizes : [p.packSize].filter(Boolean)) : [];
+  // Initialize packStock from product data or empty object
+  const packStock: Record<string, string> = {};
+  if (p?.packStock) {
+    for (const [size, qty] of Object.entries(p.packStock)) {
+      packStock[size] = String(qty);
+    }
+  }
   return {
     name: p?.name ?? "",
     originalPrice: p?.originalPrice != null ? String(p.originalPrice) : "",
@@ -60,6 +69,7 @@ const toDraft = (p: AdminProduct | null): Draft => {
     stock: p ? String(p.stock) : "0",
     channel: p?.channel ?? "ecommerce",
     packSizes: sizes.length ? sizes : [""],
+    packStock,
     tag: p?.tag ?? "",
     description: p?.description ?? "",
     // New products start with the block off; existing ones keep whatever was saved.
@@ -167,6 +177,7 @@ export default function ProductsScreen() {
     stock: p.stock,
     packSize: p.packSize,
     packSizes: p.packSizes,
+    packStock: p.packStock,
     channel: p.channel,
     tag: p.tag,
     description: p.description,
@@ -198,6 +209,20 @@ export default function ProductsScreen() {
     if (!Number.isInteger(stock) || stock < 0) errs.stock = "Use a whole number, 0 or more.";
     if (draft.packSizes.some((s) => s.trim().length > 40)) errs.packSizes = "Each pack size must be 40 characters or fewer.";
     const packSizes = cleanPackSizes(draft.packSizes);
+
+    // Validate packStock quantities
+    const packStock: Record<string, number> = {};
+    for (const [size, qtyStr] of Object.entries(draft.packStock)) {
+      if (qtyStr.trim() !== "") {
+        const qty = Number(qtyStr);
+        if (!Number.isInteger(qty) || qty < 0) {
+          errs.packStock = `Invalid quantity for "${size}". Use a whole number, 0 or more.`;
+        } else {
+          packStock[size] = qty;
+        }
+      }
+    }
+
     setErrors(errs);
     if (Object.keys(errs).length) return toast("Please fix the highlighted fields.", "error");
 
@@ -213,6 +238,7 @@ export default function ProductsScreen() {
         stock,
         packSize: packSizes[0] ?? "",
         packSizes,
+        packStock,
         channel: draft.channel,
         tag: draft.tag.trim(),
         description: draft.description.trim(),
@@ -528,17 +554,36 @@ export default function ProductsScreen() {
             </div>
           </div>
           <div className="adm-fg">
-            <span className="adm-fl" id="pf-packs-label">Pack sizes</span>
+            <span className="adm-fl" id="pf-packs-label">Pack sizes & quantities</span>
             <div role="group" aria-labelledby="pf-packs-label" style={{ display: "grid", gap: 8 }}>
               {draft.packSizes.map((size, i) => (
-                <div key={i} style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <div key={i} style={{ display: "grid", gridTemplateColumns: "2fr 1fr auto", gap: 8, alignItems: "center" }}>
                   <input
                     className={`adm-in${errors.packSizes ? " err" : ""}`}
                     value={size}
                     maxLength={40}
                     placeholder={i === 0 ? "e.g. 200 g (default)" : "e.g. 500 g"}
                     aria-label={`Pack size ${i + 1}${i === 0 ? " (default)" : ""}`}
-                    onChange={(e) => set("packSizes", draft.packSizes.map((s, j) => (j === i ? e.target.value : s)))}
+                    onChange={(e) => {
+                      const newSizes = draft.packSizes.map((s, j) => (j === i ? e.target.value : s));
+                      set("packSizes", newSizes);
+                      // Update packStock key when size changes
+                      const oldSize = draft.packSizes[i];
+                      if (oldSize !== e.target.value && draft.packStock[oldSize]) {
+                        const newStock = { ...draft.packStock };
+                        newStock[e.target.value] = newStock[oldSize];
+                        delete newStock[oldSize];
+                        set("packStock", newStock);
+                      }
+                    }}
+                  />
+                  <input
+                    className={`adm-in${errors.packStock ? " err" : ""}`}
+                    inputMode="numeric"
+                    value={draft.packStock[size] || ""}
+                    placeholder="Qty"
+                    aria-label={`Quantity for ${size || "pack size"}`}
+                    onChange={(e) => set("packStock", { ...draft.packStock, [size]: e.target.value })}
                   />
                   {draft.packSizes.length > 1 && (
                     <button
@@ -546,7 +591,13 @@ export default function ProductsScreen() {
                       className="adm-btn sm"
                       aria-label={`Remove pack size ${i + 1}`}
                       title="Remove this pack size"
-                      onClick={() => set("packSizes", draft.packSizes.filter((_, j) => j !== i))}
+                      onClick={() => {
+                        const removedSize = draft.packSizes[i];
+                        const newStock = { ...draft.packStock };
+                        delete newStock[removedSize];
+                        set("packStock", newStock);
+                        set("packSizes", draft.packSizes.filter((_, j) => j !== i));
+                      }}
                     >
                       ×
                     </button>
@@ -564,9 +615,10 @@ export default function ProductsScreen() {
               + Add pack size
             </button>
             <p className="adm-muted" style={{ margin: "6px 0 0", fontSize: 12 }}>
-              The first size is preselected on the shop; customers can choose any size from the dropdown. Up to {MAX_PACK_SIZES}.
+              The first size is preselected on the shop; customers can choose any size from the dropdown. Set quantity per pack size for detailed stock tracking. Up to {MAX_PACK_SIZES}.
             </p>
             {errors.packSizes && <p className="adm-err">{errors.packSizes}</p>}
+            {errors.packStock && <p className="adm-err">{errors.packStock}</p>}
           </div>
           <div className="adm-fg">
             <label className="adm-fl" htmlFor="pf-tag">Tag</label>

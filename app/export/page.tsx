@@ -74,14 +74,12 @@ const registrations = [
     wordmark: "FSSAI",
     type: "Central Licence",
     authority: "Food Safety and Standards Authority of India",
-    body: "The licence covers the kitchen where every pack is filled, and its details travel with each consignment's documents.",
     image: "/images/fssai-logo.png",
   },
   {
     wordmark: "MSME",
     type: "Udyam Registered",
     authority: "Ministry of Micro, Small & Medium Enterprises, Government of India",
-    body: "A registered Indian micro-enterprise, so importers can keep our Udyam credentials on file beside the invoice and packing list.",
     image: "/images/msme-logo.svg",
   },
 ] as const;
@@ -137,12 +135,11 @@ export default async function ExportPage() {
               </div>
 
               {/* Trade badges strip */}
-              <div className="mt-12 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:gap-4">
+              <div className="mt-12 grid gap-3 sm:grid-cols-3 lg:gap-4">
                 {[
                   { label: "Port of Chennai", sub: "Sea & Air Freight Hub" },
                   { label: "GI-Tagged Sourcing", sub: "Traceable single-origin" },
                   { label: "FCL & LCL Ready", sub: "Flexible container loads" },
-                  { label: "FSSAI & APEDA", sub: "Fully statutory compliant" },
                 ].map((pill) => (
                   <div key={pill.label} className="rounded-2xl border border-forest/10 bg-white/60 p-3.5 text-center shadow-soft backdrop-blur-sm">
                     <p className="font-display text-sm font-bold text-forest">{pill.label}</p>
@@ -263,7 +260,7 @@ export default async function ExportPage() {
           <Reveal>
             <SectionHeading
               align="center"
-              eyebrow="Certified Quality & Regulatory Compliance"
+              eyebrow="Official registrations"
               title={<>Transparent, <span className="italic text-clay">fully compliant</span> trade</>}
               lead="Global trade demands complete transparency and strict adherence to statutory standards. Magna Eco Bites operates with full regulatory compliance to ensure smooth customs clearance at destination ports worldwide."
             />
@@ -289,9 +286,6 @@ export default async function ExportPage() {
                       <p className="mt-2 text-xs font-bold uppercase tracking-[0.18em] text-clay">{r.type}</p>
                       <p className="mt-1 text-xs leading-snug text-ink/65">{r.authority}</p>
                     </div>
-                  </div>
-                  <div className="mt-6 flex-1 border-t border-forest/[0.08] pt-4">
-                    <p className="text-sm leading-relaxed text-ink/75 sm:text-[15px]">{r.body}</p>
                   </div>
                 </article>
               </Reveal>

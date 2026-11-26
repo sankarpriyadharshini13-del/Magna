@@ -13,7 +13,7 @@ export default function ReviewCarousel({
   tone = "light",
 }: {
   reviews: ReviewCardData[];
-  /** "dark" is for the forest band on the home page. */
+  /** "dark" is for sections sitting on a forest-coloured background. */
   tone?: "light" | "dark";
 }) {
   const dark = tone === "dark";

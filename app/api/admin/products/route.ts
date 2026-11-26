@@ -40,6 +40,7 @@ export const POST = handle(async (req) => {
     stock: input.stock,
     pack_size: input.packSize,
     pack_sizes: input.packSizes,
+    pack_stock: input.packStock,
     channel: input.channel,
     tag: input.tag,
     description: input.description,
@@ -65,6 +66,7 @@ export const POST = handle(async (req) => {
     "pack_who_can_eat",
     "pack_who_should_be_careful",
     "pack_customized",
+    "pack_stock",
   ];
   const packContent = packHasContent(input.pack);
 
@@ -96,6 +98,8 @@ export const POST = handle(async (req) => {
           throw new HttpError(503, "To save an original price, run supabase/migrations/20261029000000_original_price.sql in the Supabase SQL Editor first.", "SCHEMA_MISSING");
         if (missing.includes("pack_sizes") && input.packSizes.length > 1)
           throw new HttpError(503, "To save more than one pack size, run supabase/migrations/20261123000000_product_channels_pack_sizes.sql in the Supabase SQL Editor first.", "SCHEMA_MISSING");
+        if (missing.includes("pack_stock") && Object.keys(input.packStock).length > 0)
+          throw new HttpError(503, "To save pack size quantities, run supabase/migrations/20261126000000_pack_size_quantities.sql in the Supabase SQL Editor first.", "SCHEMA_MISSING");
         if (missing.includes("channel") && input.channel === "export")
           throw new HttpError(503, "To add a product to the Export catalogue, run supabase/migrations/20261123000000_product_channels_pack_sizes.sql in the Supabase SQL Editor first.", "SCHEMA_MISSING");
         // The pack columns are missing: saving the block's copy needs the SQL first.

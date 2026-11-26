@@ -18,14 +18,14 @@ export default function NaturalSourcing({ learnMore = true }: { learnMore?: bool
         {/* Left Column: Sourcing Editorial Photo — stretches from the first line of copy to the last */}
         <div className="order-2 lg:order-1 lg:col-span-5 lg:h-full">
           <Reveal className="h-full">
-            <figure className="group relative mx-auto flex h-full w-full flex-col overflow-hidden rounded-[2.25rem] bg-sand shadow-lift ring-1 ring-forest/[0.08]">
+            <figure className="relative mx-auto flex h-full w-full flex-col overflow-hidden rounded-[2.25rem] bg-sand shadow-lift ring-1 ring-forest/[0.08]">
               <div className="relative aspect-[4/5] w-full overflow-hidden sm:aspect-[16/10] lg:aspect-auto lg:min-h-0 lg:flex-1">
                 <Image
                   src={sourcingPhoto.src}
                   alt={sourcingPhoto.alt}
                   fill
                   sizes="(min-width:1280px) 480px, (min-width:1024px) 42vw, (min-width:640px) 70vw, 92vw"
-                  className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                  className="object-cover"
                 />
                 {/* Soft ambient gradient overlay to guarantee text legibility */}
                 <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-forest/85 via-forest/20 to-transparent" />

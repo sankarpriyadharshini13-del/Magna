@@ -82,11 +82,42 @@ export default function OrderFormModal({
   const [state, setState] = useState(order ? order.location.state || customer?.state || "Tamil Nadu" : "Tamil Nadu");
   const [pincode, setPincode] = useState(order?.location.pincode ?? "");
   const [note, setNote] = useState(order?.note ?? "");
-  const [lines, setLines] = useState<Line[]>(() =>
-    order
-      ? order.items.map((i) => ({ key: nextKey++, productId: i.productId || null, name: i.name, packSize: i.packSize, qty: i.qty, price: String(i.price) }))
-      : [blankLine()],
-  );
+  const [lines, setLines] = useState<Line[]>(() => {
+    if (!order) return [blankLine()];
+
+    // For enquiries with source="enquiry", the items might not have been saved properly in older versions.
+    // Parse the note to extract product details if needed.
+    if (order.source === "enquiry" && order.items.length === 1 && order.items[0].name.includes("enquiry")) {
+      const parsedLines: Line[] = [];
+      const noteLines = order.note.split("\n");
+      for (const line of noteLines) {
+        if (line.startsWith("Products interested:")) {
+          const products = line.replace("Products interested:", "").trim().split(", ");
+          const packSizesLine = noteLines.find((l) => l.startsWith("Pack sizes:"));
+          const packSizes = packSizesLine ? packSizesLine.replace("Pack sizes:", "").trim().split(", ") : [];
+          const quantityLine = noteLines.find((l) => l.startsWith("Estimated quantity:"));
+          const quantities = quantityLine ? quantityLine.replace("Estimated quantity:", "").trim().split("; ") : [];
+
+          products.forEach((product, i) => {
+            const qtyMatch = quantities[i]?.match(/(\d+)/);
+            const qty = qtyMatch ? parseInt(qtyMatch[1], 10) : 1;
+            parsedLines.push({
+              key: nextKey++,
+              productId: null,
+              name: product.trim(),
+              packSize: packSizes[i]?.trim() || "",
+              qty,
+              price: "0",
+            });
+          });
+        }
+      }
+      return parsedLines.length > 0 ? parsedLines : [blankLine()];
+    }
+
+    // Normal order: use the items as-is
+    return order.items.map((i) => ({ key: nextKey++, productId: i.productId || null, name: i.name, packSize: i.packSize, qty: i.qty, price: String(i.price) }));
+  });
   const [shipping, setShipping] = useState(order ? String(order.shipping) : "0");
   const [discount, setDiscount] = useState(order ? String(order.discount ?? 0) : "0");
   const [deliveryCharge, setDeliveryCharge] = useState(order ? String(order.deliveryCharge ?? 0) : "0");
@@ -105,7 +136,10 @@ export default function OrderFormModal({
   const [busy, setBusy] = useState(false);
 
   const num = (v: string) => (v.trim() === "" ? 0 : Number(v));
-  const priceOf = (l: Line) => (l.price.trim() === "" ? NaN : Number(l.price));
+  const priceOf = (l: Line) => {
+    const val = Number(l.price);
+    return l.productId ? (l.price.trim() === "" ? NaN : val) : val; // Enquiry lines always have a valid price (0)
+  };
   const subtotal = lines.reduce((s, l) => s + (Number.isFinite(priceOf(l)) ? priceOf(l) * l.qty : 0), 0);
   // Bulk orders are priced per line (bulk rates), so they have no separate discount.
   const discountNum = kind === "bulk" ? 0 : num(discount);
@@ -161,9 +195,15 @@ export default function OrderFormModal({
     if (pincode.trim() && !/^\d{6}$/.test(pincode.trim())) e.pincode = "Pincode must be 6 digits.";
     if (kind === "bulk" && gst.trim() && !/^[0-9A-Za-z]{15}$/.test(gst.trim())) e.gst = "GST number is 15 letters and digits.";
     if (filledLines.length === 0) e.items = "Add at least one product.";
-    else if (filledLines.some((l) => !l.productId && !editing)) e.items = "Choose a product on every line.";
-    else if (filledLines.some((l) => !Number.isInteger(priceOf(l)) || priceOf(l) < 0)) e.items = kind === "normal" ? "One of the products has no price yet — set it in Products & Stock, or use a bulk order." : "Enter a price for every product.";
-    else if (filledLines.some((l) => shortOf(l) != null)) e.items = "Some quantities are more than the stock available.";
+    // For enquiries (source="enquiry"), allow lines without productId - they have name and packSize instead
+    const isEnquiry = order?.source === "enquiry";
+    if (!isEnquiry && filledLines.some((l) => !l.productId && !editing)) e.items = "Choose a product on every line.";
+    // For non-enquiry lines, validate prices
+    if (!isEnquiry && !e.items && filledLines.some((l) => l.productId && (!Number.isInteger(priceOf(l)) || priceOf(l) < 0))) {
+      e.items = kind === "normal" ? "One of the products has no price yet — set it in Products & Stock, or use a bulk order." : "Enter a price for every product.";
+    }
+    // Only check stock for non-enquiry lines with valid products
+    if (!isEnquiry && !e.items && filledLines.some((l) => shortOf(l) != null)) e.items = "Some quantities are more than the stock available.";
     if (subtotal + num(shipping) - discountNum < 0) e.discount = "The discount can't be more than the total.";
     if (kind === "bulk" && trackingUrl.trim() && !/^https?:\/\/\S+\.\S+/i.test(trackingUrl.trim())) e.trackingUrl = "Start the link with https://";
     if (!onlinePaid && mode === "advance" && (!Number.isInteger(advanceNum) || advanceNum <= 0 || advanceNum >= total)) e.advance = "Enter an advance above ₹0 and below the total.";
@@ -199,7 +239,13 @@ export default function OrderFormModal({
       payment_mode: onlinePaid ? "pending" : mode,
       method,
       amount_paid: mode === "advance" ? advanceNum : 0,
-      items: filledLines.map((l) => ({ product_id: l.productId, name: l.name, pack_size: l.packSize, qty: l.qty, price: priceOf(l) })),
+      items: filledLines.map((l) => ({
+        product_id: l.productId,
+        name: l.name,
+        pack_size: l.packSize,
+        qty: l.qty,
+        price: l.productId ? priceOf(l) : 0, // Enquiry lines have no price
+      })),
     };
     const res = editing
       ? await mutate<{ number: number }>(`/api/admin/orders/${order!.number}`, "PUT", body, `Order #${label(order!.number)} updated.`)
@@ -361,10 +407,16 @@ export default function OrderFormModal({
                 const price = priceOf(l);
                 const removed = (l.productId && !p) || (!l.productId && l.name);
                 const sizes = sizesFor(p);
+                const isEnquiryLine = !l.productId && l.name && order?.source === "enquiry";
                 return (
                   <tr key={l.key}>
                     <td className="mo-prod">
-                      {removed ? (
+                      {isEnquiryLine ? (
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold">{l.name}</span>
+                          <span className="text-xs text-ink/50">(Enquiry)</span>
+                        </div>
+                      ) : removed ? (
                         <span title="This product was removed from the catalogue">{l.name} <em>(removed)</em></span>
                       ) : (
                         <select
@@ -379,7 +431,16 @@ export default function OrderFormModal({
                       )}
                     </td>
                     <td className="mo-pack">
-                      {sizes.length > 1 ? (
+                      {isEnquiryLine ? (
+                        <input
+                          type="text"
+                          className="mo-in"
+                          value={l.packSize}
+                          onChange={(e) => update(l.key, { packSize: e.target.value })}
+                          placeholder="Pack size"
+                          aria-label={`Pack size for ${l.name}`}
+                        />
+                      ) : sizes.length > 1 ? (
                         <select
                           className="mo-pack-sel"
                           aria-label={`Pack size of product ${idx + 1}`}

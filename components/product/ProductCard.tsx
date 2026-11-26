@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import type { Product } from "@/types";
 import ProductImage from "./ProductImage";
@@ -23,6 +26,8 @@ export default function ProductCard({ product, priority = false }: { product: Pr
   const href = `/products/${product.slug}`;
   const off = percentOff(product.priceInr, product.originalPriceInr);
   const sizes = packSizesOf(product).filter(Boolean);
+  const [selectedSize, setSelectedSize] = useState(() => defaultPackSize(product));
+
   return (
     <article className="group relative flex h-full flex-col rounded-[1.5rem] bg-white p-2.5 shadow-soft ring-1 ring-forest/[0.06] transition-all duration-300 hover:-translate-y-1 hover:shadow-lift focus-within:shadow-lift">
       <Link href={href} className="focus-ring relative block aspect-square overflow-hidden rounded-[1.1rem] bg-sand" aria-label={`View ${product.name}`}>
@@ -47,13 +52,33 @@ export default function ProductCard({ product, priority = false }: { product: Pr
       </Link>
 
       <div className="flex flex-1 flex-col px-2.5 pb-2 pt-4">
-        <p className="text-sm font-extrabold uppercase tracking-[0.18em] text-ink/45">
-          {sizes.length > 0 ? sizes.join(" · ") : "Pack size to be confirmed"}
-        </p>
-        <h3 className="mt-1 font-display text-xl leading-tight text-forest">
+        <h3 className="font-display text-xl leading-tight text-forest">
           <Link href={href} className="focus-ring rounded transition-colors hover:text-clay">{product.name}</Link>
         </h3>
         <p className="mt-2 line-clamp-2 flex-1 text-sm leading-relaxed text-ink/60">{product.description}</p>
+
+        {/* Circular pack size selector */}
+        {sizes.length > 1 && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {sizes.map((size) => (
+              <button
+                key={size}
+                type="button"
+                onClick={() => setSelectedSize(size)}
+                className={`focus-ring inline-flex h-8 min-w-[3rem] items-center justify-center rounded-full px-3 text-xs font-semibold transition-all ${
+                  selectedSize === size
+                    ? "bg-forest text-cream shadow-sm"
+                    : "bg-sand/60 text-ink/70 hover:bg-sand hover:text-forest"
+                }`}
+                aria-label={`Select ${size} pack size`}
+                aria-pressed={selectedSize === size}
+              >
+                {size}
+              </button>
+            ))}
+          </div>
+        )}
+
         <Link
           href={href}
           className="focus-ring mt-3 inline-flex items-center gap-1 self-start rounded text-sm font-semibold text-forest underline-offset-4 hover:text-clay hover:underline"
@@ -79,7 +104,7 @@ export default function ProductCard({ product, priority = false }: { product: Pr
             <AddToCartButton
               productId={product.id}
               name={product.name}
-              packSize={defaultPackSize(product)}
+              packSize={selectedSize}
               disabled={out}
               compact
               className="!min-h-10 shrink-0 !px-4 !text-sm !shadow-none hover:!translate-y-0"
