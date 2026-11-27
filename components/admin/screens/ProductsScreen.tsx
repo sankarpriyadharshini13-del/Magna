@@ -138,15 +138,15 @@ export default function ProductsScreen() {
   // The panel refreshes its data every 20 s in the background. The draft is only filled when a
   // product is opened (or after a save), so typing and the Know your pack switch survive refreshes.
 
-  const live = data.products.filter((p) => p.visible);
-  const drafts = data.products.length - live.length;
+  const listed = data.products.filter((p) => p.channel === channel).sort(productOrder);
+  const live = listed.filter((p) => p.visible);
+  const drafts = listed.length - live.length;
   // Export catalogue items are enquiry-only: they never carry stock alerts or stock KPIs.
-  const shop = live.filter((p) => p.channel !== "export");
+  const shop = data.products.filter((p) => p.visible && p.channel !== "export");
   const low = shop.filter((p) => p.stock > 0 && p.stock <= LOW_STOCK);
   const out = shop.filter((p) => p.stock <= 0);
   const units = shop.reduce((s, p) => s + p.stock, 0);
   const alerts = shop.filter((p) => p.stock <= LOW_STOCK);
-  const listed = data.products.filter((p) => p.channel === channel).sort(productOrder);
   const activeChannel = CHANNELS.find((c) => c.id === channel) ?? CHANNELS[0];
 
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => {
@@ -333,7 +333,7 @@ export default function ProductsScreen() {
       </Topbar>
 
       <div className="adm-kpis p-kpis">
-        <div className="adm-kpi"><div className="l">Products</div><div className="v">{data.products.length}</div><div className="d">{live.length} live · {drafts} draft</div></div>
+        <div className="adm-kpi"><div className="l">Products</div><div className="v">{listed.length}</div><div className="d">{live.length} live · {drafts} draft</div></div>
         {channel !== "export" && (
           <>
             <div className="adm-kpi"><div className="l">Total shop units in stock</div><div className="v">{units}</div><div className="d">across {shop.length} shop items</div></div>
@@ -544,14 +544,7 @@ export default function ProductsScreen() {
               </p>
             </div>
           )}
-          <div className="adm-row2 adm-fg" style={draft.channel === "export" ? { gridTemplateColumns: "1fr" } : undefined}>
-            {draft.channel !== "export" && (
-              <div>
-                <label className="adm-fl" htmlFor="pf-stock">Shop stock</label>
-                <input id="pf-stock" className={`adm-in${errors.stock ? " err" : ""}`} inputMode="numeric" value={draft.stock} onChange={(e) => set("stock", e.target.value)} />
-                {errors.stock && <p className="adm-err">{errors.stock}</p>}
-              </div>
-            )}
+          <div className="adm-fg">
             <div>
               <label className="adm-fl" htmlFor="pf-channel">Catalogue</label>
               <select
@@ -653,9 +646,6 @@ export default function ProductsScreen() {
             >
               + Add pack size
             </button>
-            <p className="adm-muted" style={{ margin: "6px 0 0", fontSize: 12 }}>
-              Customers pay the selling price. Add an original price to show a struck-through “was” price. The first size is preselected; {draft.channel === "export" ? "export orders are enquiry-only." : "set shop stock per pack."} Up to {MAX_PACK_SIZES} sizes.
-            </p>
             {errors.packSizes && <p className="adm-err">{errors.packSizes}</p>}
             {draft.channel !== "export" && errors.packStock && <p className="adm-err">{errors.packStock}</p>}
             {errors.packPrices && <p className="adm-err">{errors.packPrices}</p>}
