@@ -29,6 +29,7 @@ function ExtraFields({ type }: { type: EnquiryType }) {
   if (type === "distributor") {
     return (
       <>
+        <ProductPicker type={type} />
         <div>
           <label htmlFor="enq-region" className={label}>Region / Territory</label>
           <input id="enq-region" name="region" required type="text" placeholder="City, district or state you want to cover" className={field} />
@@ -271,6 +272,7 @@ export default function EnquiryForm({ type }: { type: EnquiryType }) {
           current: d.get("current"),
           country: d.get("country"),
           location: d.get("location"),
+          items: picks,
           products: picks.length ? picks.map((p) => p.product).join(", ") : null,
           packSizes: picks.length ? picks.map((p) => p.packSize).join(", ") : null,
           quantity: picks.length ? picks.map((p) => `${p.quantity} (${p.product} - ${p.packSize})`).join("; ") : null,

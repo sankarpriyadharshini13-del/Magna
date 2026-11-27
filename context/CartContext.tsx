@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { useProducts } from "./ProductsContext";
 import { loadCart, saveCart } from "@/services/cartStorage";
-import { defaultPackSize } from "@/lib/pack";
+import { defaultPackSize, priceForPack } from "@/lib/pack";
 import type { CartItem, Product } from "@/types";
 
 const MAX_QTY = 20;
@@ -237,14 +237,15 @@ export function CartProvider({ children, onAdd }: { children: React.ReactNode; o
   const value = useMemo<CartValue>(() => {
     const lines: CartLine[] = items.flatMap((i) => {
       const product = getById(i.productId);
-      return product && product.channel !== "export"
-        ? [{
-            product,
-            packSize: i.packSize || defaultPackSize(product),
-            quantity: i.quantity,
-            lineTotal: product.priceInr != null ? product.priceInr * i.quantity : null,
-          }]
-        : [];
+      if (!product || product.channel === "export") return [];
+      const packSize = i.packSize || defaultPackSize(product);
+      const unitPrice = priceForPack(product, packSize).price;
+      return [{
+        product,
+        packSize,
+        quantity: i.quantity,
+        lineTotal: unitPrice != null ? unitPrice * i.quantity : null,
+      }];
     });
     return {
       lines,

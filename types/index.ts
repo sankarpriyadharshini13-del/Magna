@@ -22,6 +22,11 @@ export interface ProductPack {
 export type ProductChannel = "ecommerce" | "export";
 export const PRODUCT_CHANNELS: ProductChannel[] = ["ecommerce", "export"];
 
+export interface ProductPackPrice {
+  price: number | null;
+  originalPrice: number | null;
+}
+
 export interface Product {
   id: string;
   slug: string;
@@ -41,6 +46,8 @@ export interface Product {
   priceInr: number | null;
   /** Optional "was" price (MRP) in whole INR. Shown struck through when higher than `priceInr`. */
   originalPriceInr: number | null;
+  /** Prices by pack size. Missing entries fall back to the product's legacy price fields. */
+  packPrices?: Record<string, ProductPackPrice>;
   /** Path under /public. null renders an honest "photo coming soon" tile. */
   image: string | null;
   /** All photos (first one = `image`). Optional for the bundled fallback catalogue. */

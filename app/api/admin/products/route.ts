@@ -37,6 +37,7 @@ export const POST = handle(async (req) => {
     sku: skuFor(input.name, input.packSize, (existing?.sku as string) ?? ""),
     price: input.price,
     original_price: input.originalPrice,
+    pack_prices: input.packPrices,
     stock: input.stock,
     pack_size: input.packSize,
     pack_sizes: input.packSizes,
@@ -58,6 +59,7 @@ export const POST = handle(async (req) => {
   /** Columns that arrived with their own migration. If one is missing, save the rest without it. */
   const OPTIONAL_COLUMNS = [
     "original_price",
+    "pack_prices",
     "pack_sizes",
     "channel",
     "pack_enabled",
@@ -96,6 +98,8 @@ export const POST = handle(async (req) => {
       if (missing.length) {
         if (missing.includes("original_price") && input.originalPrice != null)
           throw new HttpError(503, "To save an original price, run supabase/migrations/20261029000000_original_price.sql in the Supabase SQL Editor first.", "SCHEMA_MISSING");
+        if (missing.includes("pack_prices") && Object.values(input.packPrices).some((prices) => prices.price != null || prices.originalPrice != null))
+          throw new HttpError(503, "To save prices by pack size, run supabase/migrations/20261127000000_product_pack_prices.sql in the Supabase SQL Editor first.", "SCHEMA_MISSING");
         if (missing.includes("pack_sizes") && input.packSizes.length > 1)
           throw new HttpError(503, "To save more than one pack size, run supabase/migrations/20261123000000_product_channels_pack_sizes.sql in the Supabase SQL Editor first.", "SCHEMA_MISSING");
         if (missing.includes("pack_stock") && Object.keys(input.packStock).length > 0)

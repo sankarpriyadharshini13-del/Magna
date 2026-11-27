@@ -59,7 +59,14 @@ export const POST = handle(async (req) => {
     body.type === "business"
       ? [extra("message", "Requirements", 300, true)]
       : body.type === "distributor"
-        ? [extra("region", "Region", 120, true), extra("current", "Current distribution", 300, true), extra("message", "Note", 300)]
+        ? [
+            extra("products", "Products interested", 200, true),
+            extra("packSizes", "Pack sizes", 200),
+            extra("quantity", "Estimated quantity", 300, true),
+            extra("region", "Region", 120, true),
+            extra("current", "Current distribution", 300, true),
+            extra("message", "Note", 300),
+          ]
         : [
             extra("country", "Country", 80, true),
             `Location: ${location}`,
@@ -71,16 +78,35 @@ export const POST = handle(async (req) => {
   const note = [`${t.label} · ${company}`, ...lines].filter(Boolean).join("\n").slice(0, 500);
 
   // Parse product details for order items
-  const productNames = (body.products as string)?.split(", ") ?? [];
-  const packSizes = (body.packSizes as string)?.split(", ") ?? [];
-  const quantities = (body.quantity as string)?.split("; ") ?? [];
-  const enquiryItems = productNames.map((name, i) => ({
-    product_id: null,
-    name: name.trim(),
-    pack_size: packSizes[i]?.trim() ?? "",
-    qty: 1,
-    price: 0,
-  }));
+  const rawItems = Array.isArray(body.items) ? body.items : null;
+  const productNames = typeof body.products === "string" ? body.products.split(", ") : [];
+  const packSizes = typeof body.packSizes === "string" ? body.packSizes.split(", ") : [];
+  const quantities = typeof body.quantity === "string" ? body.quantity.split("; ") : [];
+  const enquiryItems = (rawItems
+    ? rawItems.map((item, index) => {
+        if (typeof item !== "object" || item === null || Array.isArray(item)) throw new HttpError(400, `Product ${index + 1} isn't valid.`);
+        const values = item as Record<string, unknown>;
+        return {
+          name: str(values.product, `Product ${index + 1}`, 120, { required: true }),
+          packSize: str(values.packSize, `Pack size for product ${index + 1}`, 40),
+          quantityText: str(values.quantity, `Quantity for product ${index + 1}`, 300, { required: true }),
+        };
+      })
+    : productNames.filter((name) => name.trim()).map((name, i) => ({
+        name: name.trim(),
+        packSize: packSizes[i]?.trim() ?? "",
+        quantityText: quantities[i] ?? "",
+      })))
+    .map(({ name, packSize, quantityText }) => {
+    const numericQuantity = Number(quantityText.replace(/,/g, "").match(/^\s*(\d+)/)?.[1]);
+    return {
+      product_id: null,
+      name,
+      pack_size: packSize,
+      qty: Number.isSafeInteger(numericQuantity) && numericQuantity > 0 ? numericQuantity : 1,
+      price: 0,
+    };
+  });
 
   const sb = serviceClient();
 

@@ -1,4 +1,4 @@
-import type { ProductChannel, ProductPack } from "@/types";
+import type { ProductChannel, ProductPack, ProductPackPrice } from "@/types";
 
 export type OrderStatus = "New" | "Packed" | "Delivered" | "Cancelled";
 
@@ -21,6 +21,8 @@ export interface AdminProduct {
   price: number | null;
   /** Optional "was" price (MRP), whole INR. Shown struck through on the shop when higher than `price`. */
   originalPrice: number | null;
+  /** Selling and original prices by pack size. */
+  packPrices: Record<string, ProductPackPrice>;
   stock: number;
   /** First pack size, kept for order lines and older copy. */
   packSize: string;

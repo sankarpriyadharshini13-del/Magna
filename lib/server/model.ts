@@ -41,12 +41,29 @@ export function mapProduct(r: Row): AdminProduct {
           whoShouldBeCareful: r.pack_who_should_be_careful ?? "",
           customized: r.pack_customized === true,
         };
+  const packSizes = cleanPackSizes(r.pack_sizes, r.pack_size ?? "");
+  const savedPackPrices = r.pack_prices && typeof r.pack_prices === "object" && !Array.isArray(r.pack_prices)
+    ? (r.pack_prices as Record<string, { price?: number | null; originalPrice?: number | null }>)
+    : {};
+  const packPrices = Object.fromEntries(
+    (packSizes.length ? packSizes : [""]).map((size) => {
+      const savedPrice = savedPackPrices[size];
+      return [
+        size,
+        savedPrice
+          ? { price: savedPrice.price ?? null, originalPrice: savedPrice.originalPrice ?? null }
+          : { price: r.price ?? null, originalPrice: r.original_price ?? null },
+      ];
+    }),
+  );
+  const primaryPrice = packPrices[packSizes[0] ?? ""] ?? { price: r.price ?? null, originalPrice: r.original_price ?? null };
   return {
     id: r.id,
     name: r.name,
     sku: r.sku ?? "",
-    price: r.price ?? null,
-    originalPrice: r.original_price ?? null,
+    price: primaryPrice.price,
+    originalPrice: primaryPrice.originalPrice,
+    packPrices,
     stock: r.stock ?? 0,
     packSize: cleanPackSizes(r.pack_sizes, r.pack_size ?? "")[0] ?? "",
     packSizes: cleanPackSizes(r.pack_sizes, r.pack_size ?? ""),
@@ -75,19 +92,59 @@ function orderChannel(r: Row): OrderChannel {
   return "ecommerce";
 }
 
+function enquiryItemsFromNote(note: string) {
+  const lines = note.split(/\r?\n/);
+  const productsLine = lines.find((line) => line.startsWith("Products interested:"));
+  const sizesLine = lines.find((line) => line.startsWith("Pack sizes:"));
+  const quantitiesLine = lines.find((line) => line.startsWith("Estimated quantity:"));
+  if (!productsLine || !quantitiesLine) return [];
+  const names = productsLine.replace("Products interested:", "").trim().split(", ").filter(Boolean);
+  const sizes = sizesLine?.replace("Pack sizes:", "").trim().split(", ") ?? [];
+  const quantities = quantitiesLine.replace("Estimated quantity:", "").trim().split("; ");
+  if (!names.length || quantities.length < names.length) return [];
+  return names.map((name, index) => {
+    const match = quantities[index].replace(/,/g, "").match(/^\s*(\d+)/);
+    const qty = Number(match?.[1]);
+    return {
+      name: name.trim(),
+      packSize: sizes[index]?.trim() ?? "",
+      qty: Number.isSafeInteger(qty) && qty > 0 ? qty : 1,
+    };
+  });
+}
+
 export function mapOrder(r: Row): Order {
   const events = [...(r.order_events ?? [])].sort((a: Row, b: Row) => a.at.localeCompare(b.at));
+  const orderItems = r.order_items ?? [];
+  let items = orderItems.map((i: Row) => ({
+    productId: i.product_id ?? "",
+    name: i.name,
+    packSize: i.pack_size ?? "",
+    qty: i.qty,
+    price: i.price,
+  }));
+  const source = r.source === "admin" ? "admin" : r.source === "enquiry" ? "enquiry" : "online";
+  if (source === "enquiry") {
+    const fromNote = enquiryItemsFromNote(r.note ?? "");
+    const placeholder = items.length === 1 && /enquiry/i.test(items[0].name);
+    if (fromNote.length && (placeholder || fromNote.length === items.length)) {
+      items = fromNote.map((item, index) => {
+        const saved = orderItems.find((line: Row) => line.name === item.name && (line.pack_size ?? "") === item.packSize) ?? orderItems[index];
+        return {
+          productId: saved?.product_id ?? "",
+          name: item.name,
+          packSize: item.packSize || saved?.pack_size || "",
+          qty: item.qty,
+          price: saved?.price ?? 0,
+        };
+      });
+    }
+  }
   return {
     number: Number(r.number),
     placedAt: r.placed_at,
     customerId: r.customer_id,
-    items: (r.order_items ?? []).map((i: Row) => ({
-      productId: i.product_id ?? "",
-      name: i.name,
-      packSize: i.pack_size ?? "",
-      qty: i.qty,
-      price: i.price,
-    })),
+    items,
     shipping: r.shipping ?? 0,
     method: r.method as PayMethod,
     status: r.status as OrderStatus,
@@ -101,7 +158,7 @@ export function mapOrder(r: Row): Order {
     deliveredAt: r.delivered_at ?? null,
     cancelReason: r.cancel_reason ?? "",
     kind: r.kind === "bulk" ? "bulk" : "normal",
-    source: r.source === "admin" ? "admin" : r.source === "enquiry" ? "enquiry" : "online",
+    source,
     channel: orderChannel(r),
     businessName: r.business_name ?? "",
     gstNumber: r.gst_number ?? "",
@@ -211,6 +268,7 @@ export interface ProductInput {
   name: string;
   price: number | null;
   originalPrice: number | null;
+  packPrices: Record<string, { price: number | null; originalPrice: number | null }>;
   stock: number;
   packSize: string;
   packSizes: string[];
@@ -240,8 +298,6 @@ export function parseProduct(body: Row): ProductInput {
   let originalPrice: number | null = null;
   if (body.originalPrice !== null && body.originalPrice !== undefined && body.originalPrice !== "")
     originalPrice = int(body.originalPrice, "Original price", 0, 10_000_000);
-  if (originalPrice != null && price == null) throw bad("Add a selling price along with the original price.");
-  if (originalPrice != null && price != null && originalPrice < price) throw bad("Original price can't be lower than the selling price.");
   const stock = int(body.stock ?? 0, "Stock", 0, 1_000_000);
   const rawSizes: unknown[] = Array.isArray(body.packSizes) ? body.packSizes : [body.packSize];
   if (rawSizes.length > 8) throw bad("A product can have at most 8 pack sizes.");
@@ -250,6 +306,28 @@ export function parseProduct(body: Row): ProductInput {
   if (rawSizes.some((s) => typeof s === "string" && s.trim().length > 40))
     throw bad("Each pack size must be at most 40 characters.");
   const packSizes = cleanPackSizes(rawSizes.filter((s): s is string => typeof s === "string"));
+  const rawPackPrices = body.packPrices;
+  if (rawPackPrices !== undefined && rawPackPrices !== null &&
+      (typeof rawPackPrices !== "object" || Array.isArray(rawPackPrices))) {
+    throw bad("Pack prices must map pack sizes to their selling and original prices.");
+  }
+  const packPrices: ProductInput["packPrices"] = {};
+  for (const size of packSizes.length ? packSizes : [""]) {
+    const saved = (rawPackPrices as Record<string, unknown> | undefined)?.[size];
+    if (saved !== undefined && (saved === null || typeof saved !== "object" || Array.isArray(saved)))
+      throw bad(`Prices for ${size || "pack"} must include selling and original price values.`);
+    const values = saved as Row | undefined;
+    const rawPrice = values && "price" in values ? values.price : price;
+    const rawOriginal = values && "originalPrice" in values ? values.originalPrice : originalPrice;
+    const packPrice = rawPrice === null || rawPrice === undefined || rawPrice === "" ? null : int(rawPrice, `Selling price for ${size || "pack"}`, 0, 10_000_000);
+    const packOriginal = rawOriginal === null || rawOriginal === undefined || rawOriginal === "" ? null : int(rawOriginal, `Original price for ${size || "pack"}`, 0, 10_000_000);
+    if (packOriginal != null && packPrice == null) throw bad(`Add a selling price for ${size || "pack"} along with its original price.`);
+    if (packOriginal != null && packPrice != null && packOriginal < packPrice)
+      throw bad(`Original price for ${size || "pack"} can't be lower than its selling price.`);
+    packPrices[size] = { price: packPrice, originalPrice: packOriginal };
+  }
+  price = packPrices[packSizes[0] ?? ""]?.price ?? null;
+  originalPrice = packPrices[packSizes[0] ?? ""]?.originalPrice ?? null;
 
   // Parse packStock: a JSON object mapping pack size to quantity
   let packStock: Record<string, number> = {};
@@ -272,7 +350,8 @@ export function parseProduct(body: Row): ProductInput {
   if (!Array.isArray(images) || images.length > 5) throw bad("A product can have at most 5 photos.");
   if (!images.every(isAllowedImage)) throw bad("One of the photos isn't from this store's uploads.");
   if (typeof body.visible !== "boolean") throw bad("Visibility must be on or off.");
-  if (body.visible && price == null && channel !== "export") throw bad("Add a price before making the product visible.");
+  if (body.visible && channel !== "export" && Object.entries(packPrices).some(([, value]) => value.price == null))
+    throw bad("Add a selling price for every pack size before making the product visible.");
   let id: string | undefined;
   if (body.id !== undefined && body.id !== null) {
     if (typeof body.id !== "string" || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(body.id) || body.id.length > 80) throw bad("Invalid product id.");
@@ -283,6 +362,7 @@ export function parseProduct(body: Row): ProductInput {
     name,
     price,
     originalPrice,
+    packPrices,
     stock,
     packSize: packSizes[0] ?? "",
     packSizes,

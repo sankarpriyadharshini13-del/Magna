@@ -5,12 +5,10 @@ import nextDynamic from "next/dynamic";
 import SiteShell from "@/components/layout/SiteShell";
 import ProductCard from "@/components/product/ProductCard";
 import { ArrowIcon, CheckIcon, CloseIcon, PinIcon, StoneIcon } from "@/components/ui/Icons";
-import { packPoints, packSizesOf } from "@/lib/pack";
+import { packPoints } from "@/lib/pack";
 import { recommend } from "@/lib/recommend";
 import { stockState } from "@/lib/stock";
 import { getPublicProduct, getPublicProducts } from "@/lib/server/publicProducts";
-import Price, { percentOff } from "@/components/ui/Price";
-import { formatInr } from "@/lib/format";
 
 const ProductGallery = nextDynamic(() => import("@/components/product/ProductGallery"), {
   loading: () => <div className="aspect-[4/5] animate-pulse rounded-[2rem] bg-sand" />,
@@ -26,17 +24,22 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   return p ? { title: `${p.name} | Magna Eco Bites`, description: p.description } : {};
 }
 
-export default async function ProductPage({ params }: { params: { slug: string } }) {
+export default async function ProductPage({
+  params,
+  searchParams,
+}: {
+  params: { slug: string };
+  searchParams?: { channel?: string };
+}) {
   const [product, catalogue] = await Promise.all([getPublicProduct(params.slug), getPublicProducts()]);
   if (!product) notFound();
   const related = recommend(product, catalogue, 3);
   const isExport = product.channel === "export";
-  // Export items are quoted by enquiry: their stock is not a shop quantity, so no stock badge or cart panel.
-  const stock = isExport ? null : stockState(product);
+  const isDistributorEnquiry = !isExport && searchParams?.channel === "distributors";
+  const isEnquiryOnly = isExport || isDistributorEnquiry;
+  const enquiryHref = isExport ? "/export#enquire" : "/distributors#enquire";
+  const stock = isEnquiryOnly ? null : stockState(product);
   const out = stock?.tone === "out";
-  const off = percentOff(product.priceInr, product.originalPriceInr);
-  const packSizes = packSizesOf(product);
-  const sizeLabel = packSizes.filter(Boolean).join(" · ");
   // The "Know your pack" block shows only the copy the admin saved in Products & Stock.
   const storedPack = product.pack;
   const pack = storedPack && !storedPack.enabled ? null : storedPack;
@@ -48,7 +51,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 md:py-14 lg:px-8">
         <nav aria-label="Breadcrumb" className="text-xs text-ink/55 sm:text-sm">
           <Link href="/" className="focus-ring rounded hover:text-clay">Home</Link> <span aria-hidden="true">/</span>{" "}
-          <Link href={isExport ? "/export" : "/shop"} className="focus-ring rounded hover:text-clay">{isExport ? "Export" : "Shop"}</Link> <span aria-hidden="true">/</span>{" "}
+          <Link href={isExport ? "/export" : isDistributorEnquiry ? "/distributors" : "/shop"} className="focus-ring rounded hover:text-clay">{isExport ? "Export" : isDistributorEnquiry ? "Distributors" : "Shop"}</Link> <span aria-hidden="true">/</span>{" "}
           <span aria-current="page" className="text-forest">{product.name}</span>
         </nav>
 
@@ -65,33 +68,21 @@ export default async function ProductPage({ params }: { params: { slug: string }
               )}
             </div>
             <h1 className="mt-3 font-display text-3xl leading-tight text-forest sm:text-4xl md:text-5xl">{product.name}</h1>
-            <p className="mt-3 text-sm font-semibold uppercase tracking-[0.14em] text-black sm:text-base">
-              {sizeLabel ? `${isExport ? "Available pack sizes" : "Pack size"}: ${sizeLabel}` : "Pack size to be confirmed"}
-            </p>
-            <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2">
-              {isExport && product.priceInr == null ? (
-                <span className="font-display text-2xl italic text-ink/55 sm:text-3xl">Price on request</span>
-              ) : (
-                <Price amount={product.priceInr} original={product.originalPriceInr} className="!text-3xl sm:!text-4xl" originalClassName="text-lg sm:text-xl" />
-              )}
-              {!isExport && off && product.priceInr != null && product.originalPriceInr != null && (
-                <span className="rounded-full bg-leaf/15 px-3 py-1 text-xs font-bold text-leaf">
-                  {off}% off · You save {formatInr(product.originalPriceInr - product.priceInr)}
-                </span>
-              )}
-            </div>
+            <div className="mt-5"><AddToCartPanel product={product} disabled={out} enquiryOnly={isEnquiryOnly} /></div>
             <p className="mt-5 text-base leading-relaxed text-ink/70 sm:text-lg">{product.longDescription}</p>
-            {isExport ? (
+            {isEnquiryOnly ? (
               <div className="mt-7 rounded-2xl border border-forest/10 bg-sand/40 p-5">
                 <p className="text-sm leading-relaxed text-ink/70">
-                  Export products are quoted by enquiry. Tell us the pack size, quantity and destination country and we&apos;ll reply with pricing, minimum order quantity and shipping options.
+                  {isExport
+                    ? "Export products are quoted by enquiry. Tell us the pack size, quantity and destination country and we&apos;ll reply with pricing, minimum order quantity and shipping options."
+                    : "Tell us the products, pack sizes and quantities you need and our distributor team will share wholesale pricing."}
                 </p>
-                <Link href="/export#enquire" className="btn-primary mt-4 w-full sm:w-auto">
-                  Request an export quote <ArrowIcon width={16} height={16} />
+                <Link href={enquiryHref} className="btn-primary mt-4 w-full sm:w-auto">
+                  {isExport ? "Request an export quote" : "Request distributor pricing"} <ArrowIcon width={16} height={16} />
                 </Link>
               </div>
             ) : (
-              <div className="mt-7"><AddToCartPanel product={product} disabled={out} /></div>
+              null
             )}
 
             <ul className="mt-8 grid gap-3 border-t border-forest/10 pt-6 sm:grid-cols-2">
@@ -170,13 +161,13 @@ export default async function ProductPage({ params }: { params: { slug: string }
                 <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-clay sm:text-xs">Recommended products</p>
                 <h2 id="related-title" className="mt-2 font-display text-3xl text-forest sm:text-4xl">You may <span className="italic text-clay">also like</span></h2>
               </div>
-              <Link href={isExport ? "/export" : "/shop"} className="focus-ring group inline-flex items-center gap-2 self-start rounded-full border border-forest/15 px-5 py-2.5 text-sm font-semibold text-forest transition-colors hover:border-forest hover:bg-forest hover:text-cream sm:self-auto">
-                {isExport ? "View export range" : "View all products"} <ArrowIcon width={16} height={16} />
+              <Link href={isExport ? "/export" : isDistributorEnquiry ? "/distributors" : "/shop"} className="focus-ring group inline-flex items-center gap-2 self-start rounded-full border border-forest/15 px-5 py-2.5 text-sm font-semibold text-forest transition-colors hover:border-forest hover:bg-forest hover:text-cream sm:self-auto">
+                {isExport ? "View export range" : isDistributorEnquiry ? "View distributor range" : "View all products"} <ArrowIcon width={16} height={16} />
               </Link>
             </div>
             <ul className="mt-8 grid gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
               {related.map((p) => (
-                <li key={p.id}><ProductCard product={p} /></li>
+                <li key={p.id}><ProductCard product={p} enquiryOnly={isDistributorEnquiry} /></li>
               ))}
             </ul>
           </section>

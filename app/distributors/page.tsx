@@ -175,7 +175,7 @@ export default async function DistributorsPage() {
             <ul className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {range.map((p, i) => (
                 <li key={p.id}>
-                  <ProductCard product={p} priority={i < 4} />
+                  <ProductCard product={p} priority={i < 4} enquiryOnly />
                 </li>
               ))}
             </ul>

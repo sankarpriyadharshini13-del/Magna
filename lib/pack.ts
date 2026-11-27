@@ -1,4 +1,4 @@
-import type { Product, ProductPack } from "@/types";
+import type { Product, ProductPack, ProductPackPrice } from "@/types";
 
 /** Empty "Know your pack" block — every product starts here. */
 export const emptyPack = (): ProductPack => ({
@@ -55,4 +55,15 @@ export function packSizesOf(product: Pick<Product, "packSize" | "packSizes"> | n
 /** The size to preselect on shop cards / product pages. */
 export function defaultPackSize(product: Pick<Product, "packSize" | "packSizes"> | null | undefined): string {
   return packSizesOf(product)[0];
+}
+
+/** The selected pack's price, with legacy product-level prices as a fallback. */
+export function priceForPack(
+  product: Pick<Product, "priceInr" | "originalPriceInr" | "packPrices"> | null | undefined,
+  packSize = "",
+): ProductPackPrice {
+  return product?.packPrices?.[packSize] ?? {
+    price: product?.priceInr ?? null,
+    originalPrice: product?.originalPriceInr ?? null,
+  };
 }

@@ -201,7 +201,7 @@ export default function OrdersScreen() {
       <div className={`o-wrap ${active ? "open" : "closed"}`}>
         <section className="adm-card o-panel" style={{ minHeight: 686 }}>
           <div className="adm-scroll">
-            <table className="adm-table">
+            <table className="adm-table adm-table-readable">
               <thead>
                 <tr>
                   <th style={{ width: 30 }}>
@@ -412,8 +412,8 @@ export default function OrdersScreen() {
               </div>
               <div className="o-sec">
                 <div className="adm-fl">Items</div>
-                {active.items.map((i) => (
-                  <div className="o-items" key={i.productId}>
+                {active.items.map((i, index) => (
+                  <div className="o-items" key={`${i.productId || i.name}:${i.packSize}:${index}`}>
                     <span>{i.name} {i.packSize} × {i.qty}</span>
                     <span style={{ fontWeight: 600 }}>{formatInr(i.price * i.qty)}</span>
                   </div>

@@ -7,6 +7,7 @@ const BASE_COLUMNS = ["id", "name", "price", "stock", "pack_size", "tag", "descr
 /** Columns that arrive with later migrations. Missing ones are dropped until the SQL is run. */
 const OPTIONAL_COLUMNS = [
   "original_price",
+  "pack_prices",
   "pack_sizes",
   "channel",
   "pack_enabled",
@@ -58,6 +59,19 @@ function packOf(r: any): ProductPack | null {
 function toProduct(r: any): Product {
   const image: string | null = r.images?.[0] ?? null;
   const packSizes = cleanPackSizes(r.pack_sizes, r.pack_size ?? "");
+  const savedPackPrices = r.pack_prices && typeof r.pack_prices === "object" && !Array.isArray(r.pack_prices) ? r.pack_prices : {};
+  const packPrices = Object.fromEntries(
+    (packSizes.length ? packSizes : [""]).map((size) => {
+      const saved = savedPackPrices[size];
+      return [
+        size,
+        saved && typeof saved === "object"
+          ? { price: saved.price ?? null, originalPrice: saved.originalPrice ?? null }
+          : { price: r.price ?? null, originalPrice: r.original_price ?? null },
+      ];
+    }),
+  );
+  const primaryPrice = packPrices[packSizes[0] ?? ""] ?? { price: r.price ?? null, originalPrice: r.original_price ?? null };
   const channel: ProductChannel = r.channel === "export" ? "export" : "ecommerce";
   return {
     id: r.id,
@@ -69,8 +83,12 @@ function toProduct(r: any): Product {
     packSize: packSizes[0] ?? null,
     packSizes,
     channel,
-    priceInr: r.price ?? null,
-    originalPriceInr: r.price != null && r.original_price != null && r.original_price > r.price ? r.original_price : null,
+    priceInr: primaryPrice.price,
+    originalPriceInr:
+      primaryPrice.price != null && primaryPrice.originalPrice != null && primaryPrice.originalPrice > primaryPrice.price
+        ? primaryPrice.originalPrice
+        : null,
+    packPrices,
     image,
     images: r.images ?? [],
     imageAlt: r.name,

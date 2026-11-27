@@ -1,6 +1,7 @@
 import { site } from "@/data/site";
 import { formatInr } from "@/lib/format";
 import type { CartItem, Product, UserProfile } from "@/types";
+import { defaultPackSize, priceForPack } from "@/lib/pack";
 
 /**
  * CHECKOUT SERVICE — integration point.
@@ -12,8 +13,10 @@ export function buildOrderMailto(items: CartItem[], user: UserProfile | null, lo
   const lines = items.map((i) => {
     const p = lookup(i.productId);
     if (!p) return "";
-    const price = p.priceInr != null ? ` — ${formatInr(p.priceInr * i.quantity)}` : "";
-    const size = i.packSize || p.packSize ? ` (${i.packSize || p.packSize})` : "";
+    const packSize = i.packSize || defaultPackSize(p);
+    const packPrice = priceForPack(p, packSize);
+    const price = packPrice.price != null ? ` — ${formatInr(packPrice.price * i.quantity)}` : "";
+    const size = packSize ? ` (${packSize})` : "";
     return `• ${p.name}${size} × ${i.quantity}${price}`;
   });
   const body = [

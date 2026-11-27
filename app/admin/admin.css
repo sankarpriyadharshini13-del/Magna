@@ -127,6 +127,7 @@
 
 /* ---------------- tables ---------------- */
 .adm-table { width: 100%; border-collapse: collapse; }
+.adm-table-readable { width: max-content; min-width: 100%; }
 .adm-table th { text-align: left; font-size: 11px; letter-spacing: .07em; color: #686d62; font-weight: 600; padding: 0 6px 10px; text-transform: uppercase; white-space: nowrap; }
 .adm-table td { padding: 0 6px; height: 46px; white-space: nowrap; border-top: 1px solid var(--line-soft); font-size: 12.5px; vertical-align: middle; }
 .adm-table tbody tr:first-child td { border-top: 1px solid var(--line); }

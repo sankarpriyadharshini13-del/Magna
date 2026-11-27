@@ -12,6 +12,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useProducts } from "@/context/ProductsContext";
 import { startCheckout } from "@/services/checkout";
 import { formatInr } from "@/lib/format";
+import { priceForPack } from "@/lib/pack";
 
 export default function CartDrawer() {
   const { panel, open, close } = useUI();
@@ -55,6 +56,7 @@ export default function CartDrawer() {
       ) : (
         <ul className="divide-y divide-leaf/10">
           {lines.map(({ product, packSize, quantity, lineTotal }) => {
+            const packPrice = priceForPack(product, packSize);
             const otherSizes = lines
               .filter((l) => l.product.id === product.id && l.packSize !== packSize)
               .reduce((n, l) => n + l.quantity, 0);
@@ -80,7 +82,7 @@ export default function CartDrawer() {
                   <QuantityControl value={quantity} max={lineMax} label={`${product.name}${packSize ? ` (${packSize})` : ""}`} onChange={(n) => setQuantity(product.id, n, packSize)} onLimit={() => notifyLimit(product.id)} />
                   {lineTotal != null ? (
                     <span className="text-right">
-                      <Price amount={lineTotal} original={product.originalPriceInr != null ? product.originalPriceInr * quantity : null} className="!text-base sm:!text-lg" originalClassName="text-xs" />
+                      <Price amount={lineTotal} original={packPrice.originalPrice != null ? packPrice.originalPrice * quantity : null} className="!text-base sm:!text-lg" originalClassName="text-xs" />
                     </span>
                   ) : (
                     <Price amount={null} className="!text-xs" />

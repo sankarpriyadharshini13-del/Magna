@@ -7,18 +7,28 @@ import ProductImage from "./ProductImage";
 import AddToCartButton from "./AddToCartButton";
 import Price, { percentOff } from "@/components/ui/Price";
 import { ArrowIcon } from "@/components/ui/Icons";
-import { defaultPackSize, packSizesOf } from "@/lib/pack";
+import { defaultPackSize, packSizesOf, priceForPack } from "@/lib/pack";
 import { stockState } from "@/lib/stock";
 
-export default function ProductCard({ product, priority = false }: { product: Product; priority?: boolean }) {
+export default function ProductCard({
+  product,
+  priority = false,
+  enquiryOnly = false,
+}: {
+  product: Product;
+  priority?: boolean;
+  enquiryOnly?: boolean;
+}) {
   const isExport = product.channel === "export";
-  // Export catalogue cards are enquiry-only: stock counts and the cart button belong to the shop.
-  const stock = isExport ? null : stockState(product);
+  const isEnquiryOnly = isExport || enquiryOnly;
+  const stock = isEnquiryOnly ? null : stockState(product);
   const out = stock?.tone === "out";
-  const href = `/products/${product.slug}`;
-  const off = percentOff(product.priceInr, product.originalPriceInr);
+  const href = enquiryOnly ? `/products/${product.slug}?channel=distributors` : `/products/${product.slug}`;
+  const enquiryHref = isExport ? "/export#enquire" : "/distributors#enquire";
   const sizes = packSizesOf(product).filter(Boolean);
   const [selectedSize, setSelectedSize] = useState(() => defaultPackSize(product));
+  const selectedPrice = priceForPack(product, selectedSize);
+  const off = percentOff(selectedPrice.price, selectedPrice.originalPrice);
 
   return (
     <article className="group relative flex h-full flex-col rounded-[1.5rem] bg-white p-2.5 shadow-soft ring-1 ring-forest/[0.06] transition-all duration-300 hover:-translate-y-1 hover:shadow-lift focus-within:shadow-lift">
@@ -79,15 +89,15 @@ export default function ProductCard({ product, priority = false }: { product: Pr
         </Link>
         <div className="mt-4 flex items-center justify-between gap-3 border-t border-forest/[0.07] pt-4">
           <div className="min-w-0">
-            {isExport && product.priceInr == null ? (
+            {isExport && selectedPrice.price == null ? (
               <span className="text-sm italic text-ink/55">Price on request</span>
             ) : (
-              <Price amount={product.priceInr} original={product.originalPriceInr} className={product.priceInr == null ? "!text-xs" : off ? "!text-[1.35rem]" : "!text-2xl"} originalClassName="text-xs" />
+              <Price amount={selectedPrice.price} original={selectedPrice.originalPrice} className={selectedPrice.price == null ? "!text-xs" : off ? "!text-[1.35rem]" : "!text-2xl"} originalClassName="text-xs" />
             )}
           </div>
-          {isExport ? (
+          {isEnquiryOnly ? (
             <Link
-              href="/export#enquire"
+              href={enquiryHref}
               className="focus-ring inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full bg-clay px-4 text-sm font-semibold text-white transition-colors hover:bg-[#c9531a]"
             >
               Enquire<span className="sr-only"> about {product.name}</span>

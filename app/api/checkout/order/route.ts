@@ -61,7 +61,7 @@ export const POST = handle(async (req) => {
   const select = (cols: string) =>
     sb.from("products").select(cols).in("id", Array.from(totals.keys()));
   // `pack_sizes` and `channel` arrive with a later migration: fall back until then.
-  let res = await select("id, name, pack_size, pack_sizes, channel, price, stock, visible");
+  let res = await select("id, name, pack_size, pack_sizes, pack_prices, channel, price, stock, visible");
   if (res.error && ["42703", "PGRST204"].includes(res.error.code ?? "")) {
     res = await select("id, name, pack_size, price, stock, visible");
   }
@@ -72,6 +72,7 @@ export const POST = handle(async (req) => {
     name: string;
     pack_size: string | null;
     pack_sizes?: string[] | null;
+    pack_prices?: Record<string, { price?: number | null; originalPrice?: number | null }> | null;
     channel?: string | null;
     price: number | null;
     stock: number;
@@ -82,7 +83,6 @@ export const POST = handle(async (req) => {
     const p = rows?.find((r) => r.id === id);
     if (!p || !p.visible) throw new HttpError(409, "An item in your cart is no longer available. Please remove it and try again.");
     if (p.channel === "export") throw new HttpError(409, `${p.name} is part of our export range and is quoted by enquiry. Remove it from the cart to continue.`);
-    if (p.price == null) throw new HttpError(409, `${p.name} doesn't have a price yet. Remove it from the cart to continue.`);
     if (p.stock < qty) throw new HttpError(409, p.stock > 0 ? `Only ${p.stock} × ${p.name} left in stock.` : `${p.name} is out of stock.`);
   }
 
@@ -91,12 +91,16 @@ export const POST = handle(async (req) => {
     const sizes = cleanPackSizes(p.pack_sizes, p.pack_size ?? "");
     if (line.packSize && sizes.length && !sizes.includes(line.packSize))
       throw new HttpError(409, `The ${line.packSize} pack of ${p.name} is no longer available. Remove it from the cart and choose again.`);
+    const packSize = line.packSize || sizes[0] || "";
+    const packPrice = p.pack_prices?.[packSize];
+    const price = packPrice ? packPrice.price ?? null : p.price;
+    if (price == null) throw new HttpError(409, `${p.name} ${packSize} doesn't have a price yet. Remove it from the cart to continue.`);
     return {
       product_id: p.id,
       name: p.name,
-      pack_size: line.packSize || sizes[0] || "",
+      pack_size: packSize,
       qty: line.qty,
-      price: p.price as number,
+      price,
     };
   });
   const subtotal = items.reduce((s, i) => s + i.price * i.qty, 0);

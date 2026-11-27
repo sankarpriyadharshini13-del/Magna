@@ -169,20 +169,28 @@ export default function OrderFormModal({
     setLines((ls) => ls.map((l) => (l.key === key ? { ...l, ...patch } : l)));
     clearErr("items");
   };
+  const priceForProductPack = (p: AdminProduct | undefined, size: string) => {
+    const packPrice = p?.packPrices?.[size];
+    return packPrice ? packPrice.price : p?.price ?? null;
+  };
   const chooseProduct = (key: number, id: string) => {
     const p = products.get(id);
     // The same product can appear twice in different pack sizes; start on the first size this order doesn't already have.
     const used = new Set(lines.filter((l) => l.key !== key && l.productId === id).map((l) => l.packSize));
     const sizes = sizesFor(p);
     const packSize = sizes.find((s) => !used.has(s)) ?? sizes[0] ?? "";
-    update(key, { productId: id || null, name: p?.name ?? "", packSize, price: p?.price != null ? String(p.price) : "" });
+    const price = priceForProductPack(p, packSize);
+    update(key, { productId: id || null, name: p?.name ?? "", packSize, price: price != null ? String(price) : "" });
   };
   const switchKind = (k: "normal" | "bulk") => {
     if (k === kind) return;
     setKind(k);
     setErrors({});
     // Normal orders use shop prices; bulk orders start from them and can be changed per line.
-    if (k === "normal") setLines((ls) => ls.map((l) => (l.productId && products.get(l.productId)?.price != null ? { ...l, price: String(products.get(l.productId)!.price) } : l)));
+    if (k === "normal") setLines((ls) => ls.map((l) => {
+      const price = l.productId ? priceForProductPack(products.get(l.productId), l.packSize) : null;
+      return price != null ? { ...l, price: String(price) } : l;
+    }));
     if (k === "normal" && mode === "advance") setMode("pending");
   };
 
@@ -445,7 +453,11 @@ export default function OrderFormModal({
                           className="mo-pack-sel"
                           aria-label={`Pack size of product ${idx + 1}`}
                           value={l.packSize}
-                          onChange={(e) => update(l.key, { packSize: e.target.value })}
+                          onChange={(e) => {
+                            const packSize = e.target.value;
+                            const price = priceForProductPack(l.productId ? products.get(l.productId) : undefined, packSize);
+                            update(l.key, { packSize, ...(price != null ? { price: String(price) } : {}) });
+                          }}
                         >
                           {l.packSize && !sizes.includes(l.packSize) && <option value={l.packSize}>{l.packSize}</option>}
                           {sizes.map((s) => <option key={s} value={s} disabled={packUsed(l.key, l.productId, s)}>{s}</option>)}
