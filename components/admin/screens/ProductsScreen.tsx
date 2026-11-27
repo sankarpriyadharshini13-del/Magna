@@ -8,9 +8,10 @@ import { PRODUCT_COLORS } from "@/lib/admin/defaults";
 import { useAdminData } from "@/lib/admin/store";
 import type { AdminProduct } from "@/lib/admin/types";
 import { cleanPackSizes } from "@/lib/pack";
+import { availableStock } from "@/lib/stock";
 import { formatInr } from "@/lib/format";
 import type { ProductChannel } from "@/types";
-import { Badge, BarcodeSvg, ConfirmModal, Modal, PromptModal, Toggle, Topbar } from "../ui";
+import { Badge, BarcodeSvg, ConfirmModal, Modal, Toggle, Topbar } from "../ui";
 import ProductPreviewCard from "./ProductPreviewCard";
 
 const MAX_PHOTOS = 5;
@@ -32,7 +33,6 @@ const CHANNELS: { id: ProductChannel; title: string; blurb: string }[] = [
 interface Draft {
   name: string;
   packPrices: Record<string, { price: string; originalPrice: string }>;
-  stock: string;
   channel: ProductChannel;
   /** Every pack size the product is sold in; the first one is the default on the shop. */
   packSizes: string[];
@@ -72,7 +72,6 @@ const toDraft = (p: AdminProduct | null): Draft => {
   return {
     name: p?.name ?? "",
     packPrices,
-    stock: p ? String(p.stock) : "0",
     channel: p?.channel ?? "ecommerce",
     packSizes: sizes.length ? sizes : [""],
     packStock,
@@ -103,7 +102,7 @@ export default function ProductsScreen() {
   const [draft, setDraft] = useState<Draft>(() => toDraft(product));
   const [errors, setErrors] = useState<Partial<Record<keyof Draft, string>>>({});
   const [position, setPosition] = useState("");
-  const [modal, setModal] = useState<null | "remove" | "preview" | { stockFor: string }>(null);
+  const [modal, setModal] = useState<null | "remove" | "preview">(null);
   const [over, setOver] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const panelRef = useRef<HTMLElement>(null);
@@ -143,10 +142,11 @@ export default function ProductsScreen() {
   const drafts = listed.length - live.length;
   // Export catalogue items are enquiry-only: they never carry stock alerts or stock KPIs.
   const shop = data.products.filter((p) => p.visible && p.channel !== "export");
-  const low = shop.filter((p) => p.stock > 0 && p.stock <= LOW_STOCK);
-  const out = shop.filter((p) => p.stock <= 0);
-  const units = shop.reduce((s, p) => s + p.stock, 0);
-  const alerts = shop.filter((p) => p.stock <= LOW_STOCK);
+  const stockOf = (p: AdminProduct) => availableStock(p) ?? 0;
+  const low = shop.filter((p) => stockOf(p) > 0 && stockOf(p) <= LOW_STOCK);
+  const out = shop.filter((p) => stockOf(p) <= 0);
+  const units = shop.reduce((s, p) => s + stockOf(p), 0);
+  const alerts = shop.filter((p) => stockOf(p) <= LOW_STOCK);
   const activeChannel = CHANNELS.find((c) => c.id === channel) ?? CHANNELS[0];
 
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => {
@@ -200,8 +200,6 @@ export default function ProductsScreen() {
     if (busy || uploading) return;
     const errs: typeof errors = {};
     if (!draft.name.trim()) errs.name = "Product name is required.";
-    const stock = draft.stock.trim() === "" ? 0 : Number(draft.stock);
-    if (!Number.isInteger(stock) || stock < 0) errs.stock = "Use a whole number, 0 or more.";
     if (draft.packSizes.some((s) => s.trim().length > 40)) errs.packSizes = "Each pack size must be 40 characters or fewer.";
     const packSizes = cleanPackSizes(draft.packSizes);
     const packPrices: Record<string, { price: number | null; originalPrice: number | null }> = {};
@@ -230,6 +228,7 @@ export default function ProductsScreen() {
     // Validate packStock quantities
     const packStock: Record<string, number> = {};
     for (const [size, qtyStr] of Object.entries(draft.packStock)) {
+      if (!packSizes.includes(size)) continue;
       if (qtyStr.trim() !== "") {
         const qty = Number(qtyStr);
         if (!Number.isInteger(qty) || qty < 0) {
@@ -238,6 +237,17 @@ export default function ProductsScreen() {
           packStock[size] = qty;
         }
       }
+    }
+    const savedPackStock = product?.packStock ?? {};
+    const packStockChanged =
+      !product ||
+      Object.keys(packStock).length !== Object.keys(savedPackStock).length ||
+      Object.entries(packStock).some(([size, quantity]) => savedPackStock[size] !== quantity);
+    const stock = packStockChanged
+      ? Object.values(packStock).reduce((total, quantity) => total + quantity, 0)
+      : product ? availableStock(product) ?? 0 : 0;
+    if (!Number.isInteger(stock) || stock < 0 || stock > 1_000_000) {
+      errs.packStock = "Total stock across pack sizes must be 1,000,000 or fewer.";
     }
 
     setErrors(errs);
@@ -309,7 +319,6 @@ export default function ProductsScreen() {
   const barcode = product?.barcode || (isNew ? nextBarcode(data.products) : "");
   const tint = product?.color ?? PRODUCT_COLORS[data.products.length % PRODUCT_COLORS.length];
   const status = product ? (product.visible ? { label: "Live on site", tone: "green" as const } : { label: "Hidden", tone: "gray" as const }) : { label: "New product", tone: "blue" as const };
-  const stockTarget = typeof modal === "object" && modal ? data.products.find((p) => p.id === modal.stockFor) : null;
   const previewSize = draft.packSizes.find((size) => size.trim()) ?? "";
   const previewPrices = draft.packPrices[previewSize] ?? { price: "", originalPrice: "" };
 
@@ -426,8 +435,8 @@ export default function ProductsScreen() {
                         {channel !== "export" && (
                           <td>
                             <>
-                              {p.stock} units
-                              <div className={`adm-meter${p.stock <= LOW_STOCK ? " low" : ""}`}><i style={{ width: `${Math.min(100, p.stock)}%` }} /></div>
+                              {stockOf(p)} units
+                              <div className={`adm-meter${stockOf(p) <= LOW_STOCK ? " low" : ""}`}><i style={{ width: `${Math.min(100, stockOf(p))}%` }} /></div>
                             </>
                           </td>
                         )}
@@ -459,10 +468,10 @@ export default function ProductsScreen() {
               </span>
             </div>
             <p className="adm-muted" style={{ margin: "-4px 0 8px" }}>Stock drops automatically with every purchase. You&apos;re emailed when a product reaches {LOW_STOCK} units or fewer.</p>
-            {alerts.length ? [...alerts].sort((a, b) => a.stock - b.stock).map((p) => (
+            {alerts.length ? [...alerts].sort((a, b) => stockOf(a) - stockOf(b)).map((p) => (
               <div className="p-alert" key={p.id}>
-                <span><b style={{ color: "var(--ink)" }}>{p.name} {sizesLabel(p)}</b> — {p.stock <= 0 ? <span className="out">out of stock</span> : `${p.stock} left`}</span>
-                <button className="adm-btn pri sm" onClick={() => setModal({ stockFor: p.id })}>Update stock</button>
+                <span><b style={{ color: "var(--ink)" }}>{p.name} {sizesLabel(p)}</b> — {stockOf(p) <= 0 ? <span className="out">out of stock</span> : `${stockOf(p)} left`}</span>
+                <button className="adm-btn pri sm" onClick={() => openEdit(p.id)}>Update pack stock</button>
               </div>
             )) : <div className="adm-empty" style={{ padding: "10px 0" }}>Everything is well stocked.</div>}
           </section>}
@@ -781,17 +790,6 @@ export default function ProductsScreen() {
             color={tint}
           />
         </Modal>
-      )}
-      {stockTarget && (
-        <PromptModal
-          title={`Update stock · ${stockTarget.name} ${stockTarget.packSize}`}
-          label={`Units to add (currently ${stockTarget.stock})`}
-          placeholder="e.g. 40"
-          confirmLabel="Add stock"
-          validate={(v) => (/^\d+$/.test(v.trim()) && Number(v) > 0 ? null : "Enter a whole number greater than 0.")}
-          onSubmit={(v) => mutate(`/api/admin/products/${stockTarget.id}/stock`, "POST", { qty: Number(v) }, `Added ${Number(v)} units to ${stockTarget.name}.`)}
-          onClose={() => setModal(null)}
-        />
       )}
     </>
   );

@@ -6,6 +6,7 @@ import { useCart } from "@/context/CartContext";
 import { useUI } from "@/context/UIContext";
 import { ArrowIcon } from "@/components/ui/Icons";
 import { defaultPackSize, packSizesOf, priceForPack } from "@/lib/pack";
+import { availablePackStock } from "@/lib/stock";
 import Price, { percentOff } from "@/components/ui/Price";
 import type { Product } from "@/types";
 
@@ -13,6 +14,7 @@ export default function AddToCartPanel({ product, disabled = false, enquiryOnly 
   const sizes = packSizesOf(product);
   const [packSize, setPackSize] = useState(() => defaultPackSize(product));
   const selectedPrice = priceForPack(product, packSize);
+  const selectedStock = availablePackStock(product, packSize);
   const off = percentOff(selectedPrice.price, selectedPrice.originalPrice);
   const { lines, hydrated } = useCart();
   const { open } = useUI();
@@ -45,7 +47,7 @@ export default function AddToCartPanel({ product, disabled = false, enquiryOnly 
             </select>
           </div>
         )}
-        {!enquiryOnly && <AddToCartButton productId={product.id} name={product.name} packSize={packSize} disabled={disabled || selectedPrice.price == null} className="sm:min-w-56" />}
+        {!enquiryOnly && <AddToCartButton productId={product.id} name={product.name} packSize={packSize} disabled={disabled || selectedPrice.price == null || (selectedStock != null && selectedStock <= 0)} className="sm:min-w-56" />}
       </div>
       {inCart && (
         <button type="button" onClick={() => open("cart")} className="btn-secondary">

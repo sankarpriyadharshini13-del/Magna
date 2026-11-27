@@ -57,10 +57,7 @@ export default function CartDrawer() {
         <ul className="divide-y divide-leaf/10">
           {lines.map(({ product, packSize, quantity, lineTotal }) => {
             const packPrice = priceForPack(product, packSize);
-            const otherSizes = lines
-              .filter((l) => l.product.id === product.id && l.packSize !== packSize)
-              .reduce((n, l) => n + l.quantity, 0);
-            const lineMax = Math.max(1, maxFor(product.id) - otherSizes);
+            const lineMax = Math.max(1, maxFor(product.id, packSize));
             return (
             <li key={`${product.id}::${packSize}`} className="flex gap-3 py-4 first:pt-0 sm:gap-4 sm:py-5">
               <div className="relative h-20 w-16 shrink-0 overflow-hidden rounded-xl bg-sand sm:h-24 sm:w-20 sm:rounded-2xl">
@@ -79,7 +76,7 @@ export default function CartDrawer() {
                 </div>
                 <p className="text-[11px] text-ink/50 sm:text-xs">{packSize || "Pack size to be confirmed"}</p>
                 <div className="mt-2.5 flex items-center justify-between gap-2 sm:mt-3">
-                  <QuantityControl value={quantity} max={lineMax} label={`${product.name}${packSize ? ` (${packSize})` : ""}`} onChange={(n) => setQuantity(product.id, n, packSize)} onLimit={() => notifyLimit(product.id)} />
+                  <QuantityControl value={quantity} max={lineMax} label={`${product.name}${packSize ? ` (${packSize})` : ""}`} onChange={(n) => setQuantity(product.id, n, packSize)} onLimit={() => notifyLimit(product.id, packSize)} />
                   {lineTotal != null ? (
                     <span className="text-right">
                       <Price amount={lineTotal} original={packPrice.originalPrice != null ? packPrice.originalPrice * quantity : null} className="!text-base sm:!text-lg" originalClassName="text-xs" />

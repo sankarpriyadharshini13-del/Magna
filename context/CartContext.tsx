@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useReducer,
 import { useProducts } from "./ProductsContext";
 import { loadCart, saveCart } from "@/services/cartStorage";
 import { defaultPackSize, priceForPack } from "@/lib/pack";
+import { availablePackStock, availableStock } from "@/lib/stock";
 import type { CartItem, Product } from "@/types";
 
 const MAX_QTY = 20;
@@ -108,10 +109,10 @@ interface CartValue {
   lastAdded: { productId: string; name: string; at: number } | null;
   /** Latest "can't add more" message (stock or per-order limit). */
   limitNotice: LimitNotice | null;
-  /** Most units of a product that fit in the cart: the stock left, capped at the per-order limit. */
-  maxFor: (productId: string) => number;
+  /** Most units of the selected pack that fit in the cart, capped by remaining product stock and order limit. */
+  maxFor: (productId: string, packSize?: string) => number;
   /** Shows the limit message for a product (used when + is pressed at the limit). */
-  notifyLimit: (productId: string) => void;
+  notifyLimit: (productId: string, packSize?: string) => void;
   dismissLimit: () => void;
   add: (productId: string, quantity?: number, packSize?: string) => void;
   setQuantity: (productId: string, quantity: number, packSize?: string) => void;
@@ -173,15 +174,23 @@ export function CartProvider({ children, onAdd }: { children: React.ReactNode; o
     return () => window.removeEventListener("storage", onStorage);
   }, []);
 
-  const maxFor = useCallback((productId: string) => {
-    const stock = getById(productId)?.stock;
-    return stock == null ? MAX_QTY : Math.max(0, Math.min(MAX_QTY, stock));
+  const maxFor = useCallback((productId: string, packSize = "") => {
+    const product = getById(productId);
+    if (!product) return 0;
+    const selectedSize = packSize || defaultPackSize(product);
+    const totalStock = availableStock(product);
+    const packStock = availablePackStock(product, selectedSize);
+    const otherSizes = itemsRef.current
+      .filter((item) => item.productId === productId && (item.packSize || defaultPackSize(product)) !== selectedSize)
+      .reduce((total, item) => total + item.quantity, 0);
+    const totalRoom = totalStock == null ? MAX_QTY : Math.max(0, totalStock - otherSizes);
+    return Math.max(0, Math.min(MAX_QTY, totalRoom, packStock ?? MAX_QTY));
   }, [getById]);
-  const notifyLimit = useCallback((productId: string) => {
+  const notifyLimit = useCallback((productId: string, packSize = "") => {
     const p = getById(productId);
     if (!p) return;
-    const reason = p.stock != null && p.stock <= MAX_QTY ? "stock" : "order";
-    const available = maxFor(productId);
+    const available = maxFor(productId, packSize);
+    const reason = available < MAX_QTY ? "stock" : "order";
     const message = limitMessage(available, reason);
     setLimitNotice({ productId, name: p.name, available, reason, message, at: Date.now() });
     setAnnouncement(message);
@@ -193,40 +202,42 @@ export function CartProvider({ children, onAdd }: { children: React.ReactNode; o
     if (!p) return;
     // Export catalogue items are enquiry-only and never enter the cart.
     if (p.channel === "export") return;
-    if (p.stock != null && p.stock <= 0) {
+    const selectedSize = packSize || defaultPackSize(p);
+    const stock = availablePackStock(p, selectedSize);
+    if (stock != null && stock <= 0) {
       setAnnouncement(`${p.name} is out of stock`);
       return;
     }
-    // Stock is shared by every pack size of the same product.
     const inCart = itemsRef.current
-      .filter((i) => i.productId === productId)
+      .filter((i) => i.productId === productId && (i.packSize || defaultPackSize(p)) === selectedSize)
       .reduce((n, i) => n + i.quantity, 0);
-    const room = maxFor(productId) - inCart;
-    if (room <= 0) return notifyLimit(productId);
-    dispatch({ type: "add", productId, quantity: Math.min(quantity, room), packSize });
+    const room = maxFor(productId, selectedSize) - inCart;
+    if (room <= 0) return notifyLimit(productId, selectedSize);
+    dispatch({ type: "add", productId, quantity: Math.min(quantity, room), packSize: selectedSize });
     setLastAdded({ productId, name: p.name, at: Date.now() });
     // After lastAdded, so the limit message wins over the "added" notice.
-    if (quantity > room) notifyLimit(productId);
+    if (quantity > room) notifyLimit(productId, selectedSize);
     else setAnnouncement(`${p.name} added to cart`);
     onAddRef.current?.();
   }, [getById, maxFor, notifyLimit]);
   /** Sets a line's quantity; asking for more than is available keeps the quantity at the limit and says why. */
   const setQuantity = useCallback((productId: string, quantity: number, packSize = "") => {
-    const max = maxFor(productId);
+    const product = getById(productId);
+    const selectedSize = packSize || (product ? defaultPackSize(product) : "");
+    const max = maxFor(productId, selectedSize);
     const lines = itemsRef.current.filter((i) => i.productId === productId);
     const current = lines
-      .filter((i) => (i.packSize ?? "") === packSize)
+      .filter((i) => (i.packSize || (product ? defaultPackSize(product) : "")) === selectedSize)
       .reduce((n, i) => n + i.quantity, 0);
-    const otherSizes = lines.reduce((n, i) => n + i.quantity, 0) - current;
-    const lineMax = Math.max(0, max - otherSizes);
+    const lineMax = max;
     if (quantity > lineMax && quantity > current) {
-      notifyLimit(productId);
+      notifyLimit(productId, selectedSize);
       if (current >= lineMax) return;
       quantity = lineMax;
     }
     if (quantity < current) setLimitNotice((n) => (n?.productId === productId ? null : n));
-    dispatch({ type: "set", productId, quantity, packSize });
-  }, [maxFor, notifyLimit]);
+    dispatch({ type: "set", productId, quantity, packSize: selectedSize });
+  }, [getById, maxFor, notifyLimit]);
   const remove = useCallback((productId: string, packSize = "") => {
     const p = getById(productId);
     dispatch({ type: "remove", productId, packSize });

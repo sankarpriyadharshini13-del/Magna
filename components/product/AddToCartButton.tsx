@@ -30,7 +30,7 @@ export default function AddToCartButton({
 }) {
   const { lines, add, setQuantity, remove, maxFor, notifyLimit, hydrated } = useCart();
   const qty = lines.find((l) => l.product.id === productId && l.packSize === packSize)?.quantity ?? 0;
-  const max = maxFor(productId);
+  const max = maxFor(productId, packSize);
   const sizeLabel = packSize ? ` (${packSize})` : "";
 
   // Keep keyboard focus on the control the customer is using when it swaps between button and stepper.
@@ -78,7 +78,7 @@ export default function AddToCartButton({
           aria-label={atMax ? `Increase quantity of ${name}${sizeLabel} (limit reached)` : `Increase quantity of ${name}${sizeLabel}`}
           // Stays clickable at the limit so the customer is told why the quantity won't go up.
           aria-disabled={atMax || undefined}
-          onClick={() => (atMax ? notifyLimit(productId) : setQuantity(productId, qty + 1, packSize))}
+          onClick={() => (atMax ? notifyLimit(productId, packSize) : setQuantity(productId, qty + 1, packSize))}
         >
           <PlusIcon />
         </button>

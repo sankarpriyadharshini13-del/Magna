@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useAdminData } from "@/lib/admin/store";
 import { TRACKING_STATUSES, type AdminProduct, type Customer, type Order, type PaymentMode } from "@/lib/admin/types";
 import { formatInr } from "@/lib/format";
+import { availableStock } from "@/lib/stock";
 import { Modal } from "./ui";
 
 const STATES = [
@@ -161,7 +162,7 @@ export default function OrderFormModal({
     for (const l of lines) if (l.productId) m.set(l.productId, (m.get(l.productId) ?? 0) + l.qty);
     return m;
   }, [lines]);
-  const available = (id: string) => (products.get(id)?.stock ?? 0) + (held.get(id) ?? 0);
+  const available = (id: string) => (availableStock(products.get(id) ?? { stock: 0 }) ?? 0) + (held.get(id) ?? 0);
   const shortOf = (l: Line) => (order?.status === "Cancelled" || !l.productId || !products.has(l.productId) ? null : (wanted.get(l.productId) ?? 0) > available(l.productId) ? available(l.productId) : null);
 
   const clearErr = (k: string) => setErrors((e) => (e[k] ? { ...e, [k]: "" } : e));

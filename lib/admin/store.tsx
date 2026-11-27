@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { getSupabase } from "@/lib/supabase";
 import { orderLabel } from "./format";
 import { LOW_STOCK } from "./logic";
+import { availableStock } from "@/lib/stock";
 import type { AdminData, AdminProduct } from "./types";
 
 export type ToastTone = "ok" | "warn" | "error";
@@ -93,13 +94,14 @@ function announceStock(
   const low: string[] = [];
   for (const p of products) {
     const prev = before.get(p.id);
-    if (prev === undefined || p.stock >= prev) continue;
+    const stock = availableStock(p) ?? 0;
+    if (prev === undefined || stock >= prev) continue;
     // Export catalogue items are enquiry-only, so their stock never prompts a restock toast.
     if (p.channel === "export") continue;
-    sold.push(`${p.name} ${prev} → ${p.stock}`);
+    sold.push(`${p.name} ${prev} → ${stock}`);
     if (!p.visible) continue;
-    if (p.stock <= 0) out.push(p.name);
-    else if (p.stock <= LOW_STOCK && prev > LOW_STOCK) low.push(`${p.name} (${p.stock} left)`);
+    if (stock <= 0) out.push(p.name);
+    else if (stock <= LOW_STOCK && prev > LOW_STOCK) low.push(`${p.name} (${stock} left)`);
   }
   if (out.length) toast(`Out of stock: ${out.join(", ")}. Restock it in Products & Stock.`, "error");
   if (low.length) toast(`Low stock: ${low.join(", ")}.`, "warn");
@@ -146,7 +148,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       }
       lastOrder.current = newest;
       announceStock(lastStock.current, res.data.products, background, toastRef.current);
-      lastStock.current = new Map(res.data.products.map((p) => [p.id, p.stock]));
+      lastStock.current = new Map(res.data.products.map((p) => [p.id, availableStock(p) ?? 0]));
       setLastSync(new Date());
       setData(res.data);
       setStatus("ready");

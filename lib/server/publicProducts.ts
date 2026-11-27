@@ -9,6 +9,7 @@ const OPTIONAL_COLUMNS = [
   "original_price",
   "pack_prices",
   "pack_sizes",
+  "pack_stock",
   "channel",
   "pack_enabled",
   "pack_ingredients",
@@ -71,6 +72,10 @@ function toProduct(r: any): Product {
       ];
     }),
   );
+  const packStock =
+    r.pack_stock && typeof r.pack_stock === "object" && !Array.isArray(r.pack_stock)
+      ? (r.pack_stock as Record<string, number>)
+      : undefined;
   const primaryPrice = packPrices[packSizes[0] ?? ""] ?? { price: r.price ?? null, originalPrice: r.original_price ?? null };
   const channel: ProductChannel = r.channel === "export" ? "export" : "ecommerce";
   return {
@@ -94,6 +99,7 @@ function toProduct(r: any): Product {
     imageAlt: r.name,
     featured: true,
     stock: r.stock ?? 0,
+    packStock,
     pack: packOf(r),
   };
 }

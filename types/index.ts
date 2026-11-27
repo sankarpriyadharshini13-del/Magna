@@ -48,6 +48,8 @@ export interface Product {
   originalPriceInr: number | null;
   /** Prices by pack size. Missing entries fall back to the product's legacy price fields. */
   packPrices?: Record<string, ProductPackPrice>;
+  /** Available units entered per pack size; when present, this caps product-level stock. */
+  packStock?: Record<string, number>;
   /** Path under /public. null renders an honest "photo coming soon" tile. */
   image: string | null;
   /** All photos (first one = `image`). Optional for the bundled fallback catalogue. */

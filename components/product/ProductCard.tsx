@@ -21,12 +21,12 @@ export default function ProductCard({
 }) {
   const isExport = product.channel === "export";
   const isEnquiryOnly = isExport || enquiryOnly;
-  const stock = isEnquiryOnly ? null : stockState(product);
-  const out = stock?.tone === "out";
   const href = enquiryOnly ? `/products/${product.slug}?channel=distributors` : `/products/${product.slug}`;
   const enquiryHref = isExport ? "/export#enquire" : "/distributors#enquire";
   const sizes = packSizesOf(product).filter(Boolean);
   const [selectedSize, setSelectedSize] = useState(() => defaultPackSize(product));
+  const stock = isEnquiryOnly ? null : stockState(product, selectedSize);
+  const out = stock?.tone === "out";
   const selectedPrice = priceForPack(product, selectedSize);
   const off = percentOff(selectedPrice.price, selectedPrice.originalPrice);
 

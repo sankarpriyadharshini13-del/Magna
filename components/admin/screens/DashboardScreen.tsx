@@ -6,6 +6,7 @@ import { customerSub, LOW_STOCK, orderTone, orderTotal, orderUnits } from "@/lib
 import { fmtDate, startOfDay } from "@/lib/admin/format";
 import { printInvoices } from "@/lib/admin/print";
 import { useAdminData } from "@/lib/admin/store";
+import { availableStock } from "@/lib/stock";
 import type { Order } from "@/lib/admin/types";
 import { formatInr } from "@/lib/format";
 import { Badge, Modal, Topbar } from "../ui";
@@ -141,7 +142,7 @@ export default function DashboardScreen() {
 
   // Export catalogue items are enquiry-only, so they never appear in shop stock panels.
   const live = data.products.filter((p) => p.visible && p.channel !== "export");
-  const low = live.filter((p) => p.stock <= LOW_STOCK);
+  const low = live.filter((p) => (availableStock(p) ?? 0) <= LOW_STOCK);
   const customers = useMemo(() => new Map(data.customers.map((c) => [c.id, c])), [data.customers]);
   const recent = data.orders
     .filter((o) => {
@@ -300,8 +301,8 @@ export default function DashboardScreen() {
           <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink)", marginBottom: 8 }}>Stock left</div>
           <div style={{ marginBottom: 12 }}>
             {live.slice(0, 3).map((p) => (
-              <span key={p.id} className="d-pill" style={p.stock <= LOW_STOCK ? { background: "#fbe0d2", color: "#b5532a" } : { background: "#ebe9d4", color: "#4a5238" }}>
-                {p.name} · {p.stock}
+            <span key={p.id} className="d-pill" style={(availableStock(p) ?? 0) <= LOW_STOCK ? { background: "#fbe0d2", color: "#b5532a" } : { background: "#ebe9d4", color: "#4a5238" }}>
+              {p.name} · {availableStock(p) ?? 0}
               </span>
             ))}
             {!live.length && <span className="adm-muted">No live products.</span>}
