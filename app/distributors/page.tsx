@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import nextDynamic from "next/dynamic";
+import type { SVGProps } from "react";
 import SiteShell from "@/components/layout/SiteShell";
 import EnquiryForm from "@/components/enquiry/EnquiryForm";
 import Reveal from "@/components/home/Reveal";
 import SectionHeading from "@/components/home/SectionHeading";
-import { ArrowIcon, CheckIcon, FactoryIcon, GlobeIcon, HeartIcon, LeafIcon, MailIcon, PackageIcon, PinIcon, StoreIcon, TruckIcon } from "@/components/ui/Icons";
+import { ArrowIcon, CheckIcon, GlobeIcon, MailIcon, PinIcon } from "@/components/ui/Icons";
 import { getPublicProducts } from "@/lib/server/publicProducts";
 
 const ProductCard = nextDynamic(() => import("@/components/product/ProductCard"), {
@@ -19,9 +20,56 @@ export const metadata: Metadata = {
   description: "Become a pan-India distribution partner for Magna Eco Bites' stone-ground podis, cold-pressed oils and natural pantry staples.",
 };
 
+const featureIconBase: SVGProps<SVGSVGElement> = {
+  viewBox: "0 0 48 48",
+  fill: "none",
+  "aria-hidden": true,
+  focusable: false,
+};
+
+const PurityIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...featureIconBase} {...props}>
+    <path d="m24 3.5 15 5.6v12.1c0 10-6.2 18.5-15 23.3-8.8-4.8-15-13.3-15-23.3V9.1L24 3.5Z" fill="currentColor" />
+    <path d="M32.1 14.2c-8.2.7-13.8 5-14.8 11.8-.2 1.8.4 3.4 1.6 4.7 7-1.1 11.8-7 13.2-16.5Z" fill="#F2C66D" />
+    <path d="M15.9 35c3-4.8 6.3-8.3 10.4-11.1" stroke="white" strokeWidth="2.3" strokeLinecap="round" />
+  </svg>
+);
+
+const RepeatIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...featureIconBase} {...props}>
+    <path d="M37.7 18A14.5 14.5 0 0 0 12 12.5L9 16" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="m7.5 10.5 1 6.5 6.5-1" fill="currentColor" />
+    <path d="M10.3 30A14.5 14.5 0 0 0 36 35.5L39 32" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="m40.5 37.5-1-6.5-6.5 1" fill="currentColor" />
+    <path d="M24 31.5s-7.2-4.5-7.2-9.2a4.2 4.2 0 0 1 7.2-2.9 4.2 4.2 0 0 1 7.2 2.9c0 4.7-7.2 9.2-7.2 9.2Z" fill="#F2C66D" />
+  </svg>
+);
+
+const MarginIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...featureIconBase} {...props}>
+    <ellipse cx="17" cy="33" rx="10" ry="4.5" fill="currentColor" />
+    <path d="M7 27v6c0 2.5 4.5 4.5 10 4.5s10-2 10-4.5v-6" fill="currentColor" />
+    <ellipse cx="17" cy="27" rx="10" ry="4.5" fill="#F2C66D" />
+    <path d="M17 20v2M17 32v2m3-10.5c-.6-.9-1.7-1.5-3-1.5-1.7 0-3 .9-3 2s1.3 2 3 2 3 .9 3 2-1.3 2-3 2c-1.3 0-2.4-.6-3-1.5" stroke="#3B5A3A" strokeWidth="1.7" strokeLinecap="round" />
+    <path d="m27 19 5-5 4 3 7-8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M37 9h6v6" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+const DeliveryIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...featureIconBase} {...props}>
+    <path d="M4 13a2 2 0 0 1 2-2h19v19H6a2 2 0 0 1-2-2V13Z" fill="currentColor" />
+    <path d="M25 17h8l8 8v5H25V17Z" fill="currentColor" />
+    <path d="M29 20v5h8l-5-5h-3Z" fill="#F2C66D" />
+    <circle cx="13" cy="32" r="4" fill="#3B5A3A" stroke="white" strokeWidth="2" />
+    <circle cx="34" cy="32" r="4" fill="#3B5A3A" stroke="white" strokeWidth="2" />
+    <path d="M10 17h8M10 22h10" stroke="white" strokeWidth="2" strokeLinecap="round" />
+  </svg>
+);
+
 const whyPartner = [
   {
-    Icon: LeafIcon,
+    Icon: PurityIcon,
     title: "Uncompromised Quality & Purity",
     bullets: [
       "100% Natural Ingredients: Zero artificial preservatives, zero synthetic colors, zero chemical additives, and zero hidden fillers.",
@@ -30,21 +78,21 @@ const whyPartner = [
     ],
   },
   {
-    Icon: HeartIcon,
+    Icon: RepeatIcon,
     title: "High Customer Repeat & Brand Loyalty",
     bullets: [
       "South Indian pantry staples — especially stone-ground podis, pure country sugar, and cold-pressed oils — are high-frequency daily consumption items. Your customers come back regularly for the unmatched homemade flavor.",
     ],
   },
   {
-    Icon: StoreIcon,
+    Icon: MarginIcon,
     title: "Attractive Commercials & Distributor Margins",
     bullets: [
       "We offer competitive wholesale pricing structures and healthy profit margins designed to support sustainable growth for our trade partners, distributors, and bulk purchasers.",
     ],
   },
   {
-    Icon: TruckIcon,
+    Icon: DeliveryIcon,
     title: "Pan-India Logistics & Supply Chain Security",
     bullets: [
       "No matter where your business is located — Metro cities, Tier 1, Tier 2, or Tier 3 hubs across South, North, East, West, and Central India — we have reliable logistics partners to deliver your consignments safely and on schedule.",
@@ -52,9 +100,36 @@ const whyPartner = [
   },
 ];
 
+const ShoppingCartIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...featureIconBase} {...props}>
+    <path d="M7 9h4l4.2 21.3h19.3l4.2-14.5H13" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M15.2 30.3 13 16h26l-4.3 14.3H15.2Z" stroke="currentColor" strokeWidth="2.8" strokeLinejoin="round" />
+    <path d="M16 20h21M17 25h18M21 16l2 14M30 16l-1.5 14" stroke="#F2C66D" strokeWidth="2" strokeLinecap="round" />
+    <circle cx="19" cy="37" r="2.7" fill="#F2C66D" />
+    <circle cx="33" cy="37" r="2.7" fill="#F2C66D" />
+  </svg>
+);
+
+const RestaurantUtensilsIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...featureIconBase} {...props}>
+    <circle cx="24" cy="24" r="10.5" stroke="currentColor" strokeWidth="2.6" />
+    <circle cx="24" cy="24" r="6.5" stroke="#F2C66D" strokeWidth="2.2" />
+    <path d="M7 9v8m4-8v8m4-8v8M7 17h8m-4 0v22M38 9c0 6-1.3 9-4 11v17" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+const GiftBoxIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...featureIconBase} {...props}>
+    <path d="M10 22h28v19H10V22Z" stroke="currentColor" strokeWidth="2.6" strokeLinejoin="round" />
+    <path d="M8 16h32v7H8v-7Z" fill="currentColor" />
+    <path d="M21 16h6v25h-6z" fill="#F2C66D" />
+    <path d="M24 16c-7 0-10-2-10-5a3 3 0 0 1 3-3c3 0 5 4 7 8Zm0 0c7 0 10-2 10-5a3 3 0 0 0-3-3c-3 0-5 4-7 8Z" stroke="currentColor" strokeWidth="2.2" strokeLinejoin="round" />
+  </svg>
+);
+
 const solutions = [
   {
-    Icon: StoreIcon,
+    Icon: ShoppingCartIcon,
     title: "Retail Distributors & Supermarket Chains",
     body: "Expand your shelves with premium, eye-catching retail pouches and glass/pet bottles that stand out in the natural food and ethnic staple segments.",
     bullets: [
@@ -63,7 +138,7 @@ const solutions = [
     ],
   },
   {
-    Icon: FactoryIcon,
+    Icon: RestaurantUtensilsIcon,
     title: "HoReCa (Hotels, Restaurants, Cafés & Caterers)",
     body: "Elevate your culinary offerings with authentic traditional tastes. We supply commercial kitchens with consistent, high-yield spice powders, podis, and cold-pressed oils.",
     bullets: [
@@ -71,7 +146,7 @@ const solutions = [
     ],
   },
   {
-    Icon: PackageIcon,
+    Icon: GiftBoxIcon,
     title: "Corporate Gifting & Event Supply",
     body: "Looking for wholesome, culturally rich corporate gift hampers or festive wedding packages? We curate custom natural food gift boxes featuring our best-selling podis, country sugar, and superfood mixes.",
     bullets: [],
@@ -94,6 +169,7 @@ const flexibleOrder = [
 
 export default async function DistributorsPage() {
   const range = (await getPublicProducts()).filter((p) => p.channel !== "export");
+  const enquiryProducts = range.map(({ id, name, packSize, packSizes }) => ({ id, name, packSize, packSizes }));
 
   return (
     <SiteShell>
@@ -183,10 +259,8 @@ export default async function DistributorsPage() {
         </div>
       </section>
 
-      {/* Why partner: Luxury 2x2 Feature Grid */}
-      <section className="relative overflow-hidden bg-sand/40 py-16 sm:py-20 md:py-24">
-        <div aria-hidden="true" className="pointer-events-none absolute -right-20 top-20 h-72 w-72 rounded-full bg-leaf/10 blur-3xl" />
-        
+      {/* Why partner: Editorial benefit list */}
+      <section className="bg-sand/40 py-16 sm:py-20 md:py-24">
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <Reveal>
             <SectionHeading
@@ -195,22 +269,27 @@ export default async function DistributorsPage() {
               title={<>Built for <span className="italic text-clay">long-term</span> trade partnerships</>}
             />
           </Reveal>
-          
-          <div className="mt-12 grid gap-6 md:grid-cols-2 lg:gap-8">
+
+          <div className="mx-auto mt-12 max-w-6xl overflow-hidden rounded-[2rem] border border-forest/10 bg-white shadow-soft">
             {whyPartner.map((w, i) => (
-              <Reveal key={w.title} delay={i * 80} className="h-full">
-                <article className="group flex h-full flex-col rounded-[2rem] border border-forest/10 bg-white p-7 shadow-soft transition-all duration-300 hover:-translate-y-1 hover:shadow-lift sm:p-8">
-                  <div className="flex items-center gap-4">
-                    <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-clay/10 text-clay shadow-sm transition-transform duration-300 group-hover:scale-105">
-                      <w.Icon width={26} height={26} />
+              <Reveal key={w.title} delay={i * 70}>
+                <article className="grid gap-5 p-6 transition-colors duration-300 hover:bg-sand/30 sm:p-8 lg:grid-cols-[minmax(16rem,0.8fr)_minmax(0,1.2fr)] lg:items-center lg:gap-10">
+                  <div className="flex items-start gap-4">
+                    <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-clay/10 to-honey/20 text-forest ring-1 ring-clay/10">
+                      <w.Icon width={28} height={28} />
                     </span>
-                    <h3 className="font-display text-xl font-bold text-forest sm:text-2xl">{w.title}</h3>
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-clay">Benefit 0{i + 1}</p>
+                      <h3 className="mt-1 font-display text-lg font-semibold leading-snug text-forest sm:text-xl">{w.title}</h3>
+                    </div>
                   </div>
 
-                  <ul className="mt-6 flex-1 space-y-3.5 border-t border-forest/[0.08] pt-6">
+                  <ul className="space-y-3">
                     {w.bullets.map((b) => (
                       <li key={b} className="flex items-start gap-3 text-sm leading-relaxed text-ink/75 sm:text-[15px]">
-                        <span aria-hidden="true" className="mt-2 h-2 w-2 shrink-0 rounded-full bg-clay" />
+                        <span aria-hidden="true" className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-leaf/10 text-leaf">
+                          <CheckIcon width={10} height={10} />
+                        </span>
                         <span>{b}</span>
                       </li>
                     ))}
@@ -366,7 +445,7 @@ export default async function DistributorsPage() {
 
           {/* Form Card Container */}
           <div className="mt-10 rounded-[2.25rem] bg-white p-7 text-ink shadow-lift sm:p-10 md:p-12">
-            <EnquiryForm type="distributor" />
+            <EnquiryForm type="distributor" products={enquiryProducts} />
           </div>
         </div>
       </section>

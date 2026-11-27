@@ -1,11 +1,45 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { SVGProps } from "react";
 import { sourcingPhoto, sourcingPrinciples } from "@/data/brand";
-import { ArrowIcon, HeartIcon, PackageIcon, SproutIcon } from "@/components/ui/Icons";
+import { ArrowIcon } from "@/components/ui/Icons";
 import Reveal from "./Reveal";
 import SectionHeading from "./SectionHeading";
 
-const icons = { chosen: SproutIcon, made: PackageIcon, goodness: HeartIcon };
+const sourcingIconBase: SVGProps<SVGSVGElement> = {
+  viewBox: "0 0 48 48",
+  fill: "none",
+  "aria-hidden": true,
+  focusable: false,
+};
+
+const IngredientsIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...sourcingIconBase} {...props}>
+    <path d="M24 40V21" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+    <path d="M24 27C12 27 9 18 10 9c9-1 16 3 18 12" fill="currentColor" />
+    <path d="M24 23C24 12 32 7 40 8c1 9-4 16-16 19Z" fill="#F2C66D" />
+    <path d="M12 40h24" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+  </svg>
+);
+
+const LocalProductionIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...sourcingIconBase} {...props}>
+    <path d="m4 23 15-13 15 13v19H4V23Z" fill="currentColor" />
+    <path d="M14 42V29h10v13" fill="#F2C66D" />
+    <path d="M34 4c-5 0-8.5 3.8-8.5 8.5C25.5 18.2 34 26 34 26s8.5-7.8 8.5-13.5C42.5 7.8 39 4 34 4Z" fill="#F2C66D" />
+    <circle cx="34" cy="12.5" r="2.7" fill="#3B5A3A" />
+  </svg>
+);
+
+const GoodnessIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...sourcingIconBase} {...props}>
+    <path d="m24 7 16 9v17l-16 9-16-9V16l16-9Z" fill="currentColor" />
+    <path d="m8 16 16 9 16-9M24 25v17" stroke="white" strokeWidth="2" strokeLinejoin="round" />
+    <path d="M24 22.5s-6.5-4-6.5-8.1a3.8 3.8 0 0 1 6.5-2.7 3.8 3.8 0 0 1 6.5 2.7c0 4.1-6.5 8.1-6.5 8.1Z" fill="#F2C66D" />
+  </svg>
+);
+
+const icons = { chosen: IngredientsIcon, made: LocalProductionIcon, goodness: GoodnessIcon };
 
 export default function NaturalSourcing({ learnMore = true }: { learnMore?: boolean }) {
   return (
@@ -58,8 +92,8 @@ export default function NaturalSourcing({ learnMore = true }: { learnMore?: bool
                 <li key={p.key}>
                   <Reveal delay={i * 90} className="h-full">
                     <div className="group flex h-full gap-4 rounded-2xl border border-forest/[0.08] bg-white/80 p-5 shadow-soft transition-all duration-300 hover:border-leaf/30 hover:bg-white hover:shadow-lift sm:gap-5 sm:p-6">
-                      <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-leaf/10 text-leaf transition-transform duration-300 group-hover:scale-110">
-                        <Icon width={22} height={22} />
+                      <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-leaf/10 text-forest transition-transform duration-300 group-hover:scale-110">
+                        <Icon width={26} height={26} />
                       </span>
                       <div className="min-w-0 flex-1">
                         <h3 className="font-display text-lg font-semibold leading-snug text-forest sm:text-xl">{p.title}</h3>

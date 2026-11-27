@@ -326,7 +326,7 @@ export default function DashboardScreen() {
         <section className="adm-card">
           <div className="adm-card-h"><h2>Recent orders</h2><span>{range === "custom" ? "selected period" : range === "today" ? "today" : range === "week" ? "this week" : "this month"}</span></div>
           <div className="adm-scroll">
-            <table className="adm-table">
+            <table className="adm-table adm-table-readable">
               <thead>
                 <tr><th>Order</th><th>Customer</th><th>Items</th><th>Amount</th><th>Delivery Charge</th><th>Status</th><th>Actions</th></tr>
               </thead>

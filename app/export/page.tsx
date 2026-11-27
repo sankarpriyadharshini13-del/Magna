@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import nextDynamic from "next/dynamic";
+import type { SVGProps } from "react";
 import SiteShell from "@/components/layout/SiteShell";
 import EnquiryForm from "@/components/enquiry/EnquiryForm";
 import Reveal from "@/components/home/Reveal";
 import SectionHeading from "@/components/home/SectionHeading";
-import { ArrowIcon, CheckIcon, GlobeIcon, LeafIcon, MailIcon, OilPressIcon, PackageIcon, PinIcon, ShipIcon } from "@/components/ui/Icons";
+import { ArrowIcon, CheckIcon, GlobeIcon, MailIcon, PinIcon } from "@/components/ui/Icons";
 import { getPublicProducts } from "@/lib/server/publicProducts";
 
 const ProductCard = nextDynamic(() => import("@/components/product/ProductCard"), {
@@ -19,9 +20,70 @@ export const metadata: Metadata = {
   description: "Certified exporter of GI-tagged spices, cold-pressed oils, superfoods and wholesome grains from Chennai, India.",
 };
 
+const exportIconBase: SVGProps<SVGSVGElement> = {
+  viewBox: "0 0 48 48",
+  fill: "none",
+  "aria-hidden": true,
+  focusable: false,
+};
+
+const SpiceIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...exportIconBase} {...props}>
+    <path d="M12 24h24l-3 13a3 3 0 0 1-3 2.3H18a3 3 0 0 1-3-2.3L12 24Z" fill="currentColor" />
+    <path d="M10 22a14 3.5 0 1 0 28 0 14 3.5 0 1 0-28 0Z" fill="#F2C66D" />
+    <path d="m24 7 11 11M27 6l-7 7" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+    <path d="M18 18c1.7-4.1 5.4-6.1 11-6.1-.4 5.5-3.1 8.7-8.1 9.6" fill="#F2C66D" />
+  </svg>
+);
+
+const OilIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...exportIconBase} {...props}>
+    <path d="M19 7h10v6l4 4v22H15V17l4-4V7Z" fill="currentColor" />
+    <path d="M20 7h8v5h-8z" fill="#F2C66D" />
+    <path d="M19 24h14v10H19z" fill="#F2C66D" />
+    <path d="M26 27c-2 2.7-3 4.1-3 5.4a3 3 0 0 0 6 0c0-1.3-1-2.7-3-5.4Z" fill="currentColor" />
+    <path d="M9 34c1.3-2 2-3 2-4a2 2 0 0 0-4 0c0 1 .7 2 2 4Z" fill="#F2C66D" />
+  </svg>
+);
+
+const GrainIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...exportIconBase} {...props}>
+    <path d="M24 42V10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+    <path d="M24 20c-5.2 0-8.4-2.8-9.5-8 5.1 0 8.3 2.7 9.5 8ZM24 27c5.2 0 8.4-2.8 9.5-8-5.1 0-8.3 2.7-9.5 8ZM24 33c-4.6 0-7.4-2.5-8.4-7.1 4.5 0 7.4 2.4 8.4 7.1ZM24 38c4.6 0 7.4-2.5 8.4-7.1-4.5 0-7.4 2.4-8.4 7.1Z" fill="#F2C66D" />
+    <path d="M17 42h14" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+  </svg>
+);
+
+const ConsolidatedCargoIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...exportIconBase} {...props}>
+    <path d="M7 35h34M11 39h26" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" />
+    <path d="M10 20h12v13H10zM24 13h14v20H24z" fill="currentColor" />
+    <path d="M13 24h6M27 18h8M27 23h8M27 28h8" stroke="#F2C66D" strokeWidth="2" strokeLinecap="round" />
+  </svg>
+);
+
+const ShippingContainerIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...exportIconBase} {...props}>
+    <path d="M6 12h36v24H6z" fill="currentColor" />
+    <path d="M12 15v18M19 15v18M26 15v18M33 15v18M39 15v18" stroke="#F2C66D" strokeWidth="2" />
+    <path d="M5 39h38" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" />
+    <circle cx="13" cy="40" r="2" fill="#F2C66D" />
+    <circle cx="35" cy="40" r="2" fill="#F2C66D" />
+  </svg>
+);
+
+const CustomLabelIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...exportIconBase} {...props}>
+    <path d="m8 19 16-8 16 8-16 8L8 19Z" fill="currentColor" />
+    <path d="M8 19v17l16 8 16-8V19M24 27v17" stroke="currentColor" strokeWidth="2.6" strokeLinejoin="round" />
+    <path d="M28 7h12v10H28z" fill="#F2C66D" />
+    <path d="M31 10h6M31 13h4" stroke="#3B5A3A" strokeWidth="1.5" strokeLinecap="round" />
+  </svg>
+);
+
 const portfolio = [
   {
-    Icon: LeafIcon,
+    Icon: SpiceIcon,
     title: "GI-Tagged & Authentic Indian Spices",
     items: [
       "GI-Tagged Turmeric (Whole Fingers & High-Curcumin Powder): Sourced from renowned growing regions, celebrated for vibrant colour, rich aroma, and high natural curcumin content.",
@@ -29,7 +91,7 @@ const portfolio = [
     ],
   },
   {
-    Icon: OilPressIcon,
+    Icon: OilIcon,
     title: "Pure Cold-Pressed & Culinary Oils",
     items: [
       "Groundnut Oil: Rich, nutty, traditionally extracted cooking oil ideal for culinary and retail markets.",
@@ -40,7 +102,7 @@ const portfolio = [
     ],
   },
   {
-    Icon: GlobeIcon,
+    Icon: GrainIcon,
     title: "Superfoods, Millets & Agricultural Staples",
     items: [
       "Raw Moringa Powder: Shade-dried, finely milled nutrient-dense leaf powder retaining maximum natural vitamins and antioxidants.",
@@ -53,17 +115,17 @@ const portfolio = [
 
 const logistics = [
   {
-    Icon: PackageIcon,
+    Icon: ConsolidatedCargoIcon,
     title: "LCL (Less than Container Load)",
     body: "Consolidated, cost-effective palletized shipments ideal for medium-sized orders, multi-product trial consignments, and specialty retailers.",
   },
   {
-    Icon: ShipIcon,
+    Icon: ShippingContainerIcon,
     title: "FCL (Full Container Load)",
     body: "Dedicated 20ft and 40ft container shipments engineered for bulk importers, wholesalers, and institutional buyers seeking maximum freight efficiency.",
   },
   {
-    Icon: PackageIcon,
+    Icon: CustomLabelIcon,
     title: "Custom Packaging & Private Labelling",
     body: "Available in bulk food-service sacks (25 kg / 50 kg), food-grade drums/jerrycans for oils, and retail-ready pouches or jars customized to your market's labelling regulations.",
   },
@@ -100,6 +162,7 @@ const trust = [
 
 export default async function ExportPage() {
   const exportItems = (await getPublicProducts()).filter((p) => p.channel === "export");
+  const enquiryProducts = exportItems.map(({ id, name, packSize, packSizes }) => ({ id, name, packSize, packSizes }));
 
   return (
     <SiteShell>
@@ -199,8 +262,8 @@ export default async function ExportPage() {
               <Reveal key={g.title} delay={i * 80} className="h-full">
                 <article className="group flex h-full flex-col rounded-[2rem] border border-forest/10 bg-white p-7 shadow-soft transition-all duration-300 hover:-translate-y-1 hover:shadow-lift sm:p-8">
                   <div className="flex items-center gap-4">
-                    <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-clay/10 text-clay shadow-sm transition-transform duration-300 group-hover:scale-105">
-                      <g.Icon width={24} height={24} />
+                    <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-clay/10 text-forest shadow-sm transition-transform duration-300 group-hover:scale-105">
+                      <g.Icon width={28} height={28} />
                     </span>
                     <h3 className="font-display text-xl font-bold text-forest sm:text-2xl">{g.title}</h3>
                   </div>
@@ -371,7 +434,7 @@ export default async function ExportPage() {
 
           {/* Form Card Container */}
           <div className="mt-10 rounded-[2.25rem] bg-white p-7 text-ink shadow-lift sm:p-10 md:p-12">
-            <EnquiryForm type="export" />
+            <EnquiryForm type="export" products={enquiryProducts} />
           </div>
         </div>
       </section>

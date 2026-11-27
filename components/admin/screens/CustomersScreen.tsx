@@ -162,7 +162,7 @@ export default function CustomersScreen() {
       <div className={`c-wrap ${active ? "open" : "closed"}`}>
         <section className="adm-card" style={{ minHeight: 628 }}>
           <div className="adm-scroll" style={{ maxHeight: 640 }}>
-            <table className="adm-table">
+            <table className="adm-table adm-table-readable">
               <thead>
                 <tr>
                   <th style={{ width: 30 }} aria-label="Select customer" />
