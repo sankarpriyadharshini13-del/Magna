@@ -5,14 +5,15 @@ import { useMemo, useState } from "react";
 import ProductCard from "@/components/product/ProductCard";
 import { ArrowIcon } from "@/components/ui/Icons";
 import { useProducts } from "@/context/ProductsContext";
+import { sellsOnline } from "@/lib/channels";
 import Reveal from "./Reveal";
 
 export default function FeaturedProducts() {
   const { products } = useProducts();
   const [tag, setTag] = useState<string>("All");
 
-  // Home only sells the ecommerce catalogue; export items live on /export and are enquiry-only.
-  const catalogue = useMemo(() => products.filter((p) => p.channel !== "export"), [products]);
+  // Home only sells the ecommerce catalogue; export / distributor-only items are enquiry-only.
+  const catalogue = useMemo(() => products.filter(sellsOnline), [products]);
 
   // Filter chips come from the tags set in Admin → Products, so they change with the catalogue.
   // Tags are matched case-insensitively ("Bestseller" and "BestSeller" are one chip).

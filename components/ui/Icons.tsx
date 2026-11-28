@@ -67,6 +67,14 @@ export const PinIcon = (p: P) => (
 export const StoneIcon = (p: P) => (
   <svg {...base} {...p}><ellipse cx="12" cy="8" rx="8" ry="3" /><path d="M4 8v4c0 1.7 3.6 3 8 3s8-1.3 8-3V8" /><path d="M7 15v4M17 15v4M12 15v5" /></svg>
 );
+export const GrindingStoneIcon = (p: P) => (
+  <svg {...base} {...p}>
+    <path d="M4 13c0 1.1 3.6 2 8 2s8-.9 8-2" />
+    <path d="M4 13l2 7h12l2-7" />
+    <path d="M7 20h10" />
+    <path d="m8 4 8 7-2 2-8-7z" />
+  </svg>
+);
 export const FamilyIcon = (p: P) => (
   <svg {...base} {...p}><circle cx="8" cy="7" r="3" /><circle cx="17" cy="9" r="2.5" /><path d="M2 20a6 6 0 0 1 12 0M14 20a4.5 4.5 0 0 1 8 0" /></svg>
 );

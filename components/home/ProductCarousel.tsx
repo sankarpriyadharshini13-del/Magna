@@ -28,7 +28,7 @@ export default function ProductCarousel({ products }: { products: Product[] }) {
   const imageAlt = currentProduct?.imageAlt || "Magna Eco Bites product";
 
   return (
-    <figure className="relative mx-auto aspect-[575/720] w-full max-w-[575px] overflow-hidden rounded-[2rem] bg-forest-card shadow-lift lg:mx-0 lg:rounded-[2.75rem]">
+    <figure className="relative mx-auto aspect-[575/720] w-full max-w-[575px] overflow-hidden rounded-[2rem] bg-forest-card shadow-lift lg:mx-0 lg:aspect-auto lg:h-full lg:rounded-[2.75rem]">
       <div className="relative h-full w-full">
         <Image
           src={imageSrc}

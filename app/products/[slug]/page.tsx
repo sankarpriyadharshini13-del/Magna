@@ -6,6 +6,7 @@ import SiteShell from "@/components/layout/SiteShell";
 import ProductCard from "@/components/product/ProductCard";
 import { ArrowIcon, CheckIcon, CloseIcon, PinIcon, StoneIcon } from "@/components/ui/Icons";
 import { packPoints } from "@/lib/pack";
+import { productPages } from "@/lib/channels";
 import { recommend } from "@/lib/recommend";
 import { stockState } from "@/lib/stock";
 import { getPublicProduct, getPublicProducts } from "@/lib/server/publicProducts";
@@ -34,9 +35,11 @@ export default async function ProductPage({
   const [product, catalogue] = await Promise.all([getPublicProduct(params.slug), getPublicProducts()]);
   if (!product) notFound();
   const related = recommend(product, catalogue, 3);
-  const isExport = product.channel === "export";
-  const isDistributorEnquiry = !isExport && searchParams?.channel === "distributors";
-  const isEnquiryOnly = isExport || isDistributorEnquiry;
+  const pages = productPages(product);
+  const requested = searchParams?.channel === "distributors" || searchParams?.channel === "export" ? searchParams.channel : null;
+  const isExport = requested ? requested === "export" : !pages.includes("ecommerce") && pages.includes("export");
+  const isDistributorEnquiry = requested ? requested === "distributors" : !pages.includes("ecommerce") && pages.includes("distributors");
+  const isEnquiryOnly = isExport || isDistributorEnquiry || !pages.includes("ecommerce");
   const enquiryHref = isExport ? "/export#enquire" : "/distributors#enquire";
   const stock = isEnquiryOnly ? null : stockState(product);
   const out = stock?.tone === "out";
@@ -167,7 +170,7 @@ export default async function ProductPage({
             </div>
             <ul className="mt-8 grid gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
               {related.map((p) => (
-                <li key={p.id}><ProductCard product={p} enquiryOnly={isDistributorEnquiry} /></li>
+                <li key={p.id}><ProductCard product={p} enquiryOnly={isDistributorEnquiry} page={isExport ? "export" : isDistributorEnquiry ? "distributors" : "ecommerce"} /></li>
               ))}
             </ul>
           </section>

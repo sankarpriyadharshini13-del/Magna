@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import SiteShell from "@/components/layout/SiteShell";
 import Reveal from "@/components/home/Reveal";
 import SectionHeading from "@/components/home/SectionHeading";
-import { LeafIcon, SproutIcon, StoneIcon } from "@/components/ui/Icons";
+import { GrindingStoneIcon, LandscapeIcon, ShieldIcon } from "@/components/ui/Icons";
 import { team } from "@/data/brand";
 
 const AVATAR = ["from-clay to-honey", "from-leaf to-forest", "from-honey to-clay"];
@@ -14,17 +14,17 @@ export const metadata: Metadata = {
 
 const principles = [
   {
-    Icon: SproutIcon,
+    Icon: LandscapeIcon,
     title: "Direct Farm Sourcing",
     body: "We partner closely with trusted farmers across Tamil Nadu to procure pure, unrefined ingredients straight from the harvest.",
   },
   {
-    Icon: StoneIcon,
+    Icon: GrindingStoneIcon,
     title: "Traditional Stone Grinding",
     body: "By slowly stone-grinding our spices and lentils, we lock in natural essential oils, rich aroma, and authentic texture without heat damage.",
   },
   {
-    Icon: LeafIcon,
+    Icon: ShieldIcon,
     title: "100% Natural & Pure",
     body: "Zero artificial preservatives, zero synthetic colours, and zero hidden fillers — just clean, natural ingredients.",
   },

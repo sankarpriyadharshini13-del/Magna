@@ -1,4 +1,4 @@
-import type { ProductChannel, ProductPack, ProductPackPrice } from "@/types";
+import type { ProductChannel, ProductPage, ProductPack, ProductPackPrice } from "@/types";
 
 export type OrderStatus = "New" | "Packed" | "Delivered" | "Cancelled";
 
@@ -32,6 +32,8 @@ export interface AdminProduct {
   packStock: Record<string, number>;
   /** Which admin catalogue (and storefront page) the product belongs to. */
   channel: ProductChannel;
+  /** Storefront pages this product appears on (each has its own Disable / Enable switch). */
+  channels: ProductPage[];
   /** Position on the website inside its catalogue (1 = first). 0 = not positioned yet. */
   sortOrder: number;
   tag: string;
@@ -83,7 +85,7 @@ export interface Order {
   email: string;
   shipName: string;
   shipPhone: string;
-  location: { city: string; state: string; pincode: string };
+  location: { city: string; state: string; pincode: string; country: string };
   deliveredAt: string | null;
   /** Why the shop cancelled it (empty when the order wasn't cancelled, or no reason was given). */
   cancelReason: string;
@@ -102,8 +104,10 @@ export interface Order {
   amountPaid: number;
   /** Taken off the total (total = items + shipping − discount). */
   discount: number;
-  /** Manual delivery charge entered by admin. */
+  /** Manual delivery charge entered by admin (0 = free delivery). */
   deliveryCharge: number;
+  /** Distributor / export orders: show the delivery charge as its own line on the invoice. */
+  showDeliveryCharge: boolean;
   /** Bulk orders: parcels and the transporter details the admin entered. */
   boxes: number | null;
   totalWeight: string;
@@ -199,6 +203,8 @@ export interface Settings {
     gstin: string;
     udyam: string;
   };
+  /** Storefront page-wide switches — off hides every product on that page at once. */
+  pages: Record<ProductPage, boolean>;
   razorpay: {
     mode: "Live" | "Test";
     upi: boolean;

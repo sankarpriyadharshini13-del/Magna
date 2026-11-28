@@ -147,8 +147,11 @@ export default function FAQ() {
             id="faq-title"
             className="mt-4 font-display text-[2rem] leading-[1.1] tracking-tight text-forest sm:text-4xl md:text-5xl"
           >
-            FAQ
+            Frequently asked <span className="italic text-clay">questions</span>
           </h2>
+          <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-ink/60 sm:text-base">
+            Straight answers about our products, storage, orders and wholesale supply.
+          </p>
         </Reveal>
 
         <div className="mt-8 md:mt-12">

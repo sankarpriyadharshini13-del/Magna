@@ -32,17 +32,9 @@ const FacebookMark = () => (
   </svg>
 );
 
-const WhatsAppMark = () => (
-  <svg {...socialBase}>
-    <path d="M20.4 11.9a8.4 8.4 0 0 1-12.5 7.3L3.6 20.4l1.2-4.1a8.4 8.4 0 1 1 15.6-4.4Z" />
-    <path d="M16.6 14.2c-.2-.1-1.4-.7-1.6-.8-.2-.1-.4 0-.5.1l-.7.9c-.1.2-.3.2-.5.1-.6-.3-1.2-.7-1.7-1.2-.4-.5-.8-1.1-1.1-1.7-.1-.2 0-.4.1-.5l.7-.8c.1-.2.1-.4 0-.5l-.8-1.7c-.1-.2-.2-.3-.4-.3h-.6c-.2 0-.5.1-.7.3-.5.5-.8 1.2-.7 1.9.2 1.5.9 2.9 1.9 4 1.1 1.1 2.5 1.8 4 2 .7.1 1.4-.2 1.9-.7.2-.2.3-.5.3-.7v-.6c0-.2-.1-.3-.2-.4Z" />
-  </svg>
-);
-
 const socialLinks = [
   { name: "Instagram", href: "https://instagram.com/magnaecobites", Icon: InstagramMark },
   { name: "Facebook", href: "https://facebook.com/magnaecobites", Icon: FacebookMark },
-  { name: "WhatsApp", href: "https://wa.me/919876543210", Icon: WhatsAppMark },
 ];
 
 const exploreLinks = [...site.nav, { href: "/#contact", label: "Contact" }];

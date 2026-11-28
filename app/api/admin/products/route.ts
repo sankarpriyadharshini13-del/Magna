@@ -43,6 +43,9 @@ export const POST = handle(async (req) => {
     pack_sizes: input.packSizes,
     pack_stock: input.packStock,
     channel: input.channel,
+    show_ecommerce: input.channels.includes("ecommerce"),
+    show_distributors: input.channels.includes("distributors"),
+    show_export: input.channels.includes("export"),
     tag: input.tag,
     description: input.description,
     visible: input.visible,
@@ -62,6 +65,9 @@ export const POST = handle(async (req) => {
     "pack_prices",
     "pack_sizes",
     "channel",
+    "show_ecommerce",
+    "show_distributors",
+    "show_export",
     "pack_enabled",
     "pack_ingredients",
     "pack_benefits",
@@ -106,6 +112,8 @@ export const POST = handle(async (req) => {
           throw new HttpError(503, "To save pack size quantities, run supabase/migrations/20261126000000_pack_size_quantities.sql in the Supabase SQL Editor first.", "SCHEMA_MISSING");
         if (missing.includes("channel") && input.channel === "export")
           throw new HttpError(503, "To add a product to the Export catalogue, run supabase/migrations/20261123000000_product_channels_pack_sizes.sql in the Supabase SQL Editor first.", "SCHEMA_MISSING");
+        if (missing.some((c) => c.startsWith("show_")))
+          throw new HttpError(503, "To choose which pages a product appears on, run supabase/migrations/20261128010000_product_page_flags.sql in the Supabase SQL Editor first.", "SCHEMA_MISSING");
         // The pack columns are missing: saving the block's copy needs the SQL first.
         if (missing.some((c) => c.startsWith("pack_") && c !== "pack_customized") && packContent)
           throw new HttpError(503, "To save the Know your pack section, run supabase/migrations/20261120000000_product_pack_info.sql and supabase/migrations/20261120010000_product_pack_customized.sql in the Supabase SQL Editor first.", "SCHEMA_MISSING");

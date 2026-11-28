@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import nextDynamic from "next/dynamic";
 import SiteShell from "@/components/layout/SiteShell";
+import { sellsOnline } from "@/lib/channels";
+import { getPageVisibility } from "@/lib/server/pageVisibility";
 import { getPublicProducts } from "@/lib/server/publicProducts";
 
 const ProductCard = nextDynamic(() => import("@/components/product/ProductCard"), {
@@ -12,17 +14,21 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Shop | Magna Eco Bites", description: "Browse the full Magna Eco Bites range — traditional podis, cold-pressed oils and kitchen staples, packed in Chennai." };
 
 export default async function ShopPage() {
-  const products = (await getPublicProducts()).filter((p) => p.channel !== "export");
+  const [allProducts, visibility] = await Promise.all([getPublicProducts(), getPageVisibility()]);
+  const open = visibility.ecommerce !== false;
+  const products = open ? allProducts.filter(sellsOnline) : [];
   return (
     <SiteShell>
       <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-14 md:py-20 lg:px-8">
         <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-clay sm:text-xs">Shop</p>
         <h1 className="mt-2 font-display text-3xl text-forest sm:mt-3 sm:text-4xl md:text-6xl">All <span className="italic text-clay">products</span></h1>
-        {products.length === 0 ? (
+        {!open ? (
+          <p className="mt-8 rounded-[1.5rem] bg-sand/60 p-8 text-center text-ink/65 sm:mt-12">Our shop is being updated right now — please check back soon.</p>
+        ) : products.length === 0 ? (
           <p className="mt-8 rounded-[1.5rem] bg-sand/60 p-8 text-center text-ink/65 sm:mt-12">Our new batch is being packed — check back very soon.</p>
         ) : (
           <ul className="mt-8 grid gap-5 sm:mt-12 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {products.map((p, i) => (<li key={p.id}><ProductCard product={p} priority={i < 3} /></li>))}
+            {products.map((p, i) => (<li key={p.id}><ProductCard product={p} priority={i < 3} page="ecommerce" /></li>))}
           </ul>
         )}
       </section>

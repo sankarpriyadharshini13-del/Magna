@@ -22,6 +22,10 @@ export interface ProductPack {
 export type ProductChannel = "ecommerce" | "export";
 export const PRODUCT_CHANNELS: ProductChannel[] = ["ecommerce", "export"];
 
+/** A storefront page a product can be shown on. A product may appear on one, two or all three. */
+export type ProductPage = "ecommerce" | "distributors" | "export";
+export const PRODUCT_PAGES: ProductPage[] = ["ecommerce", "distributors", "export"];
+
 export interface ProductPackPrice {
   price: number | null;
   originalPrice: number | null;
@@ -42,6 +46,8 @@ export interface Product {
   packSizes?: string[];
   /** Ecommerce (shop/distributors) or export catalogue. Missing = ecommerce for older data. */
   channel?: ProductChannel;
+  /** Pages the product is shown on. Missing = older data: the shop and distributors, or just export. */
+  channels?: ProductPage[];
   /** Price in whole INR. null until confirmed — never guess. */
   priceInr: number | null;
   /** Optional "was" price (MRP) in whole INR. Shown struck through when higher than `priceInr`. */

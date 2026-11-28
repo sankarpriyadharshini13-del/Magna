@@ -32,15 +32,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let alive = true;
+    // The initial session read and the first auth event race each other: if the event lands first,
+    // ignore the older getSession() result so it can never overwrite a fresh sign-in with null.
+    let authEventSeen = false;
     auth.getSession().then((u) => {
-      if (alive) {
+      if (alive && !authEventSeen) {
         setUser(u);
         setReady(true);
       }
     });
     const off = auth.onAuthChange((event, profile) => {
       if (!alive) return;
+      authEventSeen = true;
       setUser(profile);
+      setReady(true);
       if (event === "PASSWORD_RECOVERY") setRecovering(true);
       if (event === "SIGNED_OUT") setRecovering(false);
     });

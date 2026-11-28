@@ -10,30 +10,36 @@ import type { AdminProduct } from "@/lib/admin/types";
 import { cleanPackSizes } from "@/lib/pack";
 import { availableStock } from "@/lib/stock";
 import { formatInr } from "@/lib/format";
-import type { ProductChannel } from "@/types";
+import type { ProductPage } from "@/types";
 import { Badge, BarcodeSvg, ConfirmModal, Modal, Toggle, Topbar } from "../ui";
 import ProductPreviewCard from "./ProductPreviewCard";
 
 const MAX_PHOTOS = 5;
 const MAX_PACK_SIZES = 8;
 
-const CHANNELS: { id: ProductChannel; title: string; blurb: string }[] = [
+const PAGES: { id: ProductPage; title: string; blurb: string }[] = [
   {
     id: "ecommerce",
-    title: "Ecommerce & Distributors",
-    blurb: "Shop products and distributor enquiries — manage pack sizes and prices.",
+    title: "Ecommerce",
+    blurb: "The shop — sold online with stock and prices.",
+  },
+  {
+    id: "distributors",
+    title: "Distributors",
+    blurb: "The distributor enquiry catalogue on /distributors.",
   },
   {
     id: "export",
     title: "Export",
-    blurb: "Bulk export catalogue shown on /export — enquiry only, no online checkout.",
+    blurb: "The export enquiry catalogue on /export — no online checkout.",
   },
 ];
 
 interface Draft {
   name: string;
   packPrices: Record<string, { price: string; originalPrice: string }>;
-  channel: ProductChannel;
+  /** Pages the product is shown on. One, two or all three. */
+  pages: ProductPage[];
   /** Every pack size the product is sold in; the first one is the default on the shop. */
   packSizes: string[];
   /** Stock quantity per pack size, e.g. {"200 g": "50", "500 g": "30"}. */
@@ -72,7 +78,7 @@ const toDraft = (p: AdminProduct | null): Draft => {
   return {
     name: p?.name ?? "",
     packPrices,
-    channel: p?.channel ?? "ecommerce",
+    pages: p?.channels?.length ? p.channels : p?.channel === "export" ? ["export"] : ["ecommerce", "distributors"],
     packSizes: sizes.length ? sizes : [""],
     packStock,
     tag: p?.tag ?? "",
@@ -95,7 +101,7 @@ export default function ProductsScreen() {
   /** null = no panel; "new" = Add new product; otherwise the product being edited. */
   const [selectedId, setSelectedId] = useState<string | null>(null);
   /** Which catalogue landing box is open. */
-  const [channel, setChannel] = useState<ProductChannel>("ecommerce");
+  const [channel, setChannel] = useState<ProductPage>("ecommerce");
   const isNew = selectedId === "new";
   const product = data.products.find((p) => p.id === selectedId) ?? null;
 
@@ -113,8 +119,10 @@ export default function ProductsScreen() {
     setSelectedId(id);
     setDraft(toDraft(editing));
     if (editing) {
-      setChannel(editing.channel);
-      const pos = data.products.filter((p) => p.channel === editing.channel).sort(productOrder).findIndex((p) => p.id === id) + 1;
+      const pages = editing.channels.length ? editing.channels : (["ecommerce"] as ProductPage[]);
+      const target = pages.includes(channel) ? channel : pages[0];
+      setChannel(target);
+      const pos = data.products.filter((p) => p.channels.includes(target)).sort(productOrder).findIndex((p) => p.id === id) + 1;
       setPosition(String(pos));
     }
     setErrors({});
@@ -122,9 +130,9 @@ export default function ProductsScreen() {
   };
   const closePanel = () => setSelectedId(null);
 
-  const startNew = (target: ProductChannel = channel) => {
+  const startNew = (target: ProductPage = channel) => {
     setSelectedId("new");
-    setDraft({ ...toDraft(null), channel: target });
+    setDraft({ ...toDraft(null), pages: [target] });
     setChannel(target);
     setErrors({});
     setPosition("");
@@ -134,20 +142,31 @@ export default function ProductsScreen() {
     });
   };
 
-  // The panel refreshes its data every 20 s in the background. The draft is only filled when a
+  // The panel refreshes its data every 60 s in the background. The draft is only filled when a
   // product is opened (or after a save), so typing and the Know your pack switch survive refreshes.
 
-  const listed = data.products.filter((p) => p.channel === channel).sort(productOrder);
+  const listed = data.products.filter((p) => p.channels.includes(channel)).sort(productOrder);
   const live = listed.filter((p) => p.visible);
   const drafts = listed.length - live.length;
-  // Export catalogue items are enquiry-only: they never carry stock alerts or stock KPIs.
-  const shop = data.products.filter((p) => p.visible && p.channel !== "export");
+  // Only products sold online carry stock alerts and stock KPIs.
+  const shop = data.products.filter((p) => p.visible && p.channels.includes("ecommerce"));
   const stockOf = (p: AdminProduct) => availableStock(p) ?? 0;
   const low = shop.filter((p) => stockOf(p) > 0 && stockOf(p) <= LOW_STOCK);
   const out = shop.filter((p) => stockOf(p) <= 0);
   const units = shop.reduce((s, p) => s + stockOf(p), 0);
   const alerts = shop.filter((p) => stockOf(p) <= LOW_STOCK);
-  const activeChannel = CHANNELS.find((c) => c.id === channel) ?? CHANNELS[0];
+  const activeChannel = PAGES.find((c) => c.id === channel) ?? PAGES[0];
+  /** Page-wide switch: off hides every product on this page without touching each product's choices. */
+  const pageShown = data.settings.pages?.[channel] !== false;
+  const setPageVisibility = (enabled: boolean) =>
+    mutate(
+      "/api/admin/settings/pages",
+      "POST",
+      { page: channel, enabled },
+      enabled
+        ? `All products are showing on ${activeChannel.title} again.`
+        : `All products are hidden from ${activeChannel.title}. Switch it back on any time.`,
+    );
 
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => {
     setDraft((d) => ({ ...d, [k]: v }));
@@ -185,7 +204,7 @@ export default function ProductsScreen() {
     packSize: p.packSize,
     packSizes: p.packSizes,
     packStock: p.packStock,
-    channel: p.channel,
+    channels: p.channels,
     tag: p.tag,
     description: p.description,
     pack: p.pack,
@@ -194,12 +213,32 @@ export default function ProductsScreen() {
   });
 
   const toggleVisible = (p: AdminProduct, visible: boolean) =>
-    mutate("/api/admin/products", "POST", payloadOf(p, visible), visible ? `${p.name} is now visible on the shop.` : `${p.name} is now hidden from the shop.`);
+    mutate("/api/admin/products", "POST", payloadOf(p, visible), visible ? `${p.name} is now visible on every page.` : `${p.name} is now hidden from every page.`);
+
+  const pageTitle = (page: ProductPage) => PAGES.find((entry) => entry.id === page)?.title ?? page;
+
+  /** Per-page switch in the table: the master "Visible on website" toggle still hides it everywhere. */
+  const togglePage = (p: AdminProduct, page: ProductPage, show: boolean) => {
+    const pages = show ? Array.from(new Set([...p.channels, page])) : p.channels.filter((current) => current !== page);
+    if (!pages.length) {
+      return toast(
+        `${p.name} has to stay on at least one page. Use “Visible on website” to hide it everywhere.`,
+        "error",
+      );
+    }
+    return mutate(
+      "/api/admin/products",
+      "POST",
+      { ...payloadOf(p), channels: pages },
+      show ? `${p.name} now shows on ${pageTitle(page)}.` : `${p.name} is hidden from ${pageTitle(page)}.`,
+    );
+  };
 
   const save = async () => {
     if (busy || uploading) return;
     const errs: typeof errors = {};
     if (!draft.name.trim()) errs.name = "Product name is required.";
+    if (!draft.pages.length) errs.pages = "Choose at least one page for this product.";
     if (draft.packSizes.some((s) => s.trim().length > 40)) errs.packSizes = "Each pack size must be 40 characters or fewer.";
     const packSizes = cleanPackSizes(draft.packSizes);
     const packPrices: Record<string, { price: number | null; originalPrice: number | null }> = {};
@@ -211,7 +250,7 @@ export default function ProductsScreen() {
       if (values.price.trim()) {
         price = Number(values.price);
         if (!Number.isInteger(price) || price < 0) errs.packPrices = `Selling price for "${size || "pack"}" must be a whole number of rupees.`;
-      } else if (draft.visible && draft.channel !== "export") {
+      } else if (draft.visible && draft.pages.includes("ecommerce")) {
         errs.packPrices = `Add a selling price for "${size || "pack"}" before making this product visible.`;
       }
       let originalPrice: number | null = null;
@@ -267,7 +306,7 @@ export default function ProductsScreen() {
         packSize: packSizes[0] ?? "",
         packSizes,
         packStock,
-        channel: draft.channel,
+        channels: draft.pages,
         tag: draft.tag.trim(),
         description: draft.description.trim(),
         pack: {
@@ -285,7 +324,7 @@ export default function ProductsScreen() {
       (r) => {
         if (isNew) {
           return r.product.visible
-            ? `“${r.product.name}” is now live in the shop.`
+            ? `“${r.product.name}” is now live on the website.`
             : `“${r.product.name}” was added. Switch on “Visible on website” when it's ready.`;
         }
         return `Saved — “${r.product.name}” is up to date.`;
@@ -296,21 +335,21 @@ export default function ProductsScreen() {
       const saved = res.data.product;
       setSelectedId(saved.id);
       // A new product is appended at the end of its catalogue (sort_order 0).
-      setPosition(String(data.products.filter((p) => p.channel === saved.channel).length + 1));
+      setPosition(String(data.products.filter((p) => p.channels.includes(saved.channels[0] ?? channel)).length + 1));
     }
 
     // Reposition the product when the admin typed a different display position.
     if (res.ok && !isNew && product) {
       const targetPos = parseInt(position, 10);
       if (Number.isInteger(targetPos) && targetPos >= 1) {
-        const targetChannel = draft.channel;
-        const ordered = data.products.filter((p) => p.channel === targetChannel).sort(productOrder);
+        const targetPage = channel;
+        const ordered = data.products.filter((p) => p.channels.includes(targetPage)).sort(productOrder);
         const currentPos = ordered.findIndex((p) => p.id === product.id) + 1;
         if (currentPos !== targetPos) {
           const others = ordered.filter((p) => p.id !== product.id);
           const newIndex = Math.min(Math.max(targetPos - 1, 0), others.length);
           others.splice(newIndex, 0, product);
-          await mutate("/api/admin/products/reorder", "POST", { channel: targetChannel, ids: others.map((p) => p.id) }, "Product position updated.");
+          await mutate("/api/admin/products/reorder", "POST", { channel: targetPage, ids: others.map((p) => p.id) }, "Product position updated.");
         }
       }
     }
@@ -319,13 +358,15 @@ export default function ProductsScreen() {
   const barcode = product?.barcode || (isNew ? nextBarcode(data.products) : "");
   const tint = product?.color ?? PRODUCT_COLORS[data.products.length % PRODUCT_COLORS.length];
   const status = product ? (product.visible ? { label: "Live on site", tone: "green" as const } : { label: "Hidden", tone: "gray" as const }) : { label: "New product", tone: "blue" as const };
+  /** Stock is tracked for anything that isn't export-only (export items are quoted by enquiry). */
+  const draftStock = draft.pages.some((page) => page !== "export");
   const previewSize = draft.packSizes.find((size) => size.trim()) ?? "";
   const previewPrices = draft.packPrices[previewSize] ?? { price: "", originalPrice: "" };
 
   const sizesLabel = (p: AdminProduct) => p.packSizes.filter(Boolean).join(" · ") || p.packSize || "No pack size";
 
   const subtitle = (p: AdminProduct) =>
-    !p.visible ? "Draft · hidden from site" : [sizesLabel(p), p.tag].filter(Boolean).join(" · ") || "—";
+    !p.visible ? "Draft · hidden from all pages" : [sizesLabel(p), p.tag].filter(Boolean).join(" · ") || "—";
 
   const tileStyle = (p: AdminProduct): React.CSSProperties =>
     p.images[0] ? { backgroundImage: `url(${p.images[0]})` } : { background: p.color };
@@ -335,8 +376,14 @@ export default function ProductsScreen() {
   return (
     <>
       <Topbar
-        title={channel === "export" ? "Export Products" : "Products & Stock"}
-        subtitle={channel === "export" ? "Manage export products, pack sizes and prices" : "Add, edit or hide products — changes are saved instantly"}
+        title={channel === "export" ? "Export Products" : channel === "distributors" ? "Distributor Products" : "Products & Stock"}
+        subtitle={
+          channel === "export"
+            ? "Manage export products, pack sizes and prices"
+            : channel === "distributors"
+              ? "Manage the products shown on the distributor page"
+              : "Add, edit or hide products — changes are saved instantly"
+        }
       >
         <button type="button" className="adm-btn pri lg" onClick={() => startNew()}>+ Add new product</button>
       </Topbar>
@@ -360,10 +407,11 @@ export default function ProductsScreen() {
               <span>choose a product list</span>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
-              {CHANNELS.map((c) => {
+              {PAGES.map((c) => {
                 const active = c.id === channel;
-                const count = data.products.filter((p) => p.channel === c.id).length;
-                const liveCount = data.products.filter((p) => p.channel === c.id && p.visible).length;
+                const count = data.products.filter((p) => p.channels.includes(c.id)).length;
+                const liveCount = data.products.filter((p) => p.channels.includes(c.id) && p.visible).length;
+                const pageOn = data.settings.pages?.[c.id] !== false;
                 return (
                   <button
                     key={c.id}
@@ -383,7 +431,8 @@ export default function ProductsScreen() {
                     <span style={{ display: "block", marginTop: 2, fontSize: 24, fontWeight: 700, color: active ? "var(--forest, #3b5a3a)" : "var(--ink)" }}>{count}</span>
                     <span style={{ display: "block", fontSize: 12, color: "var(--muted)", lineHeight: 1.45 }}>
                       {c.blurb}
-                      <br />{liveCount} live on the website
+                      <br />
+                      {pageOn ? `${liveCount} live on the website` : "Hidden — page-wide switch is off"}
                     </span>
                   </button>
                 );
@@ -396,13 +445,30 @@ export default function ProductsScreen() {
               <h2>{activeChannel.title}</h2>
               <span>{listed.length} product{listed.length === 1 ? "" : "s"}</span>
             </div>
+
+            {/* One-click page-wide switch: hide every product on this page, or bring them all back. */}
+            <div className="adm-box plain" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, flexWrap: "wrap", marginTop: 0 }}>
+              <div style={{ minWidth: 240 }}>
+                <b style={{ fontSize: 13.5, color: "var(--ink)" }}>Show products on {activeChannel.title}</b>
+                <p className="adm-muted" style={{ margin: "2px 0 0", fontSize: 12, lineHeight: 1.45 }}>
+                  One click hides every product on this page. Each product&apos;s own page choices are kept, so switching
+                  it back on restores them.
+                </p>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <Badge tone={pageShown ? "green" : "gray"}>{pageShown ? "Page live" : "Page hidden"}</Badge>
+                <button type="button" className={`adm-btn sm ${pageShown ? "dng" : "pri"}`} onClick={() => setPageVisibility(!pageShown)}>
+                  {pageShown ? "Disable all products" : "Enable all products"}
+                </button>
+              </div>
+            </div>
             <div className="adm-scroll">
               <table className="adm-table adm-table-readable">
                 <thead>
                   <tr>
                     <th style={{ width: 52 }}>Order</th><th>Product</th><th className="p-sku">SKU</th><th>Price</th>
                     {channel !== "export" && <th>Stock</th>}
-                    <th>Status</th><th>Visible</th><th />
+                    <th>Pages</th><th>Status</th><th>All pages</th><th />
                   </tr>
                 </thead>
                 <tbody>
@@ -440,9 +506,37 @@ export default function ProductsScreen() {
                             </>
                           </td>
                         )}
+                        <td onClick={(e) => e.stopPropagation()} style={{ whiteSpace: "nowrap" }}>
+                          <div style={{ display: "inline-flex", gap: 4 }}>
+                            {PAGES.map((page) => {
+                              const on = p.channels.includes(page.id);
+                              return (
+                                <button
+                                  key={page.id}
+                                  type="button"
+                                  aria-pressed={on}
+                                  title={`${on ? "Hide" : "Show"} ${p.name} on ${page.title}`}
+                                  onClick={() => togglePage(p, page.id, !on)}
+                                  style={{
+                                    padding: "4px 8px",
+                                    borderRadius: 999,
+                                    fontSize: 11,
+                                    fontWeight: 600,
+                                    cursor: "pointer",
+                                    border: `1px solid ${on ? "rgba(59,90,58,.45)" : "rgba(0,0,0,.12)"}`,
+                                    background: on ? "rgba(59,90,58,.1)" : "transparent",
+                                    color: on ? "var(--forest, #3b5a3a)" : "var(--muted)",
+                                  }}
+                                >
+                                  {page.id === "ecommerce" ? "Shop" : page.id === "distributors" ? "Dist." : "Export"}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </td>
                         <td><Badge tone={st.tone}>{st.label}</Badge></td>
                         <td onClick={(e) => e.stopPropagation()}>
-                          <Toggle checked={p.visible} label={`Show ${p.name} on website`} onChange={(v) => toggleVisible(p, v)} />
+                          <Toggle checked={p.visible} label={`Show ${p.name} on every page`} onChange={(v) => toggleVisible(p, v)} />
                         </td>
                         <td onClick={(e) => e.stopPropagation()} style={{ whiteSpace: "nowrap" }}>
                           <button className="adm-btn sm" onClick={() => openEdit(p.id)}>Edit</button>
@@ -450,7 +544,7 @@ export default function ProductsScreen() {
                       </tr>
                     );
                   })}
-                  {!listed.length && <tr><td colSpan={channel === "export" ? 7 : 8}><div className="adm-empty">No {activeChannel.title} products yet. Click “+ Add new product”.</div></td></tr>}
+                  {!listed.length && <tr><td colSpan={channel === "export" ? 8 : 9}><div className="adm-empty">No {activeChannel.title} products yet. Click “+ Add new product”.</div></td></tr>}
                 </tbody>
               </table>
             </div>
@@ -463,7 +557,7 @@ export default function ProductsScreen() {
           {channel !== "export" && <section className="adm-card">
             <div className="adm-card-h">
               <h2>Low-stock alerts</h2>
-              <span className="p-live" title="Stock refreshes automatically every 20 seconds and after every sale">
+              <span className="p-live" title="Stock refreshes automatically every minute and after every sale">
                 <i aria-hidden="true" />Live{lastSync ? ` · updated ${fmtTime(lastSync)}` : ""}
               </span>
             </div>
@@ -554,26 +648,59 @@ export default function ProductsScreen() {
             </div>
           )}
           <div className="adm-fg">
-            <div>
-              <label className="adm-fl" htmlFor="pf-channel">Catalogue</label>
-              <select
-                id="pf-channel"
-                className="adm-in"
-                value={draft.channel}
-                onChange={(e) => set("channel", e.target.value as ProductChannel)}
-              >
-                {CHANNELS.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
-              </select>
+            <span className="adm-fl" id="pf-pages-label">Show on these pages</span>
+            <div role="group" aria-labelledby="pf-pages-label" style={{ display: "grid", gap: 8 }}>
+              {PAGES.map((page) => {
+                const on = draft.pages.includes(page.id);
+                return (
+                  <label
+                    key={page.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: 10,
+                      padding: "10px 12px",
+                      borderRadius: 10,
+                      border: `1.5px solid ${on ? "rgba(59,90,58,.45)" : "rgba(0,0,0,.1)"}`,
+                      background: on ? "rgba(59,90,58,.05)" : "#fff",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      className="adm-cb"
+                      checked={on}
+                      aria-label={`Show on ${page.title}`}
+                      style={{ marginTop: 2 }}
+                      onChange={(e) =>
+                        set(
+                          "pages",
+                          e.target.checked ? [...draft.pages, page.id] : draft.pages.filter((current) => current !== page.id),
+                        )
+                      }
+                    />
+                    <span>
+                      <b style={{ display: "block", fontSize: 13.5, color: "var(--ink)" }}>{page.title}</b>
+                      <small style={{ display: "block", fontSize: 12, color: "var(--muted)", lineHeight: 1.45 }}>{page.blurb}</small>
+                    </span>
+                  </label>
+                );
+              })}
             </div>
+            {errors.pages && <p className="adm-err">{errors.pages}</p>}
+            <p className="adm-muted" style={{ margin: "6px 0 0", fontSize: 12 }}>
+              Add the product to one page, two or all three. “Visible on website” below hides it everywhere without
+              changing these choices.
+            </p>
           </div>
           <div className="adm-fg">
-            <span className="adm-fl" id="pf-packs-label">{draft.channel === "export" ? "Pack sizes & prices" : "Pack sizes, stock & prices"}</span>
-            <div aria-hidden="true" className="adm-muted p-pack-head" style={{ display: "grid", gridTemplateColumns: draft.channel === "export" ? "minmax(0, 1.6fr) repeat(2, minmax(0, 1fr)) auto" : "minmax(0, 1.6fr) minmax(0, .7fr) repeat(2, minmax(0, 1fr)) auto", gap: 8, fontSize: 11 }}>
-              <span>Pack size</span>{draft.channel !== "export" && <span>Stock qty</span>}<span>Original price (₹)</span><span>Selling price (₹)</span><span />
+            <span className="adm-fl" id="pf-packs-label">{draftStock ? "Pack sizes, stock & prices" : "Pack sizes & prices"}</span>
+            <div aria-hidden="true" className="adm-muted p-pack-head" style={{ display: "grid", gridTemplateColumns: draftStock ? "minmax(0, 1.6fr) minmax(0, .7fr) repeat(2, minmax(0, 1fr)) auto" : "minmax(0, 1.6fr) repeat(2, minmax(0, 1fr)) auto", gap: 8, fontSize: 11 }}>
+              <span>Pack size</span>{draftStock && <span>Stock qty</span>}<span>Original price (₹)</span><span>Selling price (₹)</span><span />
             </div>
             <div role="group" aria-labelledby="pf-packs-label" style={{ display: "grid", gap: 8 }}>
               {draft.packSizes.map((size, i) => (
-                <div key={i} className={`p-pack-row${draft.channel === "export" ? " export" : ""}`} style={{ display: "grid", gridTemplateColumns: draft.channel === "export" ? "minmax(0, 1.6fr) repeat(2, minmax(0, 1fr)) auto" : "minmax(0, 1.6fr) minmax(0, .7fr) repeat(2, minmax(0, 1fr)) auto", gap: 8, alignItems: "center" }}>
+                <div key={i} className={`p-pack-row${draftStock ? "" : " export"}`} style={{ display: "grid", gridTemplateColumns: draftStock ? "minmax(0, 1.6fr) minmax(0, .7fr) repeat(2, minmax(0, 1fr)) auto" : "minmax(0, 1.6fr) repeat(2, minmax(0, 1fr)) auto", gap: 8, alignItems: "center" }}>
                   <input
                     className={`adm-in p-pack-size-field${errors.packSizes ? " err" : ""}`}
                     value={size}
@@ -597,7 +724,7 @@ export default function ProductsScreen() {
                       }
                     }}
                   />
-                  {draft.channel !== "export" && (
+                  {draftStock && (
                     <input
                       className={`adm-in p-pack-stock-field${errors.packStock ? " err" : ""}`}
                       inputMode="numeric"
@@ -656,7 +783,7 @@ export default function ProductsScreen() {
               + Add pack size
             </button>
             {errors.packSizes && <p className="adm-err">{errors.packSizes}</p>}
-            {draft.channel !== "export" && errors.packStock && <p className="adm-err">{errors.packStock}</p>}
+            {draftStock && errors.packStock && <p className="adm-err">{errors.packStock}</p>}
             {errors.packPrices && <p className="adm-err">{errors.packPrices}</p>}
           </div>
           <div className="adm-fg">
@@ -746,8 +873,13 @@ export default function ProductsScreen() {
           </div>
 
           <div className="p-vis">
-            <span>Visible on website</span>
-            <Toggle checked={draft.visible} label="Visible on website" onChange={(v) => set("visible", v)} />
+            <span>
+              Visible on website
+              <small className="adm-muted" style={{ display: "block", fontSize: 11.5, fontWeight: 400 }}>
+                Master switch — off hides it from every page.
+              </small>
+            </span>
+            <Toggle checked={draft.visible} label="Visible on every page" onChange={(v) => set("visible", v)} />
           </div>
 
           <div className="p-btns" style={{ marginTop: "auto" }}>

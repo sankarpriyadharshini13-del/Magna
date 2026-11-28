@@ -1,8 +1,9 @@
 import "server-only";
 import { defaultSettings, PRODUCT_COLORS } from "@/lib/admin/defaults";
+import { titleCase } from "@/lib/format";
 import { TRACKING_STATUSES } from "@/lib/admin/types";
 import { cleanPackSizes, emptyPack } from "@/lib/pack";
-import type { ProductChannel, ProductPack } from "@/types";
+import type { ProductChannel, ProductPage, ProductPack } from "@/types";
 import type {
   AdminProduct,
   Customer,
@@ -27,6 +28,22 @@ type Row = Record<string, any>;
 
 export const BUCKET = "admin-assets";
 export const storagePrefix = () => `${publicUrl.replace(/\/$/, "")}/storage/v1/object/public/${BUCKET}/`;
+
+/**
+ * The storefront pages a product appears on, from its per-page switches.
+ * Before those columns existed, `channel` decided everything: ecommerce products fed the shop
+ * and the distributor page, export products fed /export only.
+ */
+export function channelsOf(r: Row): ProductPage[] {
+  if (r.show_ecommerce !== undefined || r.show_distributors !== undefined || r.show_export !== undefined) {
+    const pages: ProductPage[] = [];
+    if (r.show_ecommerce) pages.push("ecommerce");
+    if (r.show_distributors) pages.push("distributors");
+    if (r.show_export) pages.push("export");
+    return pages;
+  }
+  return r.channel === "export" ? ["export"] : ["ecommerce", "distributors"];
+}
 
 export function mapProduct(r: Row): AdminProduct {
   // Before the pack migration runs, none of the pack_* columns exist — the form falls back to the built-in guide.
@@ -69,6 +86,7 @@ export function mapProduct(r: Row): AdminProduct {
     packSizes: cleanPackSizes(r.pack_sizes, r.pack_size ?? ""),
     packStock: (r.pack_stock as Record<string, number>) ?? {},
     channel: r.channel === "export" ? "export" : "ecommerce",
+    channels: channelsOf(r),
     sortOrder: r.sort_order ?? 0,
     tag: r.tag ?? "",
     description: r.description ?? "",
@@ -126,8 +144,12 @@ export function mapOrder(r: Row): Order {
   const source = r.source === "admin" ? "admin" : r.source === "enquiry" ? "enquiry" : "online";
   if (source === "enquiry") {
     const fromNote = enquiryItemsFromNote(r.note ?? "");
-    const placeholder = items.length === 1 && /enquiry/i.test(items[0].name);
-    if (fromNote.length && (placeholder || fromNote.length === items.length)) {
+    // Only the oldest enquiries kept their products in the note; their order_items are a single
+    // “Distributor application” / “Export enquiry” placeholder. Anything with real saved items is
+    // authoritative — otherwise an edited price or quantity in Admin → Orders would be hidden by
+    // the stale note text in the order and on the invoice.
+    const needsNote = items.length === 0 || (items.length === 1 && /enquiry/i.test(items[0].name));
+    if (fromNote.length && needsNote) {
       items = fromNote.map((item, index) => {
         const saved = orderItems.find((line: Row) => line.name === item.name && (line.pack_size ?? "") === item.packSize) ?? orderItems[index];
         return {
@@ -154,7 +176,7 @@ export function mapOrder(r: Row): Order {
     email: r.email ?? "",
     shipName: r.ship_name ?? "",
     shipPhone: r.ship_phone ?? "",
-    location: { city: r.ship_city ?? "", state: r.ship_state ?? "", pincode: r.ship_pincode ?? "" },
+    location: { city: r.ship_city ?? "", state: r.ship_state ?? "", pincode: r.ship_pincode ?? "", country: r.ship_country ?? "" },
     deliveredAt: r.delivered_at ?? null,
     cancelReason: r.cancel_reason ?? "",
     kind: r.kind === "bulk" ? "bulk" : "normal",
@@ -167,6 +189,7 @@ export function mapOrder(r: Row): Order {
     amountPaid: r.amount_paid ?? 0,
     discount: r.discount ?? 0,
     deliveryCharge: r.delivery_charge ?? 0,
+    showDeliveryCharge: r.show_delivery_charge === true,
     boxes: r.boxes ?? null,
     totalWeight: r.total_weight ?? "",
     tracking: {
@@ -182,12 +205,12 @@ export function mapOrder(r: Row): Order {
 export function mapCustomer(r: Row): Customer {
   return {
     id: r.id,
-    name: r.name,
+    name: titleCase(String(r.name ?? "")),
     phone: r.phone ?? "",
     email: r.email ?? "",
-    area: r.area ?? undefined,
-    city: r.city ?? "",
-    state: r.state ?? "",
+    area: r.area ? titleCase(String(r.area)) : undefined,
+    city: titleCase(String(r.city ?? "")),
+    state: titleCase(String(r.state ?? "")),
     since: r.since,
     notes: [...(r.customer_notes ?? [])]
       .sort((a: Row, b: Row) => b.at.localeCompare(a.at))
@@ -233,6 +256,7 @@ export function mergeSettings(saved: Row | null | undefined): Settings {
     store: { ...d.store, ...(s.store ?? {}) },
     razorpay: { ...d.razorpay, ...(s.razorpay ?? {}) },
     notifications: { ...d.notifications, ...(s.notifications ?? {}) },
+    pages: { ...d.pages, ...(s.pages ?? {}) },
     invoice: { ...d.invoice, ...(s.invoice ?? {}) },
   };
 }
@@ -274,6 +298,8 @@ export interface ProductInput {
   packSizes: string[];
   packStock: Record<string, number>;
   channel: ProductChannel;
+  /** Storefront pages the product appears on (at least one). */
+  channels: ProductPage[];
   tag: string;
   description: string;
   visible: boolean;
@@ -343,14 +369,22 @@ export function parseProduct(body: Row): ProductInput {
       packStock[key.trim()] = qty;
     }
   }
-  const channel: ProductChannel = body.channel === "export" ? "export" : "ecommerce";
-  if (body.channel !== undefined && body.channel !== "ecommerce" && body.channel !== "export")
-    throw bad("Choose either the Ecommerce or Export catalogue.");
+  // Which pages the product appears on. Old callers only sent `channel`, where ecommerce meant
+  // the shop + distributor pages and export meant the export page only.
+  if (body.channels !== undefined && !Array.isArray(body.channels)) throw bad("Choose which pages the product appears on.");
+  const pages: ProductPage[] = Array.isArray(body.channels)
+    ? Array.from(new Set(body.channels.filter((p: unknown): p is ProductPage => p === "ecommerce" || p === "distributors" || p === "export")))
+    : body.channel === "export"
+      ? ["export"]
+      : ["ecommerce", "distributors"];
+  if (!pages.length) throw bad("Choose at least one page for the product.");
+  // `channel` keeps its old meaning for stock and checkout: "export" = never sold online.
+  const channel: ProductChannel = pages.includes("ecommerce") ? "ecommerce" : "export";
   const images = body.images ?? [];
   if (!Array.isArray(images) || images.length > 5) throw bad("A product can have at most 5 photos.");
   if (!images.every(isAllowedImage)) throw bad("One of the photos isn't from this store's uploads.");
   if (typeof body.visible !== "boolean") throw bad("Visibility must be on or off.");
-  if (body.visible && channel !== "export" && Object.entries(packPrices).some(([, value]) => value.price == null))
+  if (body.visible && pages.includes("ecommerce") && Object.entries(packPrices).some(([, value]) => value.price == null))
     throw bad("Add a selling price for every pack size before making the product visible.");
   let id: string | undefined;
   if (body.id !== undefined && body.id !== null) {
@@ -368,6 +402,7 @@ export function parseProduct(body: Row): ProductInput {
     packSizes,
     packStock,
     channel,
+    channels: pages,
     tag: str(body.tag, "Tag", 30),
     description: str(body.description, "Description", 2000),
     visible: body.visible,
@@ -409,6 +444,7 @@ export function parseSettings(body: Row): Settings {
   const store = (s.store ?? {}) as Row;
   const rz = (s.razorpay ?? {}) as Row;
   const nt = (s.notifications ?? {}) as Row;
+  const pg = (s.pages ?? {}) as Row;
   const iv = (s.invoice ?? {}) as Row;
   const email = str(store.email, "Store email", 200, { required: true });
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw bad("Enter a valid store email address.");
@@ -444,6 +480,11 @@ export function parseSettings(body: Row): Settings {
       lowStock: bool(nt.lowStock, true),
       orderEmail: bool(nt.orderEmail, true),
       whatsapp: bool(nt.whatsapp, false),
+    },
+    pages: {
+      ecommerce: bool(pg.ecommerce, d.pages.ecommerce),
+      distributors: bool(pg.distributors, d.pages.distributors),
+      export: bool(pg.export, d.pages.export),
     },
     invoice: { footer: str(iv.footer, "Invoice footer", 400), numberFormat, logo },
   };

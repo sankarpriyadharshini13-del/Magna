@@ -280,13 +280,17 @@ export default function OrderFormModal({
       payment_mode: onlinePaid ? "pending" : mode,
       method,
       amount_paid: mode === "advance" ? advanceNum : 0,
-      items: filledLines.map((l) => ({
-        product_id: l.productId,
-        name: l.name,
-        pack_size: l.packSize,
-        qty: l.qty,
-        price: l.productId ? priceOf(l) : 0, // Enquiry lines have no price
-      })),
+      items: filledLines.map((l) => {
+        // Enquiry lines have no product, but the admin can still price them (bulk rate) — keep that price.
+        const price = priceOf(l);
+        return {
+          product_id: l.productId,
+          name: l.name,
+          pack_size: l.packSize,
+          qty: l.qty,
+          price: Number.isFinite(price) ? Math.max(0, Math.round(price)) : 0,
+        };
+      }),
     };
     const res = editing
       ? await mutate<{ number: number }>(`/api/admin/orders/${order!.number}`, "PUT", body, `Order #${label(order!.number)} updated.`)

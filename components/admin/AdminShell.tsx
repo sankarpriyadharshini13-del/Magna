@@ -43,7 +43,7 @@ function Notice({ title, children }: { title: string; children: React.ReactNode 
 export default function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { status, errorMessage, retry, data, toasts, dismissToast } = useAdmin();
+  const { status, errorMessage, sectionErrorMessage, retry, data, toasts, dismissToast } = useAdmin();
   const { user, signOut } = useAuth();
   const [open, setOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
@@ -106,10 +106,10 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 
   const badge = attentionCount(data.orders);
   // Products on the shop that are running low or have sold out (shown on the Products & Stock link).
-  // Export catalogue items are enquiry-only, so their stock never raises a shop alert.
+  // Export / distributor-only items are enquiry-only, so their stock never raises a shop alert.
   const stockAlerts = data.products.filter((p) => {
     const stock = availableStock(p) ?? 0;
-    return p.visible && p.channel !== "export" && stock <= LOW_STOCK;
+    return p.visible && p.channels.includes("ecommerce") && stock <= LOW_STOCK;
   });
   const soldOut = stockAlerts.filter((p) => (availableStock(p) ?? 0) <= 0).length;
   const storeName = data.settings.store.name || "Magna Eco Bites";
@@ -170,6 +170,12 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 
       <main className="adm-main">
         <button type="button" className="adm-menu-btn" onClick={() => setOpen(true)} aria-label="Open navigation">☰</button>
+        {sectionErrorMessage && (
+          <div className="adm-note" role="alert" style={{ marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+            <span>Couldn&apos;t refresh this section: {sectionErrorMessage}</span>
+            <button type="button" className="adm-btn sm" onClick={retry}>Try again</button>
+          </div>
+        )}
         {children}
       </main>
       {toastLayer}

@@ -11,6 +11,7 @@ const TYPES = {
   export: { label: "Export enquiry", item: "Export enquiry" },
 } as const;
 type EnquiryType = keyof typeof TYPES;
+const MAX_ENQUIRY_ITEMS = 20;
 
 const isType = (v: unknown): v is EnquiryType => typeof v === "string" && v in TYPES;
 
@@ -28,9 +29,7 @@ export const POST = handle(async (req) => {
   if (!isType(body.type)) throw new HttpError(400, "Unknown enquiry type.");
   const t = TYPES[body.type];
 
-  // Enquiries are public — signing in is optional. When a session is sent, remember who sent it so
-  // the enquiry is attached to their customer record and shows up in My orders, like a normal order.
-  // Distributor and export enquiries, however, need a signed-in account.
+  // Enquiries are public. When a session is sent, link the enquiry to the customer's account.
   const channel = body.type === "export" ? "export" : body.type === "distributor" ? "distributors" : "ecommerce";
   let userId: string | null = null;
   const token = bearer(req);
@@ -38,47 +37,53 @@ export const POST = handle(async (req) => {
     const { data } = await anonClient().auth.getUser(token);
     userId = data.user?.id ?? null;
   }
-  if ((body.type === "distributor" || body.type === "export") && !userId) {
-    throw new HttpError(401, "Please sign in to submit this enquiry.");
-  }
-
   const company = str(body.company, "Company name", 120, { required: true });
   const name = str(body.name, "Contact person", 120, { required: true });
-  const phone = str(body.phone, "Phone", 20, { required: true });
+  const phone = str(body.phone, "Contact", 20, { required: true });
   if (phone.replace(/\D/g, "").length < 10) throw new HttpError(400, "Enter a valid phone number (at least 10 digits).");
-  const email = str(body.email, "Email", 160).toLowerCase();
-  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new HttpError(400, "Enter a valid email address.");
+  const email = str(body.email, "Email", 160, { required: true }).toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new HttpError(400, "Enter a valid email address.");
 
-  // Type-specific details, kept inside the order's 500-char note.
+  // Distributors and exports give a full destination. It is stored on the order itself
+  // (ship_country / ship_state / ship_city / ship_pincode) so Admin → Orders shows it properly.
+  const needsLocation = body.type !== "business";
+  const country = needsLocation ? str(body.country, "Country", 80, { required: true }) : "";
+  const countryCode = needsLocation ? str(body.countryCode, "Country code", 2).toUpperCase() : "";
+  const state = needsLocation ? str(body.state, "State / province", 80, { required: true }) : "";
+  const city = needsLocation ? str(body.city, "City", 80, { required: true }) : "";
+  const pincode = needsLocation ? str(body.pincode, "Postal / PIN code", 12, { required: true }) : "";
+  if (pincode && !/^[A-Za-z0-9][A-Za-z0-9 -]{1,11}$/.test(pincode)) {
+    throw new HttpError(400, "Enter a valid postal / PIN code.");
+  }
+  if (pincode && (countryCode === "IN" || country === "India") && !/^[1-9]\d{5}$/.test(pincode)) {
+    throw new HttpError(400, "Enter a valid 6-digit PIN code.");
+  }
+  const place = [city, state].filter(Boolean).join(", ");
+  const address = place + (pincode ? `${place ? " – " : ""}${pincode}` : "");
+
+  // Type-specific free-text details, kept inside the order's 500-char note. Products, pack
+  // sizes and quantities become order items, so they no longer need room in the note.
   const extra = (field: string, label: string, max: number, required = false) => {
     const v = str(body[field], label, max, { required });
     return v ? `${label}: ${v}` : "";
   };
-  const location = body.type === "export" ? str(body.location, "Location", 120, { required: true }) : "";
   const lines =
     body.type === "business"
       ? [extra("message", "Requirements", 300, true)]
-      : body.type === "distributor"
-        ? [
-            extra("products", "Products interested", 200, true),
-            extra("packSizes", "Pack sizes", 200),
-            extra("quantity", "Estimated quantity", 300, true),
-            extra("region", "Region", 120, true),
-            extra("current", "Current distribution", 300, true),
-            extra("message", "Note", 300),
-          ]
-        : [
-            extra("country", "Country", 80, true),
-            `Location: ${location}`,
-            extra("products", "Products interested", 200, true),
-            extra("packSizes", "Pack sizes", 200),
-            extra("quantity", "Estimated quantity", 300, true),
-            extra("message", "Additional requirements", 300),
-          ];
+      : [
+          extra(
+            "message",
+            body.type === "distributor" ? "Additional information" : "Additional requirements",
+            300,
+          ),
+        ];
   const note = [`${t.label} · ${company}`, ...lines].filter(Boolean).join("\n").slice(0, 500);
 
   // Parse product details for order items
   const rawItems = Array.isArray(body.items) ? body.items : null;
+  if (rawItems && rawItems.length > MAX_ENQUIRY_ITEMS) {
+    throw new HttpError(400, `An enquiry can include up to ${MAX_ENQUIRY_ITEMS} product entries.`);
+  }
   const productNames = typeof body.products === "string" ? body.products.split(", ") : [];
   const packSizes = typeof body.packSizes === "string" ? body.packSizes.split(", ") : [];
   const quantities = typeof body.quantity === "string" ? body.quantity.split("; ") : [];
@@ -108,6 +113,12 @@ export const POST = handle(async (req) => {
     };
   });
 
+  // Distributor and export enquiries must name at least one product (the form also checks this
+  // and outlines the row in red, but the API must not depend on the browser).
+  if (body.type !== "business" && enquiryItems.length === 0) {
+    throw new HttpError(400, "Select at least one product.");
+  }
+
   const sb = serviceClient();
 
   // Reuse the signed-in customer's own record first: My orders reads orders through customers.user_id.
@@ -120,7 +131,7 @@ export const POST = handle(async (req) => {
   if (!customerId && email) {
     const { data } = await sb.from("customers").select("id, user_id").ilike("email", email).order("created_at").limit(1).maybeSingle();
     // Never attach an enquiry to a customer record that belongs to a different account.
-    if (data && (!userId || !data.user_id || data.user_id === userId)) {
+    if (data && (!data.user_id || data.user_id === userId)) {
       customerId = data.id;
       // A walk-in record for this email: claim it for the signed-in account so the enquiry shows in My orders.
       if (userId && !data.user_id) {
@@ -139,7 +150,7 @@ export const POST = handle(async (req) => {
     const phoneKey = phone.replace(/\D/g, "").slice(-10);
     customerId =
       (data ?? []).find((c) => {
-        if (userId && c.user_id && c.user_id !== userId) return false;
+        if (c.user_id && c.user_id !== userId) return false;
         const cp = String(c.phone ?? "").replace(/\D/g, "").slice(-10);
         return cp === phoneKey;
       })?.id ?? null;
@@ -150,7 +161,7 @@ export const POST = handle(async (req) => {
     customerId = data.id as string;
   }
 
-  const insertOrder = (withChannel: boolean) =>
+  const insertOrder = (withChannel: boolean, withCountry: boolean) =>
     sb
       .from("orders")
       .insert({
@@ -159,11 +170,14 @@ export const POST = handle(async (req) => {
         source: "enquiry",
         kind: "bulk",
         ...(withChannel ? { channel } : {}),
-        address: "",
+        address,
         email,
         ship_name: name,
         ship_phone: phone,
-        ship_city: location,
+        ship_city: city,
+        ship_state: state,
+        ship_pincode: pincode,
+        ...(withCountry ? { ship_country: country } : {}),
         business_name: company,
         note,
         shipping: 0,
@@ -174,10 +188,14 @@ export const POST = handle(async (req) => {
       .select("number")
       .single();
 
-  // The channel column arrives with its own migration; without it the enquiry still saves fine.
-  let orderRes = await insertOrder(true);
+  // ship_country and channel each arrive with their own migration; without them the enquiry still saves
+  // (just without that one detail) instead of failing.
+  let orderRes = await insertOrder(true, true);
   if (orderRes.error && ["42703", "PGRST204"].includes(orderRes.error.code ?? "")) {
-    orderRes = await insertOrder(false);
+    orderRes = await insertOrder(true, false);
+    if (orderRes.error && ["42703", "PGRST204"].includes(orderRes.error.code ?? "")) {
+      orderRes = await insertOrder(false, false);
+    }
   }
   if (orderRes.error) throw dbError(orderRes.error);
   const number = Number(orderRes.data.number);

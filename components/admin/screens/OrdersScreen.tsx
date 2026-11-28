@@ -9,6 +9,7 @@ import { useAdminData } from "@/lib/admin/store";
 import type { Order, OrderChannel } from "@/lib/admin/types";
 import { formatInr } from "@/lib/format";
 import OrderFormModal from "../OrderFormModal";
+import InvoiceDeliveryCard from "../InvoiceDeliveryCard";
 import { Badge, ConfirmModal, Topbar, useQueryParam } from "../ui";
 
 const PAGE = 9;
@@ -109,6 +110,7 @@ export default function OrdersScreen() {
         (c?.area?.toLowerCase().includes(q) ?? false) ||
         o.location.city.toLowerCase().includes(q) ||
         o.location.pincode.includes(q) ||
+        o.location.country.toLowerCase().includes(q) ||
         o.shipName.toLowerCase().includes(q) ||
         o.businessName.toLowerCase().includes(q) ||
         o.email.toLowerCase().includes(q)
@@ -137,19 +139,26 @@ export default function OrdersScreen() {
 
   const exportCsv = () =>
     downloadCsv("orders.csv", [
-      ["Order", "Type", "Placed", "Business", "Customer", "Email", "Phone", "City", "State", "PIN", "Address", "Units", "Amount (INR)", "Delivery Charge (INR)", "Payment", "Status"],
+      ["Order", "Type", "Placed", "Business", "Customer", "Email", "Phone", "City", "State", "PIN", "Country", "Address", "Units", "Amount (INR)", "Delivery Charge (INR)", "Payment", "Status"],
       ...filtered.map((o) => {
         const c = customers.get(o.customerId);
         return [
           label(o.number), o.kind === "bulk" ? "Bulk" : "Normal", fmtDateTime(o.placedAt), o.businessName, o.shipName || c?.name || "", o.email || c?.email || "", o.shipPhone || c?.phone || "",
-          o.location.city || c?.city || "", o.location.state || c?.state || "", o.location.pincode, o.address,
+          o.location.city || c?.city || "", o.location.state || c?.state || "", o.location.pincode, o.location.country, o.address,
           orderUnits(o), orderTotal(o), o.deliveryCharge ?? 0, paymentLabel(o), o.status,
         ];
       }),
     ]);
 
   const locationOf = (o: Order) => {
-    if (o.location.city) return { main: o.location.city, sub: [o.location.state, o.location.pincode].filter(Boolean).join(" · ") };
+    if (o.location.city) {
+      return {
+        main: o.location.city,
+        sub: [o.location.state, o.location.pincode, o.location.country && o.location.country !== "India" ? o.location.country : ""]
+          .filter(Boolean)
+          .join(" · "),
+      };
+    }
     const c = customers.get(o.customerId);
     return c?.city ? { main: c.city, sub: c.state } : null;
   };
@@ -405,7 +414,9 @@ export default function OrdersScreen() {
               </div>
               <div className="o-sec">
                 <div className="adm-fl">Delivery location</div>
-                <div style={{ lineHeight: 1.5 }}>{active.address || "—"}</div>
+                <div style={{ lineHeight: 1.5 }}>
+                  {[active.address, active.location.country].filter(Boolean).join(", ") || "—"}
+                </div>
                 {active.deliveredAt && <div className="adm-muted" style={{ marginTop: 4 }}>Delivered {fmtDateTime(active.deliveredAt)}</div>}
                 {active.status === "Cancelled" && cancelledAt && <div className="adm-muted" style={{ marginTop: 4 }}>Cancelled {fmtDateTime(cancelledAt)}</div>}
                 {active.status === "Cancelled" && active.cancelReason && <div className="adm-muted" style={{ marginTop: 2 }}>Reason: {active.cancelReason}</div>}
@@ -421,6 +432,15 @@ export default function OrdersScreen() {
                 {active.shipping > 0 && (
                   <div className="o-items adm-muted"><span>{active.kind === "bulk" ? "Freight" : "Shipping"}</span><span>{formatInr(active.shipping)}</span></div>
                 )}
+                {active.deliveryCharge > 0 && (
+                  <div className="o-items adm-muted">
+                    <span>
+                      Delivery charge
+                      {active.channel !== "ecommerce" && !active.showDeliveryCharge ? " · hidden on invoice" : ""}
+                    </span>
+                    <span>{formatInr(active.deliveryCharge)}</span>
+                  </div>
+                )}
                 {active.discount > 0 && (
                   <div className="o-items adm-muted"><span>Discount</span><span>−{formatInr(active.discount)}</span></div>
                 )}
@@ -435,6 +455,7 @@ export default function OrdersScreen() {
                   <div className="o-items" style={{ color: "var(--clay)", fontWeight: 600 }}><span>Balance due</span><span>{formatInr(orderTotal(active))}</span></div>
                 )}
               </div>
+              {active.channel !== "ecommerce" && <InvoiceDeliveryCard order={active} />}
               {active.kind === "bulk" && (active.boxes != null || active.totalWeight || active.tracking.transporter || active.tracking.number) && (
                 <div className="o-sec">
                   <div className="adm-fl">Shipment (entered manually)</div>

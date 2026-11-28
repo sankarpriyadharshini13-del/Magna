@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { getSupabase } from "@/lib/supabase";
 import { orderLabel } from "./format";
@@ -16,6 +17,7 @@ interface ToastItem {
 }
 
 export type AdminStatus = "loading" | "signed-out" | "forbidden" | "error" | "ready";
+export type AdminDataSection = "dashboard" | "orders" | "products" | "barcodes" | "customers" | "payments" | "reviews" | "settings";
 
 export interface ApiResult<T = unknown> {
   ok: boolean;
@@ -26,6 +28,8 @@ export interface ApiResult<T = unknown> {
 interface AdminContextValue {
   status: AdminStatus;
   errorMessage: string;
+  sectionLoading: boolean;
+  sectionErrorMessage: string;
   data: AdminData | null;
   /** Current time, refreshed every minute so "settled" / relative labels stay honest. */
   now: Date;
@@ -35,11 +39,11 @@ interface AdminContextValue {
   lastSync: Date | null;
   toasts: ToastItem[];
   dismissToast: (id: number) => void;
-  /** Re-read everything from the database. */
+  /** Re-read the current screen's data from the database. */
   refresh: () => Promise<void>;
   /** Authenticated call to the admin API. Doesn't toast and doesn't refresh. */
   api: <T = unknown>(path: string, init?: { method?: string; body?: unknown; form?: FormData }) => Promise<ApiResult<T>>;
-  /** Call the API, toast the outcome, and refresh the data on success. */
+  /** Call the API, toast the outcome, and refresh shared data in the background on success. */
   mutate: <T = unknown>(
     path: string,
     method: "POST" | "PUT" | "DELETE",
@@ -52,9 +56,14 @@ interface AdminContextValue {
 
 const AdminContext = createContext<AdminContextValue | null>(null);
 
-async function accessToken(): Promise<string | null> {
+async function accessToken(attempt = 0): Promise<string | null> {
   const { data } = (await getSupabase()?.auth.getSession()) ?? { data: { session: null } };
-  return data.session?.access_token ?? null;
+  const token = data.session?.access_token ?? null;
+  if (token || attempt > 0) return token;
+  // Right after sign-in the stored session can take a moment to settle; try once more before
+  // reporting a 401, so the panel never flashes the sign-in screen on a fresh login.
+  await new Promise((resolve) => setTimeout(resolve, 250));
+  return accessToken(attempt + 1);
 }
 
 async function call<T>(path: string, init: { method?: string; body?: unknown; form?: FormData } = {}): Promise<ApiResult<T> & { status: number }> {
@@ -68,14 +77,33 @@ async function call<T>(path: string, init: { method?: string; body?: unknown; fo
         Authorization: `Bearer ${token}`,
         ...(init.body !== undefined ? { "Content-Type": "application/json" } : {}),
       },
+      signal: AbortSignal.timeout(20_000),
       body: init.form ?? (init.body !== undefined ? JSON.stringify(init.body) : undefined),
     });
     const json = await res.json().catch(() => ({}));
     if (!res.ok) return { ok: false, status: res.status, error: (json as { error?: string }).error ?? "Something went wrong." };
     return { ok: true, status: res.status, data: json as T };
-  } catch {
-    return { ok: false, status: 0, error: "Network problem. Check your connection and try again." };
+  } catch (error) {
+    const timedOut = error instanceof DOMException && error.name === "TimeoutError";
+    return {
+      ok: false,
+      status: 0,
+      error: timedOut ? "This admin request took too long. Please try again." : "Network problem. Check your connection and try again.",
+    };
   }
+}
+
+/**
+ * Admin call that survives a token which was mid-refresh: a 401 is confirmed with /api/admin/me and
+ * the request is tried once more. Only a confirmed 401 (the session really is gone) signs the admin out.
+ */
+async function callAdmin<T>(path: string, init: { method?: string; body?: unknown; form?: FormData } = {}) {
+  const first = await call<T>(path, init);
+  if (first.status !== 401) return { res: first, confirm: null };
+  const confirm = await call<unknown>("/api/admin/me");
+  if (!confirm.ok) return { res: first, confirm };
+  const retry = await call<T>(path, init);
+  return { res: retry, confirm };
 }
 
 /**
@@ -96,8 +124,8 @@ function announceStock(
     const prev = before.get(p.id);
     const stock = availableStock(p) ?? 0;
     if (prev === undefined || stock >= prev) continue;
-    // Export catalogue items are enquiry-only, so their stock never prompts a restock toast.
-    if (p.channel === "export") continue;
+    // Products not sold online are enquiry-only, so their stock never prompts a restock toast.
+    if (!p.channels.includes("ecommerce")) continue;
     sold.push(`${p.name} ${prev} → ${stock}`);
     if (!p.visible) continue;
     if (stock <= 0) out.push(p.name);
@@ -112,8 +140,19 @@ function announceStock(
 
 export function AdminProvider({ children }: { children: React.ReactNode }) {
   const { user, ready } = useAuth();
+  const pathname = usePathname();
+  const section: AdminDataSection = pathname?.startsWith("/admin/orders") ? "orders"
+    : pathname?.startsWith("/admin/products") ? "products"
+      : pathname?.startsWith("/admin/barcodes") ? "barcodes"
+        : pathname?.startsWith("/admin/customers") ? "customers"
+          : pathname?.startsWith("/admin/payments") ? "payments"
+            : pathname?.startsWith("/admin/reviews") ? "reviews"
+              : pathname?.startsWith("/admin/settings") ? "settings"
+                : "dashboard";
   const [status, setStatus] = useState<AdminStatus>("loading");
   const [errorMessage, setErrorMessage] = useState("");
+  const [sectionLoading, setSectionLoading] = useState(false);
+  const [sectionErrorMessage, setSectionErrorMessage] = useState("");
   const [data, setData] = useState<AdminData | null>(null);
   const [now, setNow] = useState(() => new Date());
   const [toasts, setToasts] = useState<ToastItem[]>([]);
@@ -132,76 +171,156 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const lastOrder = useRef<number | null>(null);
   /** Stock per product at the last refresh, to spot purchases and products running low. */
   const lastStock = useRef<Map<string, number> | null>(null);
+  const dataRef = useRef<AdminData | null>(null);
+  const loadedSections = useRef(new Set<AdminDataSection>());
+  const activeSection = useRef(section);
+  const activeUserId = useRef<string | null>(null);
+  activeSection.current = section;
   const [lastSync, setLastSync] = useState<Date | null>(null);
   const toastRef = useRef(toast);
   toastRef.current = toast;
 
-  const load = useCallback(async (background = false) => {
-    const res = await call<AdminData>("/api/admin/data");
+  const load = useCallback(async (target: AdminDataSection, background = false, reportFailure = false) => {
+    const { res, confirm } = await callAdmin<Partial<AdminData>>(`/api/admin/data?section=${target}`);
     if (res.ok && res.data) {
-      // Announce orders that arrived since the last refresh (e.g. a customer just paid).
-      const newest = res.data.orders.reduce((m, o) => Math.max(m, o.number), 0);
-      if (lastOrder.current !== null && newest > lastOrder.current) {
-        const fresh = res.data.orders.filter((o) => o.number > (lastOrder.current ?? 0)).length;
-        const fmt = res.data.settings.invoice.numberFormat;
-        toastRef.current?.(fresh === 1 ? `New order #${orderLabel(newest, fmt)} received.` : `${fresh} new orders received.`);
+      if (!res.data.me || !res.data.settings) {
+        setErrorMessage("The admin response was incomplete. Please try again.");
+        if (dataRef.current) setSectionErrorMessage("The admin data couldn't be loaded. Please try again.");
+        else setStatus("error");
+        return;
       }
-      lastOrder.current = newest;
-      announceStock(lastStock.current, res.data.products, background, toastRef.current);
-      lastStock.current = new Map(res.data.products.map((p) => [p.id, availableStock(p) ?? 0]));
+      if (res.data.orders) {
+        // Announce orders that arrived since the last refresh (e.g. a customer just paid).
+        const newest = res.data.orders.reduce((m, o) => Math.max(m, o.number), 0);
+        if (lastOrder.current !== null && newest > lastOrder.current) {
+          const fresh = res.data.orders.filter((o) => o.number > (lastOrder.current ?? 0)).length;
+          const fmt = res.data.settings.invoice.numberFormat;
+          toastRef.current?.(fresh === 1 ? `New order #${orderLabel(newest, fmt)} received.` : `${fresh} new orders received.`);
+        }
+        lastOrder.current = newest;
+      }
+      if (res.data.products) {
+        announceStock(lastStock.current, res.data.products, background, toastRef.current);
+        lastStock.current = new Map(res.data.products.map((p) => [p.id, availableStock(p) ?? 0]));
+      }
+      const base = dataRef.current ?? {
+        me: res.data.me,
+        settings: res.data.settings,
+        reviews: [],
+        members: [],
+        invites: [],
+        products: [],
+        orders: [],
+        customers: [],
+        refunds: [],
+        stockLog: [],
+      };
+      const merged = { ...base, ...res.data };
+      dataRef.current = merged;
+      setData(merged);
+      loadedSections.current.add(target);
       setLastSync(new Date());
-      setData(res.data);
+      setSectionErrorMessage("");
       setStatus("ready");
     } else if (background && res.status !== 401 && res.status !== 403) {
       // A failed background refresh keeps showing the last good data.
+      if (reportFailure) {
+        toastRef.current?.("Saved, but the admin data couldn't refresh. Reload the page to see the latest values.", "warn");
+      }
       return;
     } else if (res.status === 401) {
+      // The session check already succeeded: this was a one-off failure, not a sign-out.
+      if (confirm?.ok) {
+        if (dataRef.current) setSectionErrorMessage("The admin data couldn't refresh. Please try again.");
+        return;
+      }
+      // A background refresh must never throw the admin back to the sign-in screen.
+      if (background && dataRef.current) return;
+      dataRef.current = null;
+      loadedSections.current.clear();
       setData(null);
-      setStatus("signed-out");
+      setStatus(confirm?.status === 403 ? "forbidden" : "signed-out");
     } else if (res.status === 403) {
+      dataRef.current = null;
+      loadedSections.current.clear();
       setData(null);
       setStatus("forbidden");
     } else {
-      setErrorMessage(res.error ?? "The admin data couldn't be loaded.");
-      setStatus("error");
+      const message = res.error ?? "The admin data couldn't be loaded.";
+      if (dataRef.current) setSectionErrorMessage(message);
+      else {
+        setErrorMessage(message);
+        setStatus("error");
+      }
     }
   }, []);
 
-  // Re-evaluate access whenever the signed-in user changes.
+  // Load each admin screen's data only when it is first opened.
   useEffect(() => {
     if (!ready) return;
     if (!user) {
+      activeUserId.current = null;
+      dataRef.current = null;
+      loadedSections.current.clear();
       setData(null);
       setStatus("signed-out");
+      setSectionLoading(false);
       return;
     }
-    setStatus("loading");
-    load();
-  }, [ready, user?.id, load]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (activeUserId.current !== user.id) {
+      activeUserId.current = user.id;
+      dataRef.current = null;
+      loadedSections.current.clear();
+      lastOrder.current = null;
+      lastStock.current = null;
+      setData(null);
+      setStatus("loading");
+    }
+    if (loadedSections.current.has(section)) {
+      setSectionLoading(false);
+      setSectionErrorMessage("");
+      return;
+    }
+    const alreadyLoaded = loadedSections.current.has(section);
+    let active = true;
+    setSectionLoading(!alreadyLoaded);
+    setSectionErrorMessage("");
+    void load(section, alreadyLoaded).finally(() => {
+      if (active && !alreadyLoaded) setSectionLoading(false);
+    });
+    return () => {
+      active = false;
+    };
+  }, [ready, user?.id, section, load]);
 
   useEffect(() => {
     const tick = setInterval(() => setNow(new Date()), 60_000);
     return () => clearInterval(tick);
   }, []);
 
-  // Keep orders, stock and customers live: refresh every 20 s while the tab is visible, and on focus.
+  // Refresh only the visible screen's datasets in the background.
   useEffect(() => {
     if (status !== "ready") return;
-    const refreshIfVisible = () => document.visibilityState === "visible" && load(true);
-    const timer = setInterval(refreshIfVisible, 20_000);
+    const refreshIfVisible = () => document.visibilityState === "visible" && load(section, true);
+    const timer = setInterval(refreshIfVisible, 60_000);
     window.addEventListener("focus", refreshIfVisible);
     return () => {
       clearInterval(timer);
       window.removeEventListener("focus", refreshIfVisible);
     };
-  }, [status, load]);
+  }, [status, section, load]);
 
   const api = useCallback<AdminContextValue["api"]>(async (path, init) => {
     const res = await call(path, init);
     if (res.status === 401) {
-      // The session ended while the page was open.
-      setStatus("signed-out");
-      setData(null);
+      // Confirm the session before dropping the panel: a token can be mid-refresh.
+      const confirm = await call<unknown>("/api/admin/me");
+      if (confirm.status === 401 || confirm.status === 403) {
+        dataRef.current = null;
+        loadedSections.current.clear();
+        setStatus(confirm.status === 401 ? "signed-out" : "forbidden");
+        setData(null);
+      }
     } else if (res.status === 403) {
       // A 403 can simply mean "owner only". Leave the panel only if admin access itself is gone.
       const me = await call("/api/admin/me");
@@ -220,9 +339,10 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
         toast(res.error ?? "Something went wrong.", "error");
         return res as ApiResult<never>;
       }
-      await load();
       const msg = typeof success === "function" ? success(res.data as never) : success;
       if (msg) toast(msg);
+      loadedSections.current.clear();
+      void load(activeSection.current, true, true);
       return res as ApiResult<never>;
     },
     [api, load, toast],
@@ -247,6 +367,8 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     () => ({
       status,
       errorMessage,
+      sectionLoading,
+      sectionErrorMessage,
       data,
       now,
       label,
@@ -254,16 +376,18 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       lastSync,
       toasts,
       dismissToast,
-      refresh: () => load(),
+      refresh: () => load(activeSection.current),
       api,
       mutate,
       uploadImage,
       retry: () => {
-        setStatus("loading");
-        load();
+        if (!dataRef.current) setStatus("loading");
+        else setSectionLoading(true);
+        setSectionErrorMessage("");
+        void load(activeSection.current).finally(() => setSectionLoading(false));
       },
     }),
-    [status, errorMessage, data, now, label, toast, lastSync, toasts, dismissToast, load, api, mutate, uploadImage],
+    [status, errorMessage, sectionLoading, sectionErrorMessage, data, now, label, toast, lastSync, toasts, dismissToast, load, api, mutate, uploadImage],
   );
 
   return <AdminContext.Provider value={value}>{children}</AdminContext.Provider>;

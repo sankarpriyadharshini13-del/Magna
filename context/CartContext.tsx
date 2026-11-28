@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { useProducts } from "./ProductsContext";
 import { loadCart, saveCart } from "@/services/cartStorage";
+import { sellsOnline } from "@/lib/channels";
 import { defaultPackSize, priceForPack } from "@/lib/pack";
 import { availablePackStock, availableStock } from "@/lib/stock";
 import type { CartItem, Product } from "@/types";
@@ -200,8 +201,8 @@ export function CartProvider({ children, onAdd }: { children: React.ReactNode; o
   const add = useCallback((productId: string, quantity = 1, packSize = "") => {
     const p = getById(productId);
     if (!p) return;
-    // Export catalogue items are enquiry-only and never enter the cart.
-    if (p.channel === "export") return;
+    // Products that aren't sold online (export / distributor-only) are enquiry-only and never enter the cart.
+    if (!sellsOnline(p)) return;
     const selectedSize = packSize || defaultPackSize(p);
     const stock = availablePackStock(p, selectedSize);
     if (stock != null && stock <= 0) {
@@ -248,7 +249,7 @@ export function CartProvider({ children, onAdd }: { children: React.ReactNode; o
   const value = useMemo<CartValue>(() => {
     const lines: CartLine[] = items.flatMap((i) => {
       const product = getById(i.productId);
-      if (!product || product.channel === "export") return [];
+      if (!product || !sellsOnline(product)) return [];
       const packSize = i.packSize || defaultPackSize(product);
       const unitPrice = priceForPack(product, packSize).price;
       return [{

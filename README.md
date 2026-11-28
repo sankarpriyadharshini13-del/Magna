@@ -288,12 +288,37 @@ new-order email on/off. Without email keys, orders still work and the emails are
   (it replaces the cancel function with a version that also saves the reason), then
   `supabase/migrations/20261121000000_enquiries.sql` for website enquiries.
 
+### Invoice delivery charge (Distributor / Export orders)
+
+- Open a **Distributor** or **Export** order in Admin → Orders. The panel now has a **Delivery on the invoice**
+  card: choose **Free delivery** or **Delivery charge**, enter the amount, and choose whether the charge is
+  **shown** on the invoice.
+- **Shown:** the invoice prints a Delivery line and the totals read **Subtotal + Delivery = Total**.
+- **Hidden:** the invoice total still includes the charge, but the Delivery line is left off the document.
+- **Free:** the invoice reads **Delivery — Free**. Ecommerce (shop) invoices keep their existing style.
+- The choice is saved on the order (`delivery_charge` + `show_delivery_charge`), so the Invoice PDF always
+  follows it. Changing the amount in the Orders table's Delivery Charge column keeps the show/hide choice.
+- Setup: run `supabase/migrations/20261129010000_order_show_delivery_charge.sql`.
+
 ### Website enquiries (Business / Distributors / Export)
 
 - The forms on **/business**, **/distributors** and **/export** post to `POST /api/enquiries` (public,
   honeypot-protected). Each enquiry is saved as an order with `source = 'enquiry'`, `kind = 'bulk'`,
-  one ₹0 line ("Business enquiry" / "Distributor application" / "Export enquiry") and the form details
-  in the order note — so it appears in **Admin → Orders** with an **ENQUIRY** tag.
+  one row per requested product (product, pack size, quantity — ₹0) and the contact/destination on the
+  order itself (`ship_name`, `ship_phone`, `email`, `business_name`, `ship_country`, `ship_state`,
+  `ship_city`, `ship_pincode`) — so it appears in **Admin → Orders** with an **ENQUIRY** tag.
+- Distributors and Export forms collect the full destination: Country (an all-country type-ahead fed by
+  `GET /api/locations/countries`), State / Province and City (both type-ahead), and PIN / postal code.
+  Entering a PIN fills the city and state through `GET /api/locations/pincode` (India Post for India,
+  zippopotam.us for other countries). Countries, states and cities come from the bundled
+  [`country-state-city`](https://www.npmjs.com/package/country-state-city) dataset served by
+  `GET /api/locations/states` and `GET /api/locations/cities` — complete, consistently spelled lists
+  that work without an outside service. Every field accepts free text, so a lookup miss never blocks
+  the form. Company, contact person, contact number and email are required on every form, and a missing
+  product / pack size / quantity is outlined in red before the form is sent.
+- Setup: run `supabase/migrations/20261128000000_order_ship_country.sql` so the country is stored on the
+  order and shown in Admin → Orders, the orders CSV and invoices. Until then the enquiry still saves
+  (without the country).
 - Enquiries take no payment and reserve no stock. They don't count in Dashboard sales or Payments &
   Refunds. The details panel shows the enquiry text instead of packing notes; the admin replies to
   the customer and marks it delivered or cancelled.
@@ -313,6 +338,27 @@ new-order email on/off. Without email keys, orders still work and the emails are
   fewer, or sells out.
 - With Settings → "Low-stock alerts" on, the store email and the owner get a **Low stock** email when a purchase
   leaves a product at 10 units or fewer (needs `RESEND_API_KEY` and `EMAIL_FROM`).
+
+### Which pages a product appears on (Admin → Products & Stock)
+
+- Every product has three independent page switches — **Ecommerce** (the shop), **Distributors**
+  (/distributors) and **Export** (/export). Tick one, two or all three in the product form under
+  **Show on these pages**; each storefront page only lists the products ticked for it.
+- The **Pages** column in the product table has a quick **Shop / Dist. / Export** button per product, so a
+  product can be hidden from one page without opening the form or changing the other pages.
+- **Visible on website** is the master switch: off hides the product from every page (and from the header
+  search and cart). The page switches stay as set for when it is switched back on.
+- Products not sold online (Export-only or Distributor-only) carry no shop stock alerts, never enter the
+  cart, and show enquiry actions on their cards.
+- **Page-wide disable / enable:** above each catalogue list there is a **Disable all products** button
+  (and **Enable all products** once hidden). It hides every product on that page in one click without
+  changing any product's own page choices, so switching it back on restores exactly what was there.
+  The switch is stored in `app_settings.data.pages` and the storefront pages read it through
+  `public_page_visibility()`.
+- Setup: run `supabase/migrations/20261128010000_product_page_flags.sql`, then
+  `supabase/migrations/20261129000000_page_visibility.sql` for the public page-wide read. Without the
+  second migration the switch still works when `SUPABASE_SERVICE_ROLE_KEY` is configured (the server
+  reads the settings row directly); otherwise the storefront keeps showing everything.
 
 ### Prices and cart quantity
 

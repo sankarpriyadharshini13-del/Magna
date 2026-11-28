@@ -140,8 +140,8 @@ export default function DashboardScreen() {
     };
   }, [data.orders, data.customers, now, R.days, range, customMode, customDate, customStartDate, customEndDate]);
 
-  // Export catalogue items are enquiry-only, so they never appear in shop stock panels.
-  const live = data.products.filter((p) => p.visible && p.channel !== "export");
+  // Products not sold online (Export / distributor only) never appear in shop stock panels.
+  const live = data.products.filter((p) => p.visible && p.channels.includes("ecommerce"));
   const low = live.filter((p) => (availableStock(p) ?? 0) <= LOW_STOCK);
   const customers = useMemo(() => new Map(data.customers.map((c) => [c.id, c])), [data.customers]);
   const recent = data.orders

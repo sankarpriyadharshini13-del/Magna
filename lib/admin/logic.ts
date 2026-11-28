@@ -22,8 +22,8 @@ export function orderTone(s: OrderStatus): Tone {
 }
 
 export function productStatus(p: AdminProduct): { label: string; tone: Tone } {
-  // Export catalogue items are enquiry-only: their stock is never sold or shown on the storefront.
-  if (p.channel === "export") return { label: "Active · export", tone: "green" };
+  // Products that aren't sold online (Export / distributor only) have no shop stock state.
+  if (!p.channels.includes("ecommerce")) return { label: "Active · enquiry only", tone: "green" };
   const stock = availableStock(p) ?? 0;
   if (stock <= 0) return { label: "Out of stock", tone: "red" };
   if (stock <= LOW_STOCK) return { label: "Active · low stock", tone: "yellow" };

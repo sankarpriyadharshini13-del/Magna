@@ -1,13 +1,16 @@
 import Image from "next/image";
+import { sellsOnline } from "@/lib/channels";
+import { getPageVisibility } from "@/lib/server/pageVisibility";
 import { getPublicProducts } from "@/lib/server/publicProducts";
 import type { Product } from "@/types";
 import ProductCarousel from "./ProductCarousel";
 
 async function loadProducts(): Promise<Product[]> {
   try {
-    const products = await getPublicProducts();
+    const [products, visibility] = await Promise.all([getPublicProducts(), getPageVisibility()]);
+    if (visibility.ecommerce === false) return [];
     // Filter products that have images
-    return products.filter(p => p.channel !== "export" && (Boolean(p.image) || (p.images && p.images.length > 0)));
+    return products.filter(p => sellsOnline(p) && (Boolean(p.image) || (p.images && p.images.length > 0)));
   } catch (error) {
     console.error("Failed to load products:", error);
     return [];
@@ -68,7 +71,7 @@ export default async function Hero() {
       <BlurLeaf className="-right-10 -top-6 h-44 w-44 rotate-[200deg]" />
       <BlurLeaf className="-bottom-8 -right-8 h-52 w-52 rotate-[20deg]" />
 
-      <div className="relative mx-auto grid w-full max-w-7xl items-center gap-12 px-4 pb-16 pt-6 sm:px-6 lg:grid-cols-[1fr_575px] lg:gap-11 lg:px-8 lg:py-10">
+      <div className="relative mx-auto grid w-full max-w-7xl items-center gap-12 px-4 pb-16 pt-6 sm:px-6 lg:grid-cols-[1fr_575px] lg:items-stretch lg:gap-11 lg:px-8 lg:py-10">
         <div className="lg:pr-4">
           <p className="animate-hero-fade-up inline-flex items-center gap-2 rounded-full border border-clay/30 bg-white/30 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-clay sm:px-4 sm:py-2 sm:text-[11px] [animation-delay:100ms]">
             <span className="h-2 w-2 rounded-full bg-clay" aria-hidden="true" />
@@ -87,20 +90,20 @@ export default async function Hero() {
             Magna Eco Bites brings you traditional podis, cold-pressed oils and kitchen staples — made from naturally sourced ingredients, with no shortcuts.
           </p>
 
-          <div className="animate-hero-fade-up mt-7 flex items-center gap-3 sm:mt-9 [animation-delay:550ms]">
+          <div className="animate-hero-fade-up mt-7 sm:mt-9 [animation-delay:550ms]">
             <div className="flex -space-x-2.5" aria-hidden="true">
               <span className="grid h-10 w-10 place-items-center rounded-full bg-clay font-display text-base text-white/90 ring-2 ring-cream sm:h-11 sm:w-11 sm:text-lg">M</span>
               <span className="grid h-10 w-10 place-items-center rounded-full bg-forest font-display text-base text-white ring-2 ring-cream sm:h-11 sm:w-11 sm:text-lg">S</span>
             </div>
-            <p className="text-xs text-ink/55 sm:text-sm"><span className="font-semibold text-ink">Family run</span> · Made fresh in small batches</p>
+            <p className="mt-2.5 text-xs text-ink/55 sm:text-sm"><span className="font-semibold text-ink">Family run</span> · Made fresh in small batches</p>
           </div>
         </div>
 
-        <div className="animate-hero-scale-in [animation-delay:350ms]">
+        <div className="h-full animate-hero-scale-in [animation-delay:350ms]">
           {products.length > 0 ? (
             <ProductCarousel products={products} />
           ) : (
-            <figure className="relative mx-auto aspect-[575/720] w-full max-w-[575px] overflow-hidden rounded-[2rem] bg-forest-card shadow-lift lg:mx-0 lg:rounded-[2.75rem]">
+            <figure className="relative mx-auto aspect-[575/720] w-full max-w-[575px] overflow-hidden rounded-[2rem] bg-forest-card shadow-lift lg:mx-0 lg:aspect-auto lg:h-full lg:rounded-[2.75rem]">
               <Image src="/images/hero-moringa-card.jpg" alt="Kraft pack of Magna Eco Bites Moringa Idli Podi beside a wooden bowl of the podi, moringa leaves and curry leaves" fill priority sizes="(min-width:1024px) 575px, 92vw" className="object-cover" />
               <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-[28%] bg-gradient-to-t from-forest-deep/70 to-transparent" />
               <figcaption className="absolute bottom-[4.5%] left-[6.5%] right-4 text-cream">

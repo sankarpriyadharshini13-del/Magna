@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import nextDynamic from "next/dynamic";
 import type { SVGProps } from "react";
 import SiteShell from "@/components/layout/SiteShell";
@@ -7,6 +6,8 @@ import EnquiryForm from "@/components/enquiry/EnquiryForm";
 import Reveal from "@/components/home/Reveal";
 import SectionHeading from "@/components/home/SectionHeading";
 import { ArrowIcon, CheckIcon, GlobeIcon, MailIcon, PinIcon } from "@/components/ui/Icons";
+import { productPages } from "@/lib/channels";
+import { getPageVisibility } from "@/lib/server/pageVisibility";
 import { getPublicProducts } from "@/lib/server/publicProducts";
 
 const ProductCard = nextDynamic(() => import("@/components/product/ProductCard"), {
@@ -133,7 +134,6 @@ const solutions = [
     title: "Retail Distributors & Supermarket Chains",
     body: "Expand your shelves with premium, eye-catching retail pouches and glass/pet bottles that stand out in the natural food and ethnic staple segments.",
     bullets: [
-      "Retail-Ready Packs: 50g, 100g, 200g, 500g, 800g, and 1kg options.",
       "High Shelf-Life & Safe Packaging: Sealed food-grade packaging designed to maintain fresh aroma during transit and shelf storage.",
     ],
   },
@@ -141,9 +141,7 @@ const solutions = [
     Icon: RestaurantUtensilsIcon,
     title: "HoReCa (Hotels, Restaurants, Cafés & Caterers)",
     body: "Elevate your culinary offerings with authentic traditional tastes. We supply commercial kitchens with consistent, high-yield spice powders, podis, and cold-pressed oils.",
-    bullets: [
-      "Bulk packaging available in 5 kg, 10 kg, 25 kg bags/sacks, and 10L / 20L food-grade cans/drums for oils.",
-    ],
+    bullets: [],
   },
   {
     Icon: GiftBoxIcon,
@@ -153,22 +151,47 @@ const solutions = [
   },
 ];
 
-const productRange = [
-  { title: "Stone-Ground Podis", body: "Classic Idli Podi, Moringa Idli Podi, Sesame (Ellu) Podi, Curry Leaf Podi, Garlic Podi, and regional spice mixes." },
-  { title: "Pure Cold-Pressed Oils", body: "Groundnut Oil, Sesame / Gingelly Oil, Coconut Oil, Mustard Oil, Sunflower Oil, and Food-Grade Olive Oil." },
-  { title: "Unrefined Sweeteners", body: "Pure Naatu Sakkarai (Country Sugar), Palm Jaggery, and Jaggery Powder." },
-  { title: "Superfoods & Health Mixes", body: "Raw Moringa Powder, Multi-Grain Health Mix, Quick Poha Mix, and Roasted Channa." },
-  { title: "Grains, Pulses & Spices", body: "High-curcumin GI-tagged Turmeric Powder, premium Millets, Pulses, and whole oilseeds." },
+const flexibleOrder = [
+  {
+    tag: "Start small",
+    title: "Low Minimum Order Quantities (MOQ)",
+    body: "Begin with a trial batch sized to your region and grow the order as demand builds — there is no need to commit to a full truckload on day one.",
+  },
+  {
+    tag: "Evaluate first",
+    title: "Sample Kits Available",
+    body: "Check the aroma, texture and shelf life of the range with a sample kit before you sign a bulk contract.",
+  },
+  {
+    tag: "One point of contact",
+    title: "Dedicated B2B Account Representative",
+    body: "A named representative handles pricing, order placement and dispatch tracking, so reordering stays hassle-free.",
+  },
 ];
 
-const flexibleOrder = [
-  "Low Minimum Order Quantities (MOQ) for new regional distributors.",
-  "Sample Kits Available for quality evaluation prior to bulk contract.",
-  "Dedicated B2B Account Representative for hassle-free order placement and tracking.",
+const partnershipSteps = [
+  {
+    title: "Share Your Requirements",
+    body: "Send us your business details, location, and product requirements.",
+  },
+  {
+    title: "Receive Catalog & Price List",
+    body: "Our B2B sales team will get back to you with our wholesale catalog and price list within 24 hours.",
+  },
+  {
+    title: "Evaluate Quality",
+    body: "Sample kits are available for quality evaluation prior to bulk contract.",
+  },
+  {
+    title: "Place Your Order",
+    body: "A dedicated B2B account representative supports hassle-free order placement and tracking.",
+  },
 ];
 
 export default async function DistributorsPage() {
-  const range = (await getPublicProducts()).filter((p) => p.channel !== "export");
+  const [allProducts, visibility] = await Promise.all([getPublicProducts(), getPageVisibility()]);
+  const catalogueOpen = visibility.distributors !== false;
+  const range = catalogueOpen ? allProducts.filter((p) => productPages(p).includes("distributors")) : [];
   const enquiryProducts = range.map(({ id, name, packSize, packSizes }) => ({ id, name, packSize, packSizes }));
 
   return (
@@ -194,7 +217,7 @@ export default async function DistributorsPage() {
                 Bring Authentic, Stone-Ground & 100% Natural South Indian Pantry Staples to Your Region. At Magna Eco Bites, we are expanding our distribution network across India. Whether you are a regional distributor, retail store chain, organic & natural products retailer, or a HoReCa (Hotels, Restaurants, & Caterers) partner, we supply our complete range of stone-ground podis, cold-pressed oils, unrefined sweeteners, spices, millets, and health mixes anywhere in India. We manufacture in small batches in Chennai, ensuring your customers receive fresh, aromatic, and pure products every single time.
               </p>
 
-              {/* Quick Actions & Trust Indicators */}
+              {/* Primary enquiry action */}
               <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
                 <a
                   href="#enquire"
@@ -203,59 +226,9 @@ export default async function DistributorsPage() {
                   Become a Partner
                   <ArrowIcon width={16} height={16} />
                 </a>
-                <a
-                  href="#catalogue"
-                  className="btn-secondary"
-                >
-                  Explore Stockable SKUs
-                </a>
-              </div>
-
-              {/* Trust badges strip */}
-              <div className="mt-12 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:gap-4">
-                {[
-                  { label: "100% Natural Purity", sub: "Zero preservatives" },
-                  { label: "Direct Freight", sub: "Pan-India delivery" },
-                  { label: "Wholesale Margins", sub: "Sustainable trade growth" },
-                  { label: "Fresh Batches", sub: "Milled in Chennai" },
-                ].map((pill) => (
-                  <div key={pill.label} className="rounded-2xl border border-forest/10 bg-white/60 p-3.5 text-center shadow-soft backdrop-blur-sm">
-                    <p className="font-display text-sm font-bold text-forest">{pill.label}</p>
-                    <p className="mt-0.5 text-xs text-ink/60">{pill.sub}</p>
-                  </div>
-                ))}
               </div>
             </div>
           </Reveal>
-        </div>
-      </section>
-
-      {/* Live product range */}
-      <section id="catalogue" className="scroll-mt-20 bg-cream pb-16 md:pb-24">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <Reveal>
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-              <SectionHeading
-                eyebrow="Our live range"
-                title={<>Products you can <span className="italic text-clay">stock &amp; sell</span></>}
-                lead="Everything customers buy from our shop is available to our distributor partners — tell us the products, pack sizes and quantities you need, and we'll share wholesale pricing."
-              />
-              <span className="self-start rounded-full bg-forest/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-forest sm:self-end">
-                {range.length} Active SKUs
-              </span>
-            </div>
-          </Reveal>
-          {range.length === 0 ? (
-            <p className="mt-8 rounded-[1.5rem] bg-sand/60 p-8 text-center text-ink/65">Our range is being updated — check back soon.</p>
-          ) : (
-            <ul className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {range.map((p, i) => (
-                <li key={p.id}>
-                  <ProductCard product={p} priority={i < 4} enquiryOnly />
-                </li>
-              ))}
-            </ul>
-          )}
         </div>
       </section>
 
@@ -266,7 +239,7 @@ export default async function DistributorsPage() {
             <SectionHeading
               align="center"
               eyebrow="Why Partner With Magna Eco Bites?"
-              title={<>Built for <span className="italic text-clay">long-term</span> trade partnerships</>}
+              title={<>Support for your <span className="italic text-clay">wholesale business</span></>}
             />
           </Reveal>
 
@@ -279,7 +252,6 @@ export default async function DistributorsPage() {
                       <w.Icon width={28} height={28} />
                     </span>
                     <div className="min-w-0">
-                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-clay">Benefit 0{i + 1}</p>
                       <h3 className="mt-1 font-display text-lg font-semibold leading-snug text-forest sm:text-xl">{w.title}</h3>
                     </div>
                   </div>
@@ -319,9 +291,6 @@ export default async function DistributorsPage() {
                     <span className="grid h-14 w-14 place-items-center rounded-2xl bg-forest text-cream shadow-sm transition-transform duration-300 group-hover:scale-105">
                       <s.Icon width={24} height={24} />
                     </span>
-                    <span className="font-display text-xs font-bold tracking-[0.2em] text-forest/30">
-                      Channel 0{i + 1}
-                    </span>
                   </div>
                   
                   <h3 className="mt-5 font-display text-xl font-bold text-forest sm:text-2xl">{s.title}</h3>
@@ -346,44 +315,43 @@ export default async function DistributorsPage() {
         </div>
       </section>
 
-      {/* Product range: Numbered Artisanal Cards */}
-      <section className="relative overflow-hidden bg-sand/40 py-16 sm:py-20 md:py-24">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+      {/* Live product range */}
+      <section id="catalogue" className="scroll-mt-20 bg-cream pb-16 md:pb-24">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <Reveal>
-            <SectionHeading
-              align="center"
-              eyebrow="Product Range Available for Bulk & Wholesale Order"
-              title={<>Our full range, <span className="italic text-clay">ready to stock</span></>}
-            />
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <SectionHeading
+                eyebrow="Product Range Available for Bulk & Wholesale Order"
+                title={<>Products you can <span className="italic text-clay">stock &amp; sell</span></>}
+                lead="Everything customers buy from our shop is available to our distributor partners — tell us the products, pack sizes and quantities you need, and we'll share wholesale pricing."
+              />
+              <span className="self-start rounded-full bg-forest/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-forest sm:self-end">
+                {range.length} Active SKUs
+              </span>
+            </div>
           </Reveal>
-          
-          <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {productRange.map((p, i) => (
-              <Reveal key={p.title} delay={i * 70} className="h-full">
-                <div className="group flex h-full flex-col justify-between rounded-[1.75rem] border border-forest/10 bg-white p-6 shadow-soft transition-all duration-300 hover:-translate-y-1 hover:shadow-lift sm:p-7">
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <span className="rounded-full bg-forest/5 px-3 py-1 font-display text-xs font-bold text-forest">
-                        Category 0{i + 1}
-                      </span>
-                      <span className="h-2 w-2 rounded-full bg-honey" />
-                    </div>
-                    <h3 className="mt-4 font-display text-xl font-bold text-forest">{p.title}</h3>
-                    <p className="mt-2.5 text-sm leading-relaxed text-ink/70">{p.body}</p>
-                  </div>
-                  <div className="mt-5 border-t border-forest/[0.06] pt-3 text-xs font-semibold text-clay">
-                    Bulk & Custom Pack Sizes
-                  </div>
-                </div>
-              </Reveal>
-            ))}
-          </div>
+          {!catalogueOpen ? (
+            <p className="mt-8 rounded-[1.5rem] bg-sand/60 p-8 text-center text-ink/65">
+              The distributor catalogue is being updated. Send us an enquiry below and our team will share the current
+              range and wholesale prices.
+            </p>
+          ) : range.length === 0 ? (
+            <p className="mt-8 rounded-[1.5rem] bg-sand/60 p-8 text-center text-ink/65">Our range is being updated — check back soon.</p>
+          ) : (
+            <ul className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {range.map((p, i) => (
+                <li key={p.id}>
+                  <ProductCard product={p} priority={i < 4} enquiryOnly page="distributors" />
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </section>
 
-      {/* Flexible order quantities: Reassuring Support Grid */}
+      {/* Flexible order quantities: quiet editorial cards (no icons, numbers or rules) */}
       <section className="bg-cream py-16 sm:py-20 md:py-24">
-        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <Reveal>
             <SectionHeading
               align="center"
@@ -394,19 +362,58 @@ export default async function DistributorsPage() {
           </Reveal>
 
           <div className="mt-12 grid gap-5 md:grid-cols-3">
-            {flexibleOrder.map((f, i) => (
-              <Reveal key={f} delay={i * 90} className="h-full">
-                <div className="flex h-full flex-col items-center rounded-[1.75rem] border border-forest/10 bg-white p-6 text-center shadow-soft sm:p-7">
-                  <span className="grid h-12 w-12 place-items-center rounded-2xl bg-leaf/10 text-leaf">
-                    <CheckIcon width={20} height={20} />
-                  </span>
-                  <p className="mt-4 text-sm font-semibold leading-relaxed text-forest sm:text-base">
-                    {f}
-                  </p>
-                </div>
-              </Reveal>
-            ))}
+            {flexibleOrder.map(({ tag, title, body }, i) => {
+              // The middle card is turned over in forest green so the row has a focal point.
+              const dark = i === 1;
+              return (
+                <Reveal key={title} delay={i * 90} className="h-full">
+                  <article
+                    className={`flex h-full flex-col rounded-[1.5rem] p-7 transition-transform duration-300 hover:-translate-y-1 sm:p-8 ${
+                      dark
+                        ? "bg-forest shadow-lift"
+                        : "border border-forest/10 bg-white shadow-soft transition-shadow hover:shadow-lift"
+                    }`}
+                  >
+                    <p className={`text-[11px] font-bold uppercase tracking-[0.2em] ${dark ? "text-honey" : "text-clay"}`}>
+                      {tag}
+                    </p>
+                    <h3 className={`mt-4 font-display text-2xl font-medium leading-snug ${dark ? "text-cream" : "text-forest"}`}>
+                      {title}
+                    </h3>
+                    <p className={`mt-4 text-sm leading-relaxed ${dark ? "text-cream/75" : "text-ink/65"}`}>{body}</p>
+                  </article>
+                </Reveal>
+              );
+            })}
           </div>
+
+          <Reveal delay={120}>
+            <p className="mx-auto mt-10 max-w-2xl text-center text-sm leading-relaxed text-ink/60">
+              Every partnership begins with a conversation — tell us your target market and we&apos;ll recommend the
+              right starting quantity for your region.
+            </p>
+          </Reveal>
+        </div>
+      </section>
+
+      <section id="partnership-process" className="bg-sand/40 py-16 sm:py-20 md:py-24">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <Reveal>
+            <SectionHeading
+              align="center"
+              eyebrow="How to get started"
+              title={<>From first enquiry to <span className="italic text-clay">first order</span></>}
+              lead="A straightforward process to help you assess the range and plan a wholesale order."
+            />
+          </Reveal>
+          <ol className="mt-10 grid list-none gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {partnershipSteps.map((step) => (
+              <li key={step.title} className="rounded-[1.5rem] border border-forest/10 bg-white p-6 shadow-soft">
+                <h3 className="font-display text-lg font-semibold text-forest">{step.title}</h3>
+                <p className="mt-3 text-sm leading-relaxed text-ink/70">{step.body}</p>
+              </li>
+            ))}
+          </ol>
         </div>
       </section>
 

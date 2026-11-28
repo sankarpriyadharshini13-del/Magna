@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import type { Product } from "@/types";
+import type { Product, ProductPage } from "@/types";
 import ProductImage from "./ProductImage";
 import AddToCartButton from "./AddToCartButton";
 import Price, { percentOff } from "@/components/ui/Price";
 import { ArrowIcon } from "@/components/ui/Icons";
+import { productPages } from "@/lib/channels";
 import { defaultPackSize, packSizesOf, priceForPack } from "@/lib/pack";
 import { stockState } from "@/lib/stock";
 
@@ -14,14 +15,25 @@ export default function ProductCard({
   product,
   priority = false,
   enquiryOnly = false,
+  page,
 }: {
   product: Product;
   priority?: boolean;
+  /** Force the enquiry-only treatment (Distributor / Export listings). */
   enquiryOnly?: boolean;
+  /** Which page the card sits on — decides the link and the CTA. */
+  page?: ProductPage;
 }) {
-  const isExport = product.channel === "export";
-  const isEnquiryOnly = isExport || enquiryOnly;
-  const href = enquiryOnly ? `/products/${product.slug}?channel=distributors` : `/products/${product.slug}`;
+  const pages = productPages(product);
+  const activePage = page ?? (pages.includes("ecommerce") ? "ecommerce" : pages[0] ?? "ecommerce");
+  const isExport = activePage === "export";
+  const isEnquiryOnly = enquiryOnly || activePage !== "ecommerce";
+  const href =
+    activePage === "distributors"
+      ? `/products/${product.slug}?channel=distributors`
+      : isExport
+        ? `/products/${product.slug}?channel=export`
+        : `/products/${product.slug}`;
   const enquiryHref = isExport ? "/export#enquire" : "/distributors#enquire";
   const sizes = packSizesOf(product).filter(Boolean);
   const [selectedSize, setSelectedSize] = useState(() => defaultPackSize(product));

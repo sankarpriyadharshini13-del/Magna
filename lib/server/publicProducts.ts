@@ -1,6 +1,7 @@
 import "server-only";
 import { cleanPackSizes } from "@/lib/pack";
 import type { Product, ProductChannel, ProductPack } from "@/types";
+import { channelsOf } from "./model";
 import { anonClient, supabaseConfigured } from "./supabase";
 
 const BASE_COLUMNS = ["id", "name", "price", "stock", "pack_size", "tag", "description", "long_description", "images", "created_at"];
@@ -11,6 +12,9 @@ const OPTIONAL_COLUMNS = [
   "pack_sizes",
   "pack_stock",
   "channel",
+  "show_ecommerce",
+  "show_distributors",
+  "show_export",
   "pack_enabled",
   "pack_ingredients",
   "pack_benefits",
@@ -77,7 +81,8 @@ function toProduct(r: any): Product {
       ? (r.pack_stock as Record<string, number>)
       : undefined;
   const primaryPrice = packPrices[packSizes[0] ?? ""] ?? { price: r.price ?? null, originalPrice: r.original_price ?? null };
-  const channel: ProductChannel = r.channel === "export" ? "export" : "ecommerce";
+  const channels = channelsOf(r);
+  const channel: ProductChannel = channels.includes("ecommerce") ? "ecommerce" : "export";
   return {
     id: r.id,
     slug: r.id,
@@ -88,6 +93,7 @@ function toProduct(r: any): Product {
     packSize: packSizes[0] ?? null,
     packSizes,
     channel,
+    channels,
     priceInr: primaryPrice.price,
     originalPriceInr:
       primaryPrice.price != null && primaryPrice.originalPrice != null && primaryPrice.originalPrice > primaryPrice.price

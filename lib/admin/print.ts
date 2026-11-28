@@ -151,7 +151,8 @@ export function invoiceHtml(o: Order, c: Customer, s: Settings) {
 
   // Parties.
   const street = streetOf(o);
-  const cityLine = [[o.location.city, o.location.state].filter(Boolean).join(", "), o.location.pincode].filter(Boolean).join(" ");
+  const placeLine = [[o.location.city, o.location.state].filter(Boolean).join(", "), o.location.pincode].filter(Boolean).join(" ");
+  const cityLine = [placeLine, o.location.country].filter(Boolean).join(", ");
   const billLines = [
     o.businessName ? `Attn: ${esc(name)}` : "",
     esc(street),
@@ -162,23 +163,34 @@ export function invoiceHtml(o: Order, c: Customer, s: Settings) {
   const soldLines = [esc(s.store.address), s.store.gstin ? `GSTIN: ${esc(s.store.gstin)}` : "", s.store.udyam ? `Udyam: ${esc(s.store.udyam)}` : ""].filter(Boolean);
   const logo = s.invoice.logo ? `<img src="${esc(s.invoice.logo)}" alt="">` : LEAF_SVG;
 
-  // Lines: products, then delivery. The delivery line never carries an amount — the invoice always
-  // reads "Delivery Free", whatever the admin entered in the Orders → Delivery Charge box. That charge
-  // still counts in the order total (and in Orders, payments and reports); it is only kept off the
-  // customer-facing document. Subtotal therefore covers everything charged before the discount.
   const rows = o.items
     .map(
       (i) => `<tr><td><b>${esc(i.name)}</b>${i.packSize ? `<span>${esc(i.packSize)}</span>` : ""}</td>
 <td>${i.qty}</td><td>${inr2(i.price)}</td><td>${inr2(i.price * i.qty)}</td></tr>`,
     )
     .join("");
-  const shipSub = [o.tracking.transporter, o.tracking.number].filter(Boolean).join(" · ");
-  const deliveryRow = `<tr><td><b>Delivery</b><span>${esc(shipSub || (o.kind === "bulk" ? "Transport" : "Courier"))}</span></td>
-<td>1</td><td>Free</td><td>Free</td></tr>`;
 
-  const chargedBeforeDiscount = orderSubtotal(o) + o.shipping + (o.deliveryCharge ?? 0);
+  // Delivery. Website orders keep the house style ("Delivery Free", with any charge folded into the
+  // subtotal). Distributor / Export invoices follow the admin's choice: free delivery, a printed
+  // delivery charge, or a charge that counts in the total but stays off the document.
+  const isEnquiryChannel = o.channel === "distributors" || o.channel === "export";
+  const deliveryCharge = o.deliveryCharge ?? 0;
+  const freeDelivery = !isEnquiryChannel || deliveryCharge <= 0;
+  const printCharge = isEnquiryChannel && deliveryCharge > 0 && o.showDeliveryCharge;
+  const shipSub = [o.tracking.transporter, o.tracking.number].filter(Boolean).join(" · ");
+  const deliverySub = esc(shipSub || (o.kind === "bulk" ? "Transport" : "Courier"));
+  const deliveryRow = freeDelivery
+    ? `<tr><td><b>Delivery</b><span>${deliverySub}</span></td>
+<td>1</td><td>Free</td><td>Free</td></tr>`
+    : printCharge
+      ? `<tr><td><b>Delivery</b><span>${deliverySub}</span></td>
+<td>1</td><td>${inr2(deliveryCharge)}</td><td>${inr2(deliveryCharge)}</td></tr>`
+      : "";
+
+  const chargedBeforeDiscount = orderSubtotal(o) + o.shipping + (isEnquiryChannel ? 0 : deliveryCharge);
   const sumRows = [
     `<div class="iv-r"><span>Subtotal</span><span>${inr2(chargedBeforeDiscount)}</span></div>`,
+    printCharge ? `<div class="iv-r"><span>Delivery charge</span><span>${inr2(deliveryCharge)}</span></div>` : "",
     o.discount ? `<div class="iv-r"><span>Discount</span><span>−${inr2(o.discount)}</span></div>` : "",
   ].join("");
   const afterRows = [
