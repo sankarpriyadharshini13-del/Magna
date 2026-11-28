@@ -93,7 +93,7 @@ export default function Header() {
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-2 focus:z-[70] focus:rounded-full focus:bg-forest focus:px-4 focus:py-2 focus:text-cream">
         Skip to content
       </a>
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-3 py-3.5 sm:gap-4 sm:px-6 lg:grid lg:grid-cols-[1fr_auto_1fr] lg:gap-3 lg:px-8">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-1 px-2 py-3.5 sm:gap-4 sm:px-6 lg:grid lg:grid-cols-[1fr_auto_1fr] lg:gap-3 lg:px-8">
         <div className="flex lg:justify-self-start">
           <Logo priority />
         </div>

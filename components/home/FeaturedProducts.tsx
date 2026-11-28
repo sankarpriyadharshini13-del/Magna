@@ -76,7 +76,7 @@ export default function FeaturedProducts() {
         ) : (
           <ul
             aria-label={`${active === "All" ? "All" : active} products`}
-            className="no-scrollbar -mx-4 mt-10 flex snap-x snap-mandatory scroll-px-4 gap-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:scroll-px-0 sm:mt-12 sm:grid sm:grid-cols-2 sm:gap-6 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-3 xl:grid-cols-4"
+            className="no-scrollbar -mx-4 mt-10 flex snap-x snap-mandatory scroll-px-4 gap-4 overflow-x-auto px-4 pb-2 pt-3 sm:mx-0 sm:scroll-px-0 sm:mt-12 sm:grid sm:grid-cols-2 sm:gap-6 sm:overflow-visible sm:px-0 sm:pb-0 sm:pt-0 lg:grid-cols-3 xl:grid-cols-4"
           >
             {items.map((p, i) => (
               <li key={p.id} className="w-[78%] shrink-0 snap-start sm:w-auto">

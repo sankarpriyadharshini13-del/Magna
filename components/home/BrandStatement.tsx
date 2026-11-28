@@ -1,27 +1,23 @@
 import Reveal from "./Reveal";
 import SectionHeading from "./SectionHeading";
 
-/** The four everyday promises, presented as concise text-only cards. */
+/** The four everyday promises, presented as concise text-led cards. */
 const pillars = [
   {
     title: "Natural & Pure",
     body: "Wholesome ingredients, chosen one by one",
-    wash: "hover:border-leaf/30",
   },
   {
     title: "Eco-Friendly",
     body: "A greener tomorrow, packed with care",
-    wash: "hover:border-honey/40",
   },
   {
     title: "Healthy Living",
     body: "Goodness in every bite, every day",
-    wash: "hover:border-clay/30",
   },
   {
     title: "Rooted in Nature",
     body: "Tradition you can trust",
-    wash: "hover:border-forest/30",
   },
 ];
 
@@ -39,7 +35,7 @@ const promise = (
 );
 
 /**
- * "Why Magna Eco Bites" — a single brand paragraph above four text-only
+ * "Why Magna Eco Bites" — a single brand paragraph above four text-led
  * promise cards, set on a warm sand band between the hero and the sourcing story.
  */
 export default function BrandStatement() {
@@ -68,14 +64,14 @@ export default function BrandStatement() {
           </div>
         </Reveal>
 
-        <div className="mt-12 grid gap-5 sm:grid-cols-2 md:mt-14 lg:grid-cols-4 lg:gap-6">
-          {pillars.map(({ title, body, wash }, i) => (
+        <div className="mt-10 grid gap-4 sm:grid-cols-2 md:mt-14 lg:grid-cols-4 lg:gap-5">
+          {pillars.map(({ title, body }, i) => (
             <Reveal key={title} delay={100 + i * 90} className="h-full">
               <article
-                className={`group relative flex h-full min-h-44 flex-col rounded-[1.75rem] border border-forest/10 bg-white/85 p-6 shadow-soft backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:bg-white hover:shadow-lift sm:p-7 ${wash}`}
+                className="group flex h-full min-h-24 flex-col justify-center rounded-[1.5rem] border border-forest/[0.07] bg-white p-5 shadow-soft transition-all duration-300 hover:-translate-y-1 hover:border-forest/15 hover:shadow-lift"
               >
-                <h3 className="font-display text-xl font-semibold leading-snug text-forest">{title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-ink/70 sm:text-[15px]">{body}</p>
+                <h3 className="font-display text-lg font-semibold leading-snug text-forest sm:text-xl">{title}</h3>
+                <p className="mt-1 text-sm leading-relaxed text-ink/65 sm:text-[15px]">{body}</p>
               </article>
             </Reveal>
           ))}
