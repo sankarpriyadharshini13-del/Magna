@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useAdminData } from "@/lib/admin/store";
 import { TRACKING_STATUSES, type AdminProduct, type Customer, type Order, type PaymentMode } from "@/lib/admin/types";
 import { formatInr } from "@/lib/format";
-import { availableStock } from "@/lib/stock";
+import { availablePackStock, availableStock } from "@/lib/stock";
 import { Modal } from "./ui";
 
 const STATES = [
@@ -157,13 +157,45 @@ export default function OrderFormModal({
     if (order && order.status !== "Cancelled") for (const i of order.items) if (i.productId) m.set(i.productId, (m.get(i.productId) ?? 0) + i.qty);
     return m;
   }, [order]);
+  const heldByPack = useMemo(() => {
+    const m = new Map<string, number>();
+    if (order && order.status !== "Cancelled") {
+      for (const i of order.items) {
+        if (!i.productId) continue;
+        const packSize = i.packSize || products.get(i.productId)?.packSize || "";
+        const key = `${i.productId}\0${packSize}`;
+        m.set(key, (m.get(key) ?? 0) + i.qty);
+      }
+    }
+    return m;
+  }, [order, products]);
   const wanted = useMemo(() => {
     const m = new Map<string, number>();
     for (const l of lines) if (l.productId) m.set(l.productId, (m.get(l.productId) ?? 0) + l.qty);
     return m;
   }, [lines]);
+  const wantedByPack = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const l of lines) {
+      if (!l.productId) continue;
+      const packSize = l.packSize || products.get(l.productId)?.packSize || "";
+      const key = `${l.productId}\0${packSize}`;
+      m.set(key, (m.get(key) ?? 0) + l.qty);
+    }
+    return m;
+  }, [lines, products]);
   const available = (id: string) => (availableStock(products.get(id) ?? { stock: 0 }) ?? 0) + (held.get(id) ?? 0);
-  const shortOf = (l: Line) => (order?.status === "Cancelled" || !l.productId || !products.has(l.productId) ? null : (wanted.get(l.productId) ?? 0) > available(l.productId) ? available(l.productId) : null);
+  const availableForPack = (id: string, packSize: string) =>
+    (availablePackStock(products.get(id) ?? { stock: 0 }, packSize) ?? 0) + (heldByPack.get(`${id}\0${packSize}`) ?? 0);
+  const shortOf = (l: Line) => {
+    if (order?.source === "enquiry" || order?.status === "Cancelled" || !l.productId || !products.has(l.productId)) return null;
+    const product = products.get(l.productId)!;
+    const packSize = l.packSize || product.packSize;
+    const packKey = `${l.productId}\0${packSize}`;
+    const totalShort = (wanted.get(l.productId) ?? 0) > available(l.productId);
+    const packShort = (wantedByPack.get(packKey) ?? 0) > availableForPack(l.productId, packSize);
+    return totalShort || packShort ? Math.min(available(l.productId), availableForPack(l.productId, packSize)) : null;
+  };
 
   const clearErr = (k: string) => setErrors((e) => (e[k] ? { ...e, [k]: "" } : e));
   const update = (key: number, patch: Partial<Line>) => {
@@ -478,7 +510,7 @@ export default function OrderFormModal({
                         />
                         <button type="button" aria-label="Increase" onClick={() => update(l.key, { qty: Math.min(100000, l.qty + 1) })}>+</button>
                       </div>
-                      {short != null && <span className="mo-short">Only {short} in stock</span>}
+                      {short != null && <span className="mo-short">{short === 0 ? "Out of stock" : `Only ${short} in stock`}</span>}
                     </td>
                     <td className="mo-price">
                       {bulk ? (

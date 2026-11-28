@@ -1,10 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { CheckIcon, CloseIcon } from "@/components/ui/Icons";
 import { useCart } from "@/context/CartContext";
 import { useUI } from "@/context/UIContext";
+
+const ADDED_DURATION_MS = 3500;
+const LIMIT_DURATION_MS = 8000;
 
 /**
  * Small notice at the bottom of the page: "Added to cart" after an add, or the stock-limit message when the
@@ -12,27 +16,46 @@ import { useUI } from "@/context/UIContext";
  * (Inside the open cart the limit message is shown next to the item instead.)
  */
 export default function AddedToCartToast() {
-  const { lastAdded, limitNotice, dismissLimit, count } = useCart();
+  const { lastAdded, limitNotice, dismissLimit, count, lines } = useCart();
   const { open, panel } = useUI();
+  const pathname = usePathname();
   const [visible, setVisible] = useState<"added" | "limit" | null>(null);
+  const lastAddedInCart = Boolean(lastAdded && lines.some((line) => line.product.id === lastAdded.productId));
 
   useEffect(() => {
-    if (!lastAdded) return;
+    if (!lastAdded || !lastAddedInCart) {
+      setVisible((current) => current === "added" ? null : current);
+      return;
+    }
     // An add that hit the limit is reported by the limit message instead.
     if (limitNotice && limitNotice.at >= lastAdded.at) return;
+    const remaining = ADDED_DURATION_MS - (Date.now() - lastAdded.at);
+    if (remaining <= 0) {
+      setVisible((current) => current === "added" ? null : current);
+      return;
+    }
     setVisible("added");
-    const t = setTimeout(() => setVisible(null), 3500);
+    const t = setTimeout(() => setVisible((current) => current === "added" ? null : current), remaining);
     return () => clearTimeout(t);
-  }, [lastAdded]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [lastAdded, lastAddedInCart, limitNotice]);
 
   useEffect(() => {
     if (!limitNotice) return setVisible((v) => (v === "limit" ? null : v));
+    const remaining = LIMIT_DURATION_MS - (Date.now() - limitNotice.at);
+    if (remaining <= 0) {
+      setVisible((current) => current === "limit" ? null : current);
+      dismissLimit();
+      return;
+    }
     setVisible("limit");
-    const t = setTimeout(() => setVisible(null), 8000);
+    const t = setTimeout(() => {
+      setVisible((current) => current === "limit" ? null : current);
+      dismissLimit();
+    }, remaining);
     return () => clearTimeout(t);
-  }, [limitNotice]);
+  }, [limitNotice, dismissLimit]);
 
-  if (!visible || panel === "cart") return null;
+  if (!visible || panel === "cart" || pathname.startsWith("/admin")) return null;
 
   if (visible === "limit" && limitNotice) {
     const close = () => { setVisible(null); dismissLimit(); };

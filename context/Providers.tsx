@@ -4,6 +4,7 @@ import { AuthProvider } from "./AuthContext";
 import { CartProvider } from "./CartContext";
 import { ProductsProvider } from "./ProductsContext";
 import { UIProvider } from "./UIContext";
+import AddedToCartToast from "@/components/cart/AddedToCartToast";
 import type { Product } from "@/types";
 
 
@@ -12,7 +13,10 @@ export default function Providers({ children, initialProducts }: { children: Rea
     <UIProvider>
       <AuthProvider>
         <ProductsProvider initial={initialProducts}>
-          <CartProvider>{children}</CartProvider>
+          <CartProvider>
+            {children}
+            <AddedToCartToast />
+          </CartProvider>
         </ProductsProvider>
       </AuthProvider>
     </UIProvider>

@@ -83,8 +83,8 @@ export default function ReviewForm({
     if (!rating) return setError("Choose a star rating first.");
     setBusy(true);
     setError("");
-    const token = (await getSupabase()?.auth.getSession())?.data.session?.access_token;
     try {
+      const token = (await getSupabase()?.auth.getSession())?.data.session?.access_token;
       const res = await fetch("/api/reviews", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },

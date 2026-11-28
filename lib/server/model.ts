@@ -568,6 +568,8 @@ export function parseOrder(body: Row, editing: boolean): OrderInput {
 export function orderSaveError(e: { code?: string; message?: string } | null): HttpError {
   const m = e?.message ?? "";
   if (m.startsWith("insufficient_stock:")) return new HttpError(409, `Not enough stock for ${m.slice(19)}. Lower the quantity or add stock in Products & Stock.`);
+  if (m.startsWith("insufficient_pack_stock:"))
+    return new HttpError(409, `Not enough stock for ${m.slice("insufficient_pack_stock:".length)}. Lower the quantity or add stock in Products & Stock.`);
   if (m.startsWith("unknown_product:")) return new HttpError(409, "One of the products no longer exists. Remove it and try again.");
   if (m.includes("order_not_found")) return new HttpError(404, "That order no longer exists.");
   if (m.includes("invalid_advance")) return new HttpError(400, "The advance must be more than ₹0 and less than the order total.");

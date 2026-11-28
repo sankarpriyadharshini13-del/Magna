@@ -568,14 +568,14 @@ export default function ProductsScreen() {
           </div>
           <div className="adm-fg">
             <span className="adm-fl" id="pf-packs-label">{draft.channel === "export" ? "Pack sizes & prices" : "Pack sizes, stock & prices"}</span>
-            <div aria-hidden="true" className="adm-muted" style={{ display: "grid", gridTemplateColumns: draft.channel === "export" ? "minmax(0, 1.6fr) repeat(2, minmax(0, 1fr)) auto" : "minmax(0, 1.6fr) minmax(0, .7fr) repeat(2, minmax(0, 1fr)) auto", gap: 8, fontSize: 11 }}>
+            <div aria-hidden="true" className="adm-muted p-pack-head" style={{ display: "grid", gridTemplateColumns: draft.channel === "export" ? "minmax(0, 1.6fr) repeat(2, minmax(0, 1fr)) auto" : "minmax(0, 1.6fr) minmax(0, .7fr) repeat(2, minmax(0, 1fr)) auto", gap: 8, fontSize: 11 }}>
               <span>Pack size</span>{draft.channel !== "export" && <span>Stock qty</span>}<span>Original price (₹)</span><span>Selling price (₹)</span><span />
             </div>
             <div role="group" aria-labelledby="pf-packs-label" style={{ display: "grid", gap: 8 }}>
               {draft.packSizes.map((size, i) => (
-                <div key={i} style={{ display: "grid", gridTemplateColumns: draft.channel === "export" ? "minmax(0, 1.6fr) repeat(2, minmax(0, 1fr)) auto" : "minmax(0, 1.6fr) minmax(0, .7fr) repeat(2, minmax(0, 1fr)) auto", gap: 8, alignItems: "center" }}>
+                <div key={i} className={`p-pack-row${draft.channel === "export" ? " export" : ""}`} style={{ display: "grid", gridTemplateColumns: draft.channel === "export" ? "minmax(0, 1.6fr) repeat(2, minmax(0, 1fr)) auto" : "minmax(0, 1.6fr) minmax(0, .7fr) repeat(2, minmax(0, 1fr)) auto", gap: 8, alignItems: "center" }}>
                   <input
-                    className={`adm-in${errors.packSizes ? " err" : ""}`}
+                    className={`adm-in p-pack-size-field${errors.packSizes ? " err" : ""}`}
                     value={size}
                     maxLength={40}
                     placeholder={i === 0 ? "e.g. 200 g (default)" : "e.g. 500 g"}
@@ -599,7 +599,7 @@ export default function ProductsScreen() {
                   />
                   {draft.channel !== "export" && (
                     <input
-                      className={`adm-in${errors.packStock ? " err" : ""}`}
+                      className={`adm-in p-pack-stock-field${errors.packStock ? " err" : ""}`}
                       inputMode="numeric"
                       value={draft.packStock[size] || ""}
                       placeholder="Stock qty"
@@ -608,15 +608,15 @@ export default function ProductsScreen() {
                     />
                   )}
                   <input
-                    className={`adm-in${errors.packPrices ? " err" : ""}`}
+                    className={`adm-in p-pack-original-field${errors.packPrices ? " err" : ""}`}
                     inputMode="numeric"
                     value={draft.packPrices[size]?.originalPrice ?? ""}
-                    placeholder="Optional"
+                    placeholder="Original price (₹)"
                     aria-label={`Original price for ${size || "pack"} in rupees`}
                     onChange={(e) => set("packPrices", { ...draft.packPrices, [size]: { ...draft.packPrices[size], originalPrice: e.target.value, price: draft.packPrices[size]?.price ?? "" } })}
                   />
                   <input
-                    className={`adm-in${errors.packPrices ? " err" : ""}`}
+                    className={`adm-in p-pack-selling-field${errors.packPrices ? " err" : ""}`}
                     inputMode="numeric"
                     value={draft.packPrices[size]?.price ?? ""}
                     placeholder="Selling price"
@@ -626,7 +626,7 @@ export default function ProductsScreen() {
                   {draft.packSizes.length > 1 && (
                     <button
                       type="button"
-                      className="adm-btn sm"
+                      className="adm-btn sm p-pack-remove"
                       aria-label={`Remove pack size ${i + 1}`}
                       title="Remove this pack size"
                       onClick={() => {
